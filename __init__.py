@@ -23,6 +23,7 @@
 
 import bpy
 import importlib
+import os
 
 from bpy.props import *
 from bpy.app.handlers import persistent
@@ -174,12 +175,12 @@ class CombinedFolder(Operator):
     filter_glob = StringProperty(default='', options={'HIDDEN'})
 
     def execute(self, context):
-        Scene.combined_path = self.filepath.rstrip('\\').lower()
+        Scene.combined_path = self.filepath.rstrip(os.sep).lower()
         return {'FINISHED'}
 
     def invoke(self, context, event):
         scn = context.scene
-        self.filepath = scn.combined_path + "\\"
+        self.filepath = scn.combined_path + os.sep
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
@@ -211,12 +212,12 @@ class TexFolder(Operator):
     filter_glob = StringProperty(default='', options={'HIDDEN'})
 
     def execute(self, context):
-        Scene.tex_path = self.filepath.rstrip('\\').lower()
+        Scene.tex_path = self.filepath.rstrip(os.sep).lower()
         return {'FINISHED'}
 
     def invoke(self, context, event):
         scn = context.scene
-        self.filepath = scn.tex_path + "\\"
+        self.filepath = scn.tex_path + os.sep
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
