@@ -39,7 +39,8 @@ material-combiner-addon
 ## CHANGELOG
 #### 1.1.3
 1. Attention message on texture combining
-2. Some minor fixes
+2. Some description added
+3. Some minor fixes
 #### 1.1.2
 1. Auto-assigning .blend path as save path
 2. Materials with only color support
