@@ -257,7 +257,7 @@ class ExecuteMat(Operator):
     bl_region_type = 'TOOLS'
     bl_category = 'shotariya'
 
-    def show_message(self, context, title='Materials combining', icon='INFO'):
+    def show_message(self, context):
         def draw(self, context):
             layout = self.layout
             layout.separator()
