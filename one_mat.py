@@ -118,12 +118,12 @@ class GenMat(bpy.types.Operator):
                                             tex_slot = mat.texture_slots[j]
                                             break
                             if tex_slot:
-                                    tex = tex_slot.texture
-                                    if tex.image:
-                                        image_path = bpy.path.abspath(tex.image.filepath)
-                                        if len(image_path.split('\\')[-1].split('.')) > 1:
-                                            if image_path not in files:
-                                                files.append(image_path)
+                                tex = tex_slot.texture
+                                if tex.image:
+                                    image_path = bpy.path.abspath(tex.image.filepath)
+                                    if len(image_path.split('\\')[-1].split('.')) > 1:
+                                        if image_path not in files:
+                                            files.append(image_path)
                             else:
                                 diffuse = L(int(mat.diffuse_color.r * 255),
                                             int(mat.diffuse_color.g * 255),
@@ -131,10 +131,12 @@ class GenMat(bpy.types.Operator):
                                 diffuse.size = (8, 8)
                                 diffuse.name = mat.name
                                 files.append(diffuse)
+        broken_links = []
         for x in files:
             if not isinstance(x, (list,)):
                 path = pathlib.Path(x)
                 if not path.is_file():
+                    broken_links.append(x.split('\\')[-1])
                     files.remove(x)
         if len(files) < 2:
             self.report({'ERROR'}, 'Nothing to Combine')
@@ -234,5 +236,10 @@ class GenMat(bpy.types.Operator):
         bpy.ops.shotariya.list_actions(action='GENERATE_MAT')
         bpy.ops.shotariya.list_actions(action='GENERATE_TEX')
         print('{} seconds passed'.format(time.time() - start_time))
+        if broken_links:
+            broken_links = ',\n    '.join([', '.join(broken_links[x:x + 5])
+                                           for x in range(0, len(broken_links), 5)])
+            self.report({'ERROR'}, 'Materials were combined\nFiles not found:\n    {}'.format(broken_links))
+            return {'FINISHED'}
         self.report({'INFO'}, 'Materials were combined.')
         return{'FINISHED'}
