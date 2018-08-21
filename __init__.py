@@ -261,9 +261,11 @@ class ExecuteMat(Operator):
         def draw(self, context):
             layout = self.layout
             layout.separator()
-            layout.label('If you have transparent textures to combine')
-            layout.label('that may couse combined texture be full-transparent in Unity')
-            layout.label('combine transparent and non-transparent textures if you are know what you do')
+            layout.label('If you have transparent and non-transparent textures to combine')
+            layout.label('that may cause combined texture be full-transparent in Unity')
+            layout.label('instead combine them separately')
+            layout.separator()
+            layout.label('Combine transparent and non-transparent textures together if you are know what you do')
             layout.separator()
             layout.separator()
             layout.operator('shotariya.gen_mat')
