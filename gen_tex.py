@@ -24,6 +24,7 @@
 import bpy
 import time
 import math
+import os
 from PIL import Image
 
 
@@ -70,7 +71,7 @@ class GenTex(bpy.types.Operator):
                     work.append(True)
                 for info in tex_info:
                     if len(info) > 3:
-                        img_name = info[2].split('\\')[-1].split('.')[0]
+                        img_name = info[2].split(os.sep)[-1].split('.')[0]
                         img = Image.open(info[2])
                         w, h = img.size
                         if info[0] == 0:
@@ -87,7 +88,7 @@ class GenTex(bpy.types.Operator):
                                 x = i * w
                                 y = j * h
                                 result.paste(img, (x, y, x + w, y + h))
-                        result.save('{}\\{}_uv.png'.format(save_path, img_name), 'PNG')
+                        result.save('{}{}{}_uv.png'.format(save_path, os.sep, img_name), 'PNG')
                         mat = info[3]
                         mat_index = 0
                         for index in range(mat_len):
@@ -95,7 +96,7 @@ class GenTex(bpy.types.Operator):
                                 mat_index = index
                         tex_slot = mat.texture_slots[0]
                         tex = tex_slot.texture
-                        tex.image = bpy.data.images.load('{}\\{}_uv.png'.format(save_path, img_name))
+                        tex.image = bpy.data.images.load('{}{}{}_uv.png'.format(save_path, os.sep, img_name))
                         for face in obj.data.polygons:
                             if face.material_index == mat_index:
                                 face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
