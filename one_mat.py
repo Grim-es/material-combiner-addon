@@ -121,7 +121,7 @@ class GenMat(bpy.types.Operator):
                                 tex = tex_slot.texture
                                 if tex.image:
                                     image_path = bpy.path.abspath(tex.image.filepath)
-                                    if len(image_path.split('\\')[-1].split('.')) > 1:
+                                    if len(image_path.split(os.sep)[-1].split('.')) > 1:
                                         if image_path not in files:
                                             files.append(image_path)
                             else:
@@ -136,7 +136,7 @@ class GenMat(bpy.types.Operator):
             if not isinstance(x, (list,)):
                 path = pathlib.Path(x)
                 if not path.is_file():
-                    broken_links.append(x.split('\\')[-1])
+                    broken_links.append(x.split(os.sep)[-1])
                     files.remove(x)
         if len(files) < 2:
             self.report({'ERROR'}, 'Nothing to Combine')
@@ -223,14 +223,14 @@ class GenMat(bpy.types.Operator):
                     context.object.active_material_index = [x.material.name for x in
                                                             context.object.material_slots].index(mat)
                     bpy.ops.object.material_slot_remove()
-        image.save('{}\\combined_image_{}.png'.format(save_path, unique_id))
+        image.save(os.path.join(save_path + 'combined_image_' + unique_id + '.png'))
         mat = bpy.data.materials['combined_material_{}'.format(unique_id)]
         mat.use_shadeless = True
         mat.alpha = 0
         mat.use_transparency = True
         mat.texture_slots[0].use_map_alpha = True
         tex = mat.texture_slots[0].texture
-        tex.image = bpy.data.images.load('{}\\combined_image_{}.png'.format(save_path, unique_id))
+        tex.image = bpy.data.images.load(os.path.join(save_path + 'combined_image_' + unique_id + '.png'))
         for mesh in bpy.data.meshes:
             mesh.show_double_sided = True
         bpy.ops.shotariya.list_actions(action='GENERATE_MAT')
