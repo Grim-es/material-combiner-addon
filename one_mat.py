@@ -30,8 +30,6 @@ import pathlib
 from .Packer import Packer
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-print(os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image
 
 

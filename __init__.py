@@ -22,8 +22,8 @@
 
 
 import bpy
-import importlib
 import os
+import importlib
 
 from bpy.props import *
 from bpy.app.handlers import persistent
@@ -43,9 +43,9 @@ bl_info = {
     'author': 'shotariya (shotariya#4269)',
     'location': 'View 3D > Tool Shelf > Shotariya-don',
     'description': 'Tool with some functions',
-    'version': [1, 1, 2],
+    'version': [1, 1, 3],
     'blender': (2, 79, 0),
-    'wiki_url': '',
+    'wiki_url': 'https://github.com/Grim-es/material-combiner-addon/blob/master/README.md',
     'tracker_url': 'https://discordapp.com/users/275608234595713024',
     'warning': '',
 }
@@ -250,6 +250,30 @@ def saved_folder(dummy):
             scn.tex_path = bpy.path.abspath('//')
 
 
+class ExecuteMat(Operator):
+    bl_label = 'Materials'
+    bl_idname = 'shotariya.execute_mat'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_category = 'shotariya'
+
+    def show_message(self, context, title='Materials combining', icon='INFO'):
+        def draw(self, context):
+            layout = self.layout
+            layout.separator()
+            layout.label('If you have transparent textures to combine')
+            layout.label('that may couse combined texture be full-transparent in Unity')
+            layout.label('combine transparent and non-transparent textures if you are know what you do')
+            layout.separator()
+            layout.separator()
+            layout.operator('shotariya.gen_mat')
+        context.window_manager.popup_menu(draw, title='Be careful', icon='INFO')
+
+    def execute(self, context):
+        self.show_message(context)
+        return {'FINISHED'}
+
+
 class ShotariyaMaterials(Panel):
     bl_label = 'Materials'
     bl_idname = 'shotariya.materials'
@@ -283,7 +307,7 @@ class ShotariyaMaterials(Panel):
         row = layout.row()
         split = row.split(percentage=0.8, align=True)
         split.scale_y = 1.3
-        split.operator('shotariya.gen_mat', icon='SOLO_ON')
+        split.operator('shotariya.execute_mat', icon='SOLO_ON')
         if not scn.combined_path:
             combined_icon = 'NEWFOLDER'
         else:
@@ -367,6 +391,7 @@ classes = (
     TexturesList,
     TexturesGroup,
     ShotariyaActions,
+    ExecuteMat,
     one_mat.GenMat,
     uv_fixer.FixUV,
     uv_splitter.SplitUV,
