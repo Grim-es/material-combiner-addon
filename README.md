@@ -33,6 +33,9 @@ material-combiner-addon
 5. Activate Shotariya-don
 
 
+## PREVIEW
+![](http://webgrimes.com/Preview.png)
+
 ## CHANGELOG
 #### 1.1.2
 1. Auto-assigning .blend path as save path
