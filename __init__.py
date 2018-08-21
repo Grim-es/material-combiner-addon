@@ -168,7 +168,7 @@ class ShotariyaActions(Operator):
 class CombinedFolder(Operator):
     bl_idname = 'shotariya.combined_folder'
     bl_label = 'Select a Folder for Combined Texture'
-    bl_description = ''
+    bl_description = 'Select a path for combined texture saving'
     bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
 
     filepath = StringProperty(subtype='DIR_PATH')
@@ -205,7 +205,7 @@ class MaterialsGroup(PropertyGroup):
 class TexFolder(Operator):
     bl_idname = 'shotariya.tex_folder'
     bl_label = 'Select a Folder for UVs / Diffuse Texture'
-    bl_description = ''
+    bl_description = 'Select a path for textures saving'
     bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
 
     filepath = StringProperty(subtype='DIR_PATH')
@@ -408,13 +408,13 @@ def register():
     Scene.shotariya_mat_idx = IntProperty(default=0)
     Material.to_combine = BoolProperty(name='Add material to combine', default=False)
     Scene.clear_mats = BoolProperty(name='Clear materials checkbox', default=True)
-    Scene.combined_path = StringProperty(default='')
+    Scene.combined_path = StringProperty(description='Select a path for combined texture saving', default='')
     Scene.shotariya_tex = CollectionProperty(type=TexturesGroup)
     Scene.shotariya_tex_idx = IntProperty(default=0)
     Texture.to_save = BoolProperty(name='Add textures to save', default=False)
     Scene.clear_texs = BoolProperty(name='Clear textures checkbox', default=True)
-    Scene.tex_path = StringProperty(default='')
-    Scene.uv_size = IntProperty(default=1, min=1, max=10)
+    Scene.tex_path = StringProperty(description='Select a path for textures saving', default='')
+    Scene.uv_size = IntProperty(description='Select max scale for UV bounds to pack into', default=1, min=1, max=10)
     if saved_folder not in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.append(saved_folder)
     if saved_folder not in bpy.app.handlers.save_pre:
