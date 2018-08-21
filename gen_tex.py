@@ -88,7 +88,7 @@ class GenTex(bpy.types.Operator):
                                 x = i * w
                                 y = j * h
                                 result.paste(img, (x, y, x + w, y + h))
-                        result.save(os.path.join(save_path + os.sep + 'combined_image_' + img_name + '_uv.png'), 'PNG')
+                        result.save(os.path.join(save_path, 'combined_image_' + img_name + '_uv.png'), 'PNG')
                         mat = info[3]
                         mat_index = 0
                         for index in range(mat_len):
@@ -96,7 +96,7 @@ class GenTex(bpy.types.Operator):
                                 mat_index = index
                         tex_slot = mat.texture_slots[0]
                         tex = tex_slot.texture
-                        tex.image = bpy.data.images.load(os.path.join(save_path + os.sep + 'combined_image_' +
+                        tex.image = bpy.data.images.load(os.path.join(save_path, 'combined_image_' +
                                                                       img_name + '_uv.png'))
                         for face in obj.data.polygons:
                             if face.material_index == mat_index:

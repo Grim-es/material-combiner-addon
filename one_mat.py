@@ -223,14 +223,14 @@ class GenMat(bpy.types.Operator):
                     context.object.active_material_index = [x.material.name for x in
                                                             context.object.material_slots].index(mat)
                     bpy.ops.object.material_slot_remove()
-        image.save(os.path.join(save_path + 'combined_image_' + unique_id + '.png'))
+        image.save(os.path.join(save_path, 'combined_image_' + unique_id + '.png'))
         mat = bpy.data.materials['combined_material_{}'.format(unique_id)]
         mat.use_shadeless = True
         mat.alpha = 0
         mat.use_transparency = True
         mat.texture_slots[0].use_map_alpha = True
         tex = mat.texture_slots[0].texture
-        tex.image = bpy.data.images.load(os.path.join(save_path + 'combined_image_' + unique_id + '.png'))
+        tex.image = bpy.data.images.load(os.path.join(save_path, 'combined_image_' + unique_id + '.png'))
         for mesh in bpy.data.meshes:
             mesh.show_double_sided = True
         bpy.ops.shotariya.list_actions(action='GENERATE_MAT')
