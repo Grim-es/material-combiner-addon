@@ -118,7 +118,13 @@ class ShotariyaActions(Operator):
                     for mat_slot in obj.material_slots:
                         if mat_slot:
                             mat = mat_slot.material
-                            tex_slot = mat.texture_slots[0]
+                            tex_slot = False
+                            for j in range(len(mat.texture_slots)):
+                                if mat.texture_slots[j]:
+                                    if mat.texture_slots[j].texture:
+                                        if mat.use_textures[j]:
+                                            tex_slot = mat.texture_slots[j]
+                                            break
                             if tex_slot:
                                 tex = tex_slot.texture
                                 item = scn.shotariya_tex.add()
