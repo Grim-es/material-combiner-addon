@@ -21,7 +21,7 @@ material-combiner-addon
 3. Select a folder for generated textures
 4. Generate
 #### Packing UV by splitting mesh:
-1. Choose max scale of bounds
+1. Choose max scale for UV bounds
 2. Pack
 
 
