@@ -42,6 +42,7 @@ material-combiner-addon
 2. Materials with only color support
 3. Checking for file existing
 4. Other file formats support
+5. Mac support
 #### 1.1.1
 1. New combined texture positioning logic
 2. Checking for UV bounds before combining
