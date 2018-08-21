@@ -251,7 +251,7 @@ def saved_folder(dummy):
 
 
 class ExecuteMat(Operator):
-    bl_label = 'Materials'
+    bl_label = 'Combine'
     bl_idname = 'shotariya.execute_mat'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
