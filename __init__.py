@@ -25,6 +25,7 @@ import bpy
 import importlib
 
 from bpy.props import *
+from bpy.app.handlers import persistent
 from . import one_mat, uv_fixer, uv_splitter, gen_tex
 from bpy.types import Panel, PropertyGroup, UIList, Operator, Scene, Material, Texture
 
@@ -237,6 +238,17 @@ class TexturesGroup(PropertyGroup):
         type=Texture)
 
 
+@persistent
+def saved_folder(dummy):
+    scn = bpy.context.scene
+    if not scn.combined_path:
+        if bpy.path.abspath('//'):
+            scn.combined_path = bpy.path.abspath('//')
+    if not scn.tex_path:
+        if bpy.path.abspath('//'):
+            scn.tex_path = bpy.path.abspath('//')
+
+
 class ShotariyaMaterials(Panel):
     bl_label = 'Materials'
     bl_idname = 'shotariya.materials'
@@ -364,39 +376,45 @@ classes = (
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-
     Scene.shotariya_mat = CollectionProperty(type=MaterialsGroup)
     Scene.shotariya_mat_idx = IntProperty(default=0)
     Material.to_combine = BoolProperty(name='Add material to combine', default=False)
     Scene.clear_mats = BoolProperty(name='Clear materials checkbox', default=True)
     Scene.combined_path = StringProperty(default='')
-
     Scene.shotariya_tex = CollectionProperty(type=TexturesGroup)
     Scene.shotariya_tex_idx = IntProperty(default=0)
     Texture.to_save = BoolProperty(name='Add textures to save', default=False)
     Scene.clear_texs = BoolProperty(name='Clear textures checkbox', default=True)
     Scene.tex_path = StringProperty(default='')
-
     Scene.uv_size = IntProperty(default=1, min=1, max=10)
+    if saved_folder not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(saved_folder)
+    if saved_folder not in bpy.app.handlers.save_pre:
+        bpy.app.handlers.save_pre.append(saved_folder)
+    if saved_folder not in bpy.app.handlers.scene_update_post:
+        bpy.app.handlers.scene_update_post.append(saved_folder)
 
 
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
-
     del Scene.shotariya_mat
     del Scene.shotariya_mat_idx
     del Material.to_combine
     del Scene.clear_mats
     del Scene.combined_path
-
     del Scene.shotariya_tex
     del Scene.shotariya_tex_idx
     del Texture.to_save
     del Scene.clear_texs
     del Scene.tex_path
-
     del Scene.uv_size
+    if saved_folder in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(saved_folder)
+    if saved_folder in bpy.app.handlers.save_pre:
+        bpy.app.handlers.save_pre.remove(saved_folder)
+    if saved_folder in bpy.app.handlers.scene_update_post:
+        bpy.app.handlers.scene_update_post.remove(saved_folder)
 
 
 if __name__ == '__main__':
