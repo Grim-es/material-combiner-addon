@@ -110,8 +110,14 @@ class GenMat(bpy.types.Operator):
                     if mat_slot:
                         mat = mat_slot.material
                         if mat.to_combine:
-                            tex_slot = mat.texture_slots[0]
-                            if tex_slot and mat.use_textures[0]:
+                            tex_slot = False
+                            for j in range(len(mat.texture_slots)):
+                                if mat.texture_slots[j]:
+                                    if mat.texture_slots[j].texture:
+                                        if mat.use_textures[j]:
+                                            tex_slot = mat.texture_slots[j]
+                                            break
+                            if tex_slot:
                                     tex = tex_slot.texture
                                     if tex.image:
                                         image_path = bpy.path.abspath(tex.image.filepath)
@@ -173,8 +179,14 @@ class GenMat(bpy.types.Operator):
                 for img in images:
                     for i in range(mat_len):
                         mat = obj.material_slots[i].material
-                        tex_slot = mat.texture_slots[0]
-                        if tex_slot and mat.use_textures[0]:
+                        tex_slot = False
+                        for j in range(len(mat.texture_slots)):
+                            if mat.texture_slots[j]:
+                                if mat.texture_slots[j].texture:
+                                    if mat.use_textures[j]:
+                                        tex_slot = mat.texture_slots[j]
+                                        break
+                        if tex_slot:
                             tex = tex_slot.texture
                             texture_path = bpy.path.abspath(tex.image.filepath)
                             if texture_path == img['path']:
