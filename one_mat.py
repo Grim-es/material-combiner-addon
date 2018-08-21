@@ -161,10 +161,14 @@ class GenMat(bpy.types.Operator):
                 scn.objects.active = obj
                 mat_len = len(obj.material_slots)
                 mats = []
-                mat = bpy.data.materials.new(name='combined_material_{}'.format(unique_id))
-                tex = bpy.data.textures.new('combined_texture_{}'.format(unique_id), 'IMAGE')
-                slot = mat.texture_slots.add()
-                slot.texture = tex
+                mat_name = 'combined_material_{}'.format(unique_id)
+                if mat_name not in bpy.data.materials:
+                    mat = bpy.data.materials.new(name=mat_name)
+                    tex = bpy.data.textures.new('combined_texture_{}'.format(unique_id), 'IMAGE')
+                    slot = mat.texture_slots.add()
+                    slot.texture = tex
+                else:
+                    mat = bpy.data.materials[mat_name]
                 obj.data.materials.append(mat)
                 for img in images:
                     for i in range(mat_len):
