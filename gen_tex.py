@@ -48,7 +48,7 @@ class GenTex(bpy.types.Operator):
         work = []
         for obj in context.scene.objects:
             if obj.type == 'MESH':
-                if not obj.data.uv_layers.active or not obj.hide:
+                if not obj.data.uv_layers.active or obj.hide:
                     continue
                 mat_len = len(obj.material_slots)
                 mat_info = [[] for x in range(mat_len)]

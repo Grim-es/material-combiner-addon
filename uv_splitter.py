@@ -183,7 +183,7 @@ class SplitUV(bpy.types.Operator):
         uv_size = scn.uv_size
         for obj in scn.objects:
             if obj.type == 'MESH':
-                if not obj.data.uv_layers.active or not obj.hide:
+                if not obj.data.uv_layers.active or obj.hide:
                     continue
                 scn.objects.active = obj
                 cicled = 0
