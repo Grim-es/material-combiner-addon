@@ -13,8 +13,9 @@ material-combiner-addon
 #### Combining multiple materials:
 1. Generate materials list
 2. Choose materials to combine
-3. Select a folder for combined texture
-4. Combine
+3. Choose ID of combined material, keep 1 to have only one combined material
+4. Select a folder for combined texture
+5. Combine
 #### Generation of textures by UV size:
 1. Generate textures list
 2. Choose textures to generate
