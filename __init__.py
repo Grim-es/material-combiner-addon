@@ -43,7 +43,7 @@ bl_info = {
     'author': 'shotariya (shotariya#4269)',
     'location': 'View 3D > Tool Shelf > Shotariya-don',
     'description': 'Tool with some functions',
-    'version': [1, 1, 3],
+    'version': [1, 1, 4],
     'blender': (2, 79, 0),
     'wiki_url': 'https://github.com/Grim-es/material-combiner-addon/blob/master/README.md',
     'tracker_url': 'https://discordapp.com/users/275608234595713024',
@@ -87,6 +87,7 @@ class ShotariyaActions(Operator):
                             item.material = mat
                             item.name = item.material.name
                             item.material.to_combine = True
+                            item.mat_index = item.material.mat_index
                             item.to_combine = item.material.to_combine
                             scn.shotariya_mat_idx = (len(scn.shotariya_mat)-1)
         if self.action == 'ALL_MAT':
@@ -188,9 +189,13 @@ class CombinedFolder(Operator):
 class MaterialsList(UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         mat = item.material
-        split = layout.row()
-        split.prop(mat, 'name', emboss=False, text='', icon_value=layout.icon(mat))
-        split.prop(mat, 'to_combine', text='')
+        row = layout.row()
+        row.prop(mat, 'name', emboss=False, text='', icon_value=layout.icon(mat))
+        sub_row = row.row()
+        sub_row.alignment = 'RIGHT'
+        sub_row.scale_x = .5
+        sub_row.prop(mat, 'mat_index', text='')
+        row.prop(mat, 'to_combine', text='')
 
     def invoke(self, context, event):
         pass
@@ -406,13 +411,14 @@ def register():
         bpy.utils.register_class(cls)
     Scene.shotariya_mat = CollectionProperty(type=MaterialsGroup)
     Scene.shotariya_mat_idx = IntProperty(default=0)
-    Material.to_combine = BoolProperty(name='Add material to combine', default=False)
-    Scene.clear_mats = BoolProperty(name='Clear materials checkbox', default=True)
+    Material.to_combine = BoolProperty(description='Add material to combine', default=False)
+    Material.mat_index = IntProperty(description='Choose combined material ID', default=1, min=1, max=99)
+    Scene.clear_mats = BoolProperty(description='Clear materials checkbox', default=True)
     Scene.combined_path = StringProperty(description='Select a path for combined texture saving', default='')
     Scene.shotariya_tex = CollectionProperty(type=TexturesGroup)
     Scene.shotariya_tex_idx = IntProperty(default=0)
-    Texture.to_save = BoolProperty(name='Add textures to save', default=False)
-    Scene.clear_texs = BoolProperty(name='Clear textures checkbox', default=True)
+    Texture.to_save = BoolProperty(description='Add texture to save', default=False)
+    Scene.clear_texs = BoolProperty(description='Clear textures checkbox', default=True)
     Scene.tex_path = StringProperty(description='Select a path for textures saving', default='')
     Scene.uv_size = IntProperty(description='Select max scale for UV bounds to pack into', default=1, min=1, max=10)
     if saved_folder not in bpy.app.handlers.load_post:
@@ -429,6 +435,7 @@ def unregister():
     del Scene.shotariya_mat
     del Scene.shotariya_mat_idx
     del Material.to_combine
+    del Material.mat_index
     del Scene.clear_mats
     del Scene.combined_path
     del Scene.shotariya_tex

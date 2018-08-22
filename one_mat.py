@@ -57,6 +57,12 @@ class GenMat(bpy.types.Operator):
 
     def execute(self, context):
         start_time = time.time()
+        files = []
+        broken_materials = []
+        copies = {}
+        standard_mats = {}
+        broken_links = []
+        indexes = []
         scn = context.scene
         save_path = scn.combined_path
         unique_id = str(random.randrange(9999999999))
@@ -64,8 +70,6 @@ class GenMat(bpy.types.Operator):
             self.report({'ERROR'}, 'Please select Folder for Combined Texture')
             return {'FINISHED'}
         bpy.ops.shotariya.uv_fixer()
-        files = []
-        broken_materials = []
         for obj in scn.objects:
             if obj.type == 'MESH':
                 if not obj.data.uv_layers.active:
@@ -122,6 +126,11 @@ class GenMat(bpy.types.Operator):
                                     if len(image_path.split(os.sep)[-1].split('.')) > 1:
                                         if image_path not in files:
                                             files.append(image_path)
+                                            standard_mats[mat] = image_path
+                                        else:
+                                            for s_mat, s_path in standard_mats.items():
+                                                if s_path == image_path:
+                                                    copies[s_mat] = mat
                             else:
                                 diffuse = L(int(mat.diffuse_color.r * 255),
                                             int(mat.diffuse_color.g * 255),
@@ -129,14 +138,38 @@ class GenMat(bpy.types.Operator):
                                 diffuse.size = (8, 8)
                                 diffuse.name = mat.name
                                 files.append(diffuse)
-        broken_links = []
         for x in files:
             if not isinstance(x, (list,)):
                 path = pathlib.Path(x)
                 if not path.is_file():
                     broken_links.append(x.split(os.sep)[-1])
                     files.remove(x)
+        combined_copies = 0
         if len(files) < 2:
+            if copies:
+                for obj in scn.objects:
+                    if obj.type == 'MESH':
+                        if not obj.data.uv_layers.active:
+                            continue
+                        for m_mat, c_mat in copies.items():
+                            if m_mat.mat_index == c_mat.mat_index:
+                                if (m_mat.name in obj.data.materials) and (c_mat.name in obj.data.materials):
+                                    if m_mat.name != c_mat.name:
+                                        combined_copies += 1
+                                        to_delete = obj.data.materials.find(c_mat.name)
+                                        for face in obj.data.polygons:
+                                            if face.material_index == to_delete:
+                                                face.material_index = obj.data.materials.find(m_mat.name)
+                                        context.object.active_material_index = to_delete
+                                        bpy.ops.object.material_slot_remove()
+                if combined_copies > 0:
+                    bpy.ops.shotariya.list_actions(action='GENERATE_MAT')
+                    bpy.ops.shotariya.list_actions(action='GENERATE_TEX')
+                    self.report({'INFO'}, 'Copies were combined')
+                    return {'FINISHED'}
+                else:
+                    self.report({'ERROR'}, 'Nothing to Combine')
+                    return {'FINISHED'}
             self.report({'ERROR'}, 'Nothing to Combine')
             return {'FINISHED'}
         images = sorted([{'w': i.size[0], 'h': i.size[1], 'path': path, 'img': i}
@@ -167,18 +200,34 @@ class GenMat(bpy.types.Operator):
                 scn.objects.active = obj
                 mat_len = len(obj.material_slots)
                 mats = []
-                mat_name = 'combined_material_{}'.format(unique_id)
-                if mat_name not in bpy.data.materials:
-                    mat = bpy.data.materials.new(name=mat_name)
-                    tex = bpy.data.textures.new('combined_texture_{}'.format(unique_id), 'IMAGE')
-                    slot = mat.texture_slots.add()
-                    slot.texture = tex
-                else:
-                    mat = bpy.data.materials[mat_name]
-                obj.data.materials.append(mat)
+                new_mats = []
+                for mat_slot in obj.material_slots:
+                    if mat_slot:
+                        mat = mat_slot.material
+                        if mat:
+                            if mat.to_combine:
+                                mat_name = 'combined_material_id{}_{}'.format(mat.mat_index, unique_id)
+                                if mat_name not in obj.data.materials:
+                                    if mat_name not in bpy.data.materials:
+                                        material = bpy.data.materials.new(name=mat_name)
+                                        indexes.append(mat.mat_index)
+                                        tex_name = 'combined_texture_{}'.format(unique_id)
+                                        if tex_name not in bpy.data.textures:
+                                            texture = bpy.data.textures.new(tex_name, 'IMAGE')
+                                        else:
+                                            texture = bpy.data.textures[tex_name]
+                                        slot = material.texture_slots.add()
+                                        slot.texture = texture
+                                    else:
+                                        material = bpy.data.materials[mat_name]
+                                    if material not in new_mats:
+                                        new_mats.append(material)
+                for materials in new_mats:
+                    obj.data.materials.append(materials)
                 for img in images:
                     for i in range(mat_len):
                         mat = obj.material_slots[i].material
+                        mat_name = 'combined_material_id{}_{}'.format(mat.mat_index, unique_id)
                         tex_slot = False
                         for j in range(len(mat.texture_slots)):
                             if mat.texture_slots[j]:
@@ -199,7 +248,7 @@ class GenMat(bpy.types.Operator):
                                             reset_y = 1 + z.y * (img['h'] - 2) / size[1] - img['h'] / size[1]
                                             z.x = reset_x + (img['fit']['x'] + 1) / size[0]
                                             z.y = reset_y - (img['fit']['y'] - 1) / size[1]
-                                        face.material_index = mat_len
+                                        face.material_index = obj.data.materials.find(mat_name)
                                 if mat.name not in mats:
                                     mats.append(mat.name)
                         else:
@@ -214,21 +263,23 @@ class GenMat(bpy.types.Operator):
                                                 reset_y = 1 + z.y * (img['h'] - 2) / size[1] - img['h'] / size[1]
                                                 z.x = reset_x + (img['fit']['x'] + 1) / size[0]
                                                 z.y = reset_y - (img['fit']['y'] - 1) / size[1]
-                                            face.material_index = mat_len
+                                            face.material_index = obj.data.materials.find(mat_name)
                                     if mat.name not in mats:
                                         mats.append(mat.name)
-                for mat in mats:
+                for mater in mats:
                     context.object.active_material_index = [x.material.name for x in
-                                                            context.object.material_slots].index(mat)
+                                                            context.object.material_slots].index(mater)
                     bpy.ops.object.material_slot_remove()
         image.save(os.path.join(save_path, 'combined_image_' + unique_id + '.png'))
-        mat = bpy.data.materials['combined_material_{}'.format(unique_id)]
-        mat.use_shadeless = True
-        mat.alpha = 0
-        mat.use_transparency = True
-        mat.texture_slots[0].use_map_alpha = True
-        tex = mat.texture_slots[0].texture
-        tex.image = bpy.data.images.load(os.path.join(save_path, 'combined_image_' + unique_id + '.png'))
+        for index in indexes:
+            mat = bpy.data.materials['combined_material_id{}_{}'.format(index, unique_id)]
+            mat.mat_index = index
+            mat.use_shadeless = True
+            mat.alpha = 0
+            mat.use_transparency = True
+            mat.texture_slots[0].use_map_alpha = True
+            tex = mat.texture_slots[0].texture
+            tex.image = bpy.data.images.load(os.path.join(save_path, 'combined_image_' + unique_id + '.png'))
         for mesh in bpy.data.meshes:
             mesh.show_double_sided = True
         bpy.ops.shotariya.list_actions(action='GENERATE_MAT')

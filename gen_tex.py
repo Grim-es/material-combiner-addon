@@ -67,9 +67,12 @@ class GenTex(bpy.types.Operator):
                         if (tex_info[index][0] > 1) or (tex_info[index][1] > 1):
                             tex = tex_slot.texture
                             if tex:
-                                if tex.to_save:
-                                    tex_info[index].append(bpy.path.abspath(tex.image.filepath))
-                                    tex_info[index].append(mat)
+                                tex_info[index].append(bpy.path.abspath(tex.image.filepath))
+                                tex_info[index].append(mat)
+                        else:
+                            tex = tex_slot.texture
+                            if tex:
+                                tex.to_save = False
                 if len([True for info in tex_info if len(info) > 2]) != 0:
                     work.append(True)
                 for info in tex_info:
@@ -91,7 +94,7 @@ class GenTex(bpy.types.Operator):
                                 x = i * w
                                 y = j * h
                                 result.paste(img, (x, y, x + w, y + h))
-                        result.save(os.path.join(save_path, 'combined_image_' + img_name + '_uv.png'), 'PNG')
+                        result.save(os.path.join(save_path, img_name + '_uv.png'), 'PNG')
                         mat = info[3]
                         mat_index = 0
                         for index in range(mat_len):
@@ -99,15 +102,15 @@ class GenTex(bpy.types.Operator):
                                 mat_index = index
                         tex_slot = mat.texture_slots[0]
                         tex = tex_slot.texture
-                        tex.image = bpy.data.images.load(os.path.join(save_path, 'combined_image_' +
-                                                                      img_name + '_uv.png'))
-                        for face in obj.data.polygons:
-                            if face.material_index == mat_index:
-                                face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
-                                               face.loop_indices]
-                                for z in face_coords:
-                                    z.x = z.x / info[0]
-                                    z.y = z.y / info[1]
+                        if tex.to_save:
+                            tex.image = bpy.data.images.load(os.path.join(save_path, img_name + '_uv.png'))
+                            for face in obj.data.polygons:
+                                if face.material_index == mat_index:
+                                    face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
+                                                   face.loop_indices]
+                                    for z in face_coords:
+                                        z.x = z.x / info[0]
+                                        z.y = z.y / info[1]
         if not work:
             self.report({'ERROR'}, 'All Selected texture UVs bounds are 0-1')
             return {'FINISHED'}
