@@ -72,7 +72,7 @@ class GenMat(bpy.types.Operator):
         bpy.ops.shotariya.uv_fixer()
         for obj in scn.objects:
             if obj.type == 'MESH':
-                if not obj.data.uv_layers.active:
+                if not obj.data.uv_layers.active or not obj.hide:
                     continue
                 for mat_slot in obj.material_slots:
                     if mat_slot:
@@ -106,7 +106,7 @@ class GenMat(bpy.types.Operator):
             return {'FINISHED'}
         for obj in scn.objects:
             if obj.type == 'MESH':
-                if not obj.data.uv_layers.active:
+                if not obj.data.uv_layers.active or not obj.hide:
                     continue
                 for mat_slot in obj.material_slots:
                     if mat_slot:
@@ -149,7 +149,7 @@ class GenMat(bpy.types.Operator):
             if copies:
                 for obj in scn.objects:
                     if obj.type == 'MESH':
-                        if not obj.data.uv_layers.active:
+                        if not obj.data.uv_layers.active or not obj.hide:
                             continue
                         for m_mat, c_mat in copies.items():
                             if m_mat.mat_index == c_mat.mat_index:
@@ -195,7 +195,7 @@ class GenMat(bpy.types.Operator):
                                          img['fit']['y'] + img['h']))
         for obj in scn.objects:
             if obj.type == 'MESH':
-                if not obj.data.uv_layers.active:
+                if not obj.data.uv_layers.active or not obj.hide:
                     continue
                 scn.objects.active = obj
                 mat_len = len(obj.material_slots)

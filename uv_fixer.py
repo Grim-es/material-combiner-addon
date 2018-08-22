@@ -37,6 +37,8 @@ class FixUV(bpy.types.Operator):
         scene = bpy.context.scene
         for obj in scene.objects:
             if obj.type == 'MESH':
+                if not obj.data.uv_layers.active or not obj.hode:
+                    continue
                 for face in obj.data.polygons:
                     try:
                         face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]

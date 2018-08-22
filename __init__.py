@@ -77,7 +77,7 @@ class ShotariyaActions(Operator):
             scn.shotariya_mat_idx = 0
             for obj in scn.objects:
                 if obj.type == 'MESH':
-                    if not obj.data.uv_layers.active:
+                    if not obj.data.uv_layers.active or not obj.hide:
                         continue
                     for mat_slot in obj.material_slots:
                         if mat_slot:
@@ -93,7 +93,7 @@ class ShotariyaActions(Operator):
         if self.action == 'ALL_MAT':
             for obj in context.scene.objects:
                 if obj.type == 'MESH':
-                    if not obj.data.uv_layers.active:
+                    if not obj.data.uv_layers.active or not obj.hide:
                         continue
                     for mat_slot in obj.material_slots:
                         if mat_slot:
@@ -103,7 +103,7 @@ class ShotariyaActions(Operator):
         if self.action == 'CLEAR_MAT':
             for obj in context.scene.objects:
                 if obj.type == 'MESH':
-                    if not obj.data.uv_layers.active:
+                    if not obj.data.uv_layers.active or not obj.hide:
                         continue
                     for mat_slot in obj.material_slots:
                         if mat_slot:
@@ -116,7 +116,7 @@ class ShotariyaActions(Operator):
             scn.shotariya_tex_idx = 0
             for obj in context.scene.objects:
                 if obj.type == 'MESH':
-                    if not obj.data.uv_layers.active:
+                    if not obj.data.uv_layers.active or not obj.hide:
                         continue
                     for mat_slot in obj.material_slots:
                         if mat_slot:
@@ -140,7 +140,7 @@ class ShotariyaActions(Operator):
         if self.action == 'ALL_TEX':
             for obj in scn.objects:
                 if obj.type == 'MESH':
-                    if not obj.data.uv_layers.active:
+                    if not obj.data.uv_layers.active or not obj.hide:
                         continue
                     for mat_slot in obj.material_slots:
                         if mat_slot:
@@ -153,7 +153,7 @@ class ShotariyaActions(Operator):
         if self.action == 'CLEAR_TEX':
             for obj in context.scene.objects:
                 if obj.type == 'MESH':
-                    if not obj.data.uv_layers.active:
+                    if not obj.data.uv_layers.active or not obj.hide:
                         continue
                     for mat_slot in obj.material_slots:
                         if mat_slot:

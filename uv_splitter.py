@@ -183,11 +183,12 @@ class SplitUV(bpy.types.Operator):
         uv_size = scn.uv_size
         for obj in scn.objects:
             if obj.type == 'MESH':
-                if not obj.hide:
-                    scn.objects.active = obj
-                    cicled = 0
-                    while self.split(uv_size, obj, cicled):
-                        cicled += 1
+                if not obj.data.uv_layers.active or not obj.hode:
+                    continue
+                scn.objects.active = obj
+                cicled = 0
+                while self.split(uv_size, obj, cicled):
+                    cicled += 1
         print('{} seconds passed'.format(time.time() - start_time))
         self.report({'INFO'}, 'UVs packed.')
         return{'FINISHED'}
