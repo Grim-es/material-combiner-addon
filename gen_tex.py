@@ -52,68 +52,57 @@ class GenTex(bpy.types.Operator):
                     continue
                 mat_len = len(obj.material_slots)
                 mat_info = [[] for x in range(mat_len)]
-                tex_info = [[] for x in range(mat_len)]
                 for face in obj.data.polygons:
                     face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
                     mat_info[face.material_index].append(face_coords)
-                for mat, faces in enumerate(mat_info):
+                for index, faces in enumerate(mat_info):
                     x_list = [math.ceil(poly.x) for face in faces for poly in face if not math.isnan(poly.x)]
                     y_list = [math.ceil(poly.y) for face in faces for poly in face if not math.isnan(poly.y)]
-                    tex_info[mat] = [max(x_list), max(y_list)]
-                for index in range(mat_len):
                     mat = obj.material_slots[index].material
-                    tex_slot = mat.texture_slots[0]
-                    if tex_slot:
-                        if (tex_info[index][0] > 1) or (tex_info[index][1] > 1):
-                            tex = tex_slot.texture
-                            if tex:
-                                tex_info[index].append(bpy.path.abspath(tex.image.filepath))
-                                tex_info[index].append(mat)
-                        else:
-                            tex = tex_slot.texture
-                            if tex:
-                                tex.to_save = False
-                if len([True for info in tex_info if len(info) > 2]) != 0:
-                    work.append(True)
-                for info in tex_info:
-                    if len(info) > 3:
-                        img_name = info[2].split(os.sep)[-1].split('.')[0]
-                        img = Image.open(info[2])
-                        w, h = img.size
-                        if info[0] == 0:
-                            info[0] = 1
-                        if info[1] == 0:
-                            info[1] = 1
-                        if info[0] > 64:
-                            info[0] = 1
-                        if info[1] > 64:
-                            info[1] = 1
-                        result = Image.new('RGBA', (w * info[0], h * info[1]))
-                        for i in range(info[0]):
-                            for j in range(info[1]):
-                                x = i * w
-                                y = j * h
-                                result.paste(img, (x, y, x + w, y + h))
-                        result.save(os.path.join(save_path, img_name + '_uv.png'), 'PNG')
-                        mat = info[3]
-                        mat_index = 0
-                        for index in range(mat_len):
-                            if obj.material_slots[index].material == mat:
-                                mat_index = index
-                        tex_slot = mat.texture_slots[0]
-                        tex = tex_slot.texture
-                        if tex.to_save:
-                            tex.image = bpy.data.images.load(os.path.join(save_path, img_name + '_uv.png'))
-                            for face in obj.data.polygons:
-                                if face.material_index == mat_index:
-                                    face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
-                                                   face.loop_indices]
-                                    for z in face_coords:
-                                        z.x = z.x / info[0]
-                                        z.y = z.y / info[1]
-        if not work:
-            self.report({'ERROR'}, 'All Selected texture UVs bounds are 0-1')
-            return {'FINISHED'}
+                    if mat.to_tex:
+                        tex_slot = False
+                        for j in range(len(mat.texture_slots)):
+                            if mat.texture_slots[j]:
+                                if mat.texture_slots[j].texture:
+                                    if mat.use_textures[j]:
+                                        tex_slot = mat.texture_slots[j]
+                                        break
+                        if tex_slot:
+                            if (max(x_list) > 1) or (max(y_list) > 1):
+                                tex = tex_slot.texture
+                                if tex:
+                                    img_name = bpy.path.abspath(tex.image.filepath).split(os.sep)[-1].split('.')[0]
+                                    img = Image.open(bpy.path.abspath(tex.image.filepath))
+                                    w, h = img.size
+                                    max_x = max(x_list)
+                                    max_y = max(y_list)
+                                    if max_x == 0:
+                                        max_x = 1
+                                    if max_y == 0:
+                                        max_y = 1
+                                    if max_x > 64:
+                                        max_x = 1
+                                    if max_y > 64:
+                                        max_y = 1
+                                    result = Image.new('RGBA', (w * max_x, h * max_y))
+                                    print(result.size)
+                                    for i in range(max_x):
+                                        for j in range(max_y):
+                                            x = i * w
+                                            y = j * h
+                                            result.paste(img, (x, y, x + w, y + h))
+                                    result.save(os.path.join(save_path, img_name + '_uv.png'), 'PNG')
+                                    tex = bpy.data.textures.new(img_name + '_uv', 'IMAGE')
+                                    tex.image = bpy.data.images.load(os.path.join(save_path, img_name + '_uv.png'))
+                                    tex_slot.texture = tex
+                                    for face in obj.data.polygons:
+                                        if face.material_index == index:
+                                            face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
+                                                           face.loop_indices]
+                                            for z in face_coords:
+                                                z.x = z.x / max_x
+                                                z.y = z.y / max_y
+
         bpy.ops.shotariya.list_actions(action='GENERATE_MAT')
         bpy.ops.shotariya.list_actions(action='GENERATE_TEX')
         print('{} seconds passed'.format(time.time() - start_time))

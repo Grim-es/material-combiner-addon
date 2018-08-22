@@ -132,10 +132,11 @@ class ShotariyaActions(Operator):
                                 tex = tex_slot.texture
                                 item = scn.shotariya_tex.add()
                                 item.id = len(scn.shotariya_tex)
+                                item.material = mat
                                 item.texture = tex
                                 item.name = item.texture.name
-                                item.texture.to_save = True
-                                item.to_save = item.texture.to_save
+                                item.material.to_tex = True
+                                item.to_tex = item.material.to_tex
                                 scn.shotariya_tex_idx = (len(scn.shotariya_tex)-1)
         if self.action == 'ALL_TEX':
             for obj in scn.objects:
@@ -145,10 +146,15 @@ class ShotariyaActions(Operator):
                     for mat_slot in obj.material_slots:
                         if mat_slot:
                             mat = mat_slot.material
-                            tex_slot = mat.texture_slots[0]
+                            tex_slot = False
+                            for j in range(len(mat.texture_slots)):
+                                if mat.texture_slots[j]:
+                                    if mat.texture_slots[j].texture:
+                                        if mat.use_textures[j]:
+                                            tex_slot = mat.texture_slots[j]
+                                            break
                             if tex_slot:
-                                tex = tex_slot.texture
-                                tex.to_save = True
+                                mat.to_tex = True
                                 scn.clear_texs = True
         if self.action == 'CLEAR_TEX':
             for obj in context.scene.objects:
@@ -158,10 +164,15 @@ class ShotariyaActions(Operator):
                     for mat_slot in obj.material_slots:
                         if mat_slot:
                             mat = mat_slot.material
-                            tex_slot = mat.texture_slots[0]
+                            tex_slot = False
+                            for j in range(len(mat.texture_slots)):
+                                if mat.texture_slots[j]:
+                                    if mat.texture_slots[j].texture:
+                                        if mat.use_textures[j]:
+                                            tex_slot = mat.texture_slots[j]
+                                            break
                             if tex_slot:
-                                tex = tex_slot.texture
-                                tex.to_save = False
+                                mat.to_tex = False
                                 scn.clear_texs = False
         return {'FINISHED'}
 
@@ -200,12 +211,6 @@ class MaterialsList(UIList):
         pass
 
 
-class MaterialsGroup(PropertyGroup):
-    material = PointerProperty(
-        name='Material',
-        type=Material)
-
-
 class TexFolder(Operator):
     bl_idname = 'shotariya.tex_folder'
     bl_label = 'Select a Folder for UVs / Diffuse Texture'
@@ -229,15 +234,19 @@ class TexFolder(Operator):
 class TexturesList(UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         tex = item.texture
+        mat = item.material
         split = layout.row()
         split.prop(tex, 'name', emboss=False, text='', icon_value=layout.icon(tex))
-        split.prop(tex, 'to_save', text='')
+        split.prop(mat, 'to_tex', text='')
 
     def invoke(self, context, event):
         pass
 
 
-class TexturesGroup(PropertyGroup):
+class DataGroup(PropertyGroup):
+    material = PointerProperty(
+        name='Material',
+        type=Material)
     texture = PointerProperty(
         name='Texture',
         type=Texture)
@@ -392,10 +401,9 @@ classes = (
     ShotariyaUVs,
     CombinedFolder,
     MaterialsList,
-    MaterialsGroup,
     TexFolder,
     TexturesList,
-    TexturesGroup,
+    DataGroup,
     ShotariyaActions,
     ExecuteMat,
     one_mat.GenMat,
@@ -408,15 +416,15 @@ classes = (
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    Scene.shotariya_mat = CollectionProperty(type=MaterialsGroup)
+    Scene.shotariya_mat = CollectionProperty(type=DataGroup)
     Scene.shotariya_mat_idx = IntProperty(default=0)
     Material.to_combine = BoolProperty(description='Add material to combine', default=False)
     Material.mat_index = IntProperty(description='Choose combined material ID', default=1, min=1, max=99)
+    Material.to_tex = BoolProperty(description='Add texture to save', default=False)
     Scene.clear_mats = BoolProperty(description='Clear materials checkbox', default=True)
     Scene.combined_path = StringProperty(description='Select a path for combined texture saving', default='')
-    Scene.shotariya_tex = CollectionProperty(type=TexturesGroup)
+    Scene.shotariya_tex = CollectionProperty(type=DataGroup)
     Scene.shotariya_tex_idx = IntProperty(default=0)
-    Texture.to_save = BoolProperty(description='Add texture to save', default=False)
     Scene.clear_texs = BoolProperty(description='Clear textures checkbox', default=True)
     Scene.tex_path = StringProperty(description='Select a path for textures saving', default='')
     Scene.uv_size = IntProperty(description='Select max scale for UV bounds to pack into', default=1, min=1, max=10)
@@ -435,11 +443,11 @@ def unregister():
     del Scene.shotariya_mat_idx
     del Material.to_combine
     del Material.mat_index
+    del Material.to_tex
     del Scene.clear_mats
     del Scene.combined_path
     del Scene.shotariya_tex
     del Scene.shotariya_tex_idx
-    del Texture.to_save
     del Scene.clear_texs
     del Scene.tex_path
     del Scene.uv_size
