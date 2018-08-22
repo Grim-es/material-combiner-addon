@@ -34,9 +34,13 @@ material-combiner-addon
 
 
 ## PREVIEW
-![](http://webgrimes.com/Preview.png)
+![](http://webgrimes.com/Preview.png#)
 
 ## CHANGELOG
+#### 1.1.4
+1. Added combining materials by different IDs to be able to use different shaders but keep use one combined texture
+2. Fixed Save Textures by UVs wrong material selection
+3. Allow to work with multiple models, Hide models which you do not want to change
 #### 1.1.3
 1. Attention message on texture combining
 2. Some description added
