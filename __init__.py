@@ -192,8 +192,7 @@ class MaterialsList(UIList):
         row = layout.row()
         row.prop(mat, 'name', emboss=False, text='', icon_value=layout.icon(mat))
         sub_row = row.row()
-        sub_row.alignment = 'RIGHT'
-        sub_row.scale_x = .5
+        sub_row.scale_x = 0.2
         sub_row.prop(mat, 'mat_index', text='')
         row.prop(mat, 'to_combine', text='')
 
