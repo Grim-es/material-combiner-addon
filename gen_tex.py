@@ -102,7 +102,10 @@ class GenTex(bpy.types.Operator):
                                             for z in face_coords:
                                                 z.x = z.x / max_x
                                                 z.y = z.y / max_y
-
+                                work.append(True)
+        if not work:
+            self.report({'ERROR'}, 'All Selected texture UVs bounds are 0-1')
+            return {'FINISHED'}
         bpy.ops.shotariya.list_actions(action='GENERATE_MAT')
         bpy.ops.shotariya.list_actions(action='GENERATE_TEX')
         print('{} seconds passed'.format(time.time() - start_time))
