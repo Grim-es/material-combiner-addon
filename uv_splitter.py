@@ -148,28 +148,30 @@ class SplitUV(bpy.types.Operator):
         for face in obj.data.polygons:
             x = 0
             y = 0
-            face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
-            xi = min([x.x for x in face_coords])
-            yi = min([y.y for y in face_coords])
-            while xi >= 0.999:
-                xi -= 1
-                x -= 1
-            while yi >= 0.999:
-                yi -= 1
-                y -= 1
-            if x != 0:
-                for i in face_coords:
-                    i.x += x
-            if y != 0:
-                for i in face_coords:
-                    i.y += y
+            if face.loop_indices > 0:
+                face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
+                xi = min([x.x for x in face_coords])
+                yi = min([y.y for y in face_coords])
+                while xi >= 0.999:
+                    xi -= 1
+                    x -= 1
+                while yi >= 0.999:
+                    yi -= 1
+                    y -= 1
+                if x != 0:
+                    for i in face_coords:
+                        i.x += x
+                if y != 0:
+                    for i in face_coords:
+                        i.y += y
         for face in obj.data.polygons:
-            face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
-            xi = max([x.x for x in face_coords])
-            yi = max([y.y for y in face_coords])
-            if (xi > 1) or (yi > 1):
-                if cicled < 100:
-                    return True
+            if face.loop_indices > 0:
+                face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
+                xi = max([x.x for x in face_coords])
+                yi = max([y.y for y in face_coords])
+                if (xi > 1) or (yi > 1):
+                    if cicled < 100:
+                        return True
         for uv in obj.data.uv_layers:
             for vert in range(len(uv.data) - 1):
                 if math.isnan(uv.data[vert].uv.x):

@@ -86,14 +86,15 @@ class GenMat(bpy.types.Operator):
                             height = 0
                             for face in obj.data.polygons:
                                 if face.material_index == mat_index:
-                                    face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
-                                                   face.loop_indices]
-                                    max_width = max([z.x for z in face_coords])
-                                    max_height = max([z.y for z in face_coords])
-                                    if max_width > width:
-                                        width = max_width
-                                    if max_height > height:
-                                        height = max_height
+                                    if face.loop_indices > 0:
+                                        face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
+                                                       face.loop_indices]
+                                        max_width = max([z.x for z in face_coords])
+                                        max_height = max([z.y for z in face_coords])
+                                        if max_width > width:
+                                            width = max_width
+                                        if max_height > height:
+                                            height = max_height
                             if (width > 1) or (height > 1):
                                 broken_materials.append(mat.name)
         if broken_materials:
@@ -241,21 +242,7 @@ class GenMat(bpy.types.Operator):
                             if texture_path == img['path']:
                                 for face in obj.data.polygons:
                                     if face.material_index == i:
-                                        face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
-                                                       face.loop_indices]
-                                        for z in face_coords:
-                                            reset_x = z.x * (img['w'] - 2) / size[0]
-                                            reset_y = 1 + z.y * (img['h'] - 2) / size[1] - img['h'] / size[1]
-                                            z.x = reset_x + (img['fit']['x'] + 1) / size[0]
-                                            z.y = reset_y - (img['fit']['y'] - 1) / size[1]
-                                        face.material_index = obj.data.materials.find(mat_name)
-                                if mat.name not in mats:
-                                    mats.append(mat.name)
-                        else:
-                            if mat.to_combine:
-                                if img['path'] == mat.name:
-                                    for face in obj.data.polygons:
-                                        if face.material_index == i:
+                                        if face.loop_indices > 0:
                                             face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
                                                            face.loop_indices]
                                             for z in face_coords:
@@ -264,6 +251,22 @@ class GenMat(bpy.types.Operator):
                                                 z.x = reset_x + (img['fit']['x'] + 1) / size[0]
                                                 z.y = reset_y - (img['fit']['y'] - 1) / size[1]
                                             face.material_index = obj.data.materials.find(mat_name)
+                                if mat.name not in mats:
+                                    mats.append(mat.name)
+                        else:
+                            if mat.to_combine:
+                                if img['path'] == mat.name:
+                                    for face in obj.data.polygons:
+                                        if face.material_index == i:
+                                            if face.loop_indices > 0:
+                                                face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
+                                                               face.loop_indices]
+                                                for z in face_coords:
+                                                    reset_x = z.x * (img['w'] - 2) / size[0]
+                                                    reset_y = 1 + z.y * (img['h'] - 2) / size[1] - img['h'] / size[1]
+                                                    z.x = reset_x + (img['fit']['x'] + 1) / size[0]
+                                                    z.y = reset_y - (img['fit']['y'] - 1) / size[1]
+                                                face.material_index = obj.data.materials.find(mat_name)
                                     if mat.name not in mats:
                                         mats.append(mat.name)
                 for mater in mats:

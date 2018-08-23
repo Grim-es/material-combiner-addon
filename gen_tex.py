@@ -55,8 +55,9 @@ class GenTex(bpy.types.Operator):
                 mat_len = len(obj.material_slots)
                 mat_info = [[] for x in range(mat_len)]
                 for face in obj.data.polygons:
-                    face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
-                    mat_info[face.material_index].append(face_coords)
+                    if face.loop_indices > 0:
+                        face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
+                        mat_info[face.material_index].append(face_coords)
                 for index, faces in enumerate(mat_info):
                     x_list = [math.ceil(poly.x) for face in faces for poly in face if not math.isnan(poly.x)]
                     y_list = [math.ceil(poly.y) for face in faces for poly in face if not math.isnan(poly.y)]
@@ -103,11 +104,12 @@ class GenTex(bpy.types.Operator):
                                     tex_slot.texture = tex
                                     for face in obj.data.polygons:
                                         if face.material_index == index:
-                                            face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
-                                                           face.loop_indices]
-                                            for z in face_coords:
-                                                z.x = z.x / max_x
-                                                z.y = z.y / max_y
+                                            if face.loop_indices > 0:
+                                                face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
+                                                               face.loop_indices]
+                                                for z in face_coords:
+                                                    z.x = z.x / max_x
+                                                    z.y = z.y / max_y
                                 work.append(True)
         print(broken_links)
         if not work:
