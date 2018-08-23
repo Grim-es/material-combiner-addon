@@ -26,6 +26,7 @@ import os
 import sys
 import time
 import math
+import pathlib
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image
@@ -46,6 +47,7 @@ class GenTex(bpy.types.Operator):
             return {'FINISHED'}
         bpy.ops.shotariya.uv_fixer()
         work = []
+        broken_links = []
         for obj in context.scene.objects:
             if obj.type == 'MESH':
                 if not obj.data.uv_layers.active or obj.hide:
@@ -72,6 +74,10 @@ class GenTex(bpy.types.Operator):
                                 tex = tex_slot.texture
                                 if tex:
                                     img_name = bpy.path.abspath(tex.image.filepath).split(os.sep)[-1].split('.')[0]
+                                    check_for_file = pathlib.Path(bpy.path.abspath(tex.image.filepath))
+                                    if not check_for_file.is_file():
+                                        broken_links.append(img_name)
+                                        continue
                                     img = Image.open(bpy.path.abspath(tex.image.filepath))
                                     w, h = img.size
                                     max_x = max(x_list)
@@ -103,11 +109,17 @@ class GenTex(bpy.types.Operator):
                                                 z.x = z.x / max_x
                                                 z.y = z.y / max_y
                                 work.append(True)
+        print(broken_links)
         if not work:
             self.report({'ERROR'}, 'All Selected texture UVs bounds are 0-1')
             return {'FINISHED'}
         bpy.ops.shotariya.list_actions(action='GENERATE_MAT')
         bpy.ops.shotariya.list_actions(action='GENERATE_TEX')
+        if broken_links:
+            broken_links = ',\n    '.join([', '.join(broken_links[x:x + 5])
+                                           for x in range(0, len(broken_links), 5)])
+            self.report({'ERROR'}, 'Textures were combined\nFiles not found:\n    {}'.format(broken_links))
+            return {'FINISHED'}
         print('{} seconds passed'.format(time.time() - start_time))
         self.report({'INFO'}, 'Textures were created.')
         return{'FINISHED'}
