@@ -46,7 +46,6 @@ class GenTex(bpy.types.Operator):
             self.report({'ERROR'}, 'Please select Folder for Combined Texture')
             return {'FINISHED'}
         bpy.ops.shotariya.uv_fixer()
-        work = []
         broken_links = []
         for obj in context.scene.objects:
             if obj.type == 'MESH':
@@ -109,16 +108,12 @@ class GenTex(bpy.types.Operator):
                                                 for z in face_coords:
                                                     z.x = z.x / max_x
                                                     z.y = z.y / max_y
-                                work.append(True)
-        if not work:
-            self.report({'ERROR'}, 'All Selected texture UVs bounds are 0-1')
-            return {'FINISHED'}
         bpy.ops.shotariya.list_actions(action='GENERATE_MAT')
         bpy.ops.shotariya.list_actions(action='GENERATE_TEX')
         if broken_links:
             broken_links = ',\n    '.join([', '.join(broken_links[x:x + 5])
                                            for x in range(0, len(broken_links), 5)])
-            self.report({'ERROR'}, 'Textures were combined\nFiles not found:\n    {}'.format(broken_links))
+            self.report({'ERROR'}, 'Files not found:\n    {}'.format(broken_links))
             return {'FINISHED'}
         print('{} seconds passed'.format(time.time() - start_time))
         self.report({'INFO'}, 'Textures were created.')
