@@ -55,7 +55,7 @@ class GenTex(bpy.types.Operator):
                 mat_len = len(obj.material_slots)
                 mat_info = [[] for x in range(mat_len)]
                 for face in obj.data.polygons:
-                    if face.loop_indices > 0:
+                    if len(face.loop_indices) > 0:
                         face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
                         mat_info[face.material_index].append(face_coords)
                 for index, faces in enumerate(mat_info):
@@ -104,7 +104,7 @@ class GenTex(bpy.types.Operator):
                                     tex_slot.texture = tex
                                     for face in obj.data.polygons:
                                         if face.material_index == index:
-                                            if face.loop_indices > 0:
+                                            if len(face.loop_indices) > 0:
                                                 face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
                                                                face.loop_indices]
                                                 for z in face_coords:

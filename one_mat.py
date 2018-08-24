@@ -86,7 +86,7 @@ class GenMat(bpy.types.Operator):
                             height = 0
                             for face in obj.data.polygons:
                                 if face.material_index == mat_index:
-                                    if face.loop_indices > 0:
+                                    if len(face.loop_indices) > 0:
                                         face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
                                                        face.loop_indices]
                                         max_width = max([z.x for z in face_coords])
@@ -242,7 +242,7 @@ class GenMat(bpy.types.Operator):
                             if texture_path == img['path']:
                                 for face in obj.data.polygons:
                                     if face.material_index == i:
-                                        if face.loop_indices > 0:
+                                        if len(face.loop_indices) > 0:
                                             face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
                                                            face.loop_indices]
                                             for z in face_coords:
@@ -258,7 +258,7 @@ class GenMat(bpy.types.Operator):
                                 if img['path'] == mat.name:
                                     for face in obj.data.polygons:
                                         if face.material_index == i:
-                                            if face.loop_indices > 0:
+                                            if len(face.loop_indices) > 0:
                                                 face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
                                                                face.loop_indices]
                                                 for z in face_coords:

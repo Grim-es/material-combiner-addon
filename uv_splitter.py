@@ -148,7 +148,7 @@ class SplitUV(bpy.types.Operator):
         for face in obj.data.polygons:
             x = 0
             y = 0
-            if face.loop_indices > 0:
+            if len(face.loop_indices) > 0:
                 face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
                 xi = min([x.x for x in face_coords])
                 yi = min([y.y for y in face_coords])
@@ -165,7 +165,7 @@ class SplitUV(bpy.types.Operator):
                     for i in face_coords:
                         i.y += y
         for face in obj.data.polygons:
-            if face.loop_indices > 0:
+            if len(face.loop_indices) > 0:
                 face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
                 xi = max([x.x for x in face_coords])
                 yi = max([y.y for y in face_coords])
