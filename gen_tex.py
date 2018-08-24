@@ -92,7 +92,6 @@ class GenTex(bpy.types.Operator):
                                     if max_y > 64:
                                         max_y = 1
                                     result = Image.new('RGBA', (w * max_x, h * max_y))
-                                    print(result.size)
                                     for i in range(max_x):
                                         for j in range(max_y):
                                             x = i * w
@@ -111,7 +110,6 @@ class GenTex(bpy.types.Operator):
                                                     z.x = z.x / max_x
                                                     z.y = z.y / max_y
                                 work.append(True)
-        print(broken_links)
         if not work:
             self.report({'ERROR'}, 'All Selected texture UVs bounds are 0-1')
             return {'FINISHED'}
