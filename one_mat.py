@@ -155,6 +155,7 @@ class GenMat(bpy.types.Operator):
                     if obj.type == 'MESH':
                         if not obj.data.uv_layers.active or obj.hide:
                             continue
+                        scn.objects.active = obj
                         for m_mat, cs_mat in copies.items():
                             for c_mat in cs_mat:
                                 if m_mat.mat_index == c_mat.mat_index:
