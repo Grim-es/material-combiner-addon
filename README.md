@@ -38,6 +38,8 @@ material-combiner-addon
 ![](http://webgrimes.com/Preview.png#)
 
 ## CHANGELOG
+#### 1.1.6
+1. Some minor fixes
 #### 1.1.5
 1. Fixed same material combining
 2. Some minor fixes
