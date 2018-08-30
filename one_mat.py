@@ -55,6 +55,10 @@ class GenMat(bpy.types.Operator):
     bl_description = 'Combine selected materials'
     bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
 
+    @classmethod
+    def poll(cls, context):
+        return bpy.context.object.mode == 'OBJECT'
+
     def execute(self, context):
         start_time = time.time()
         files = []

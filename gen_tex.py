@@ -38,6 +38,10 @@ class GenTex(bpy.types.Operator):
     bl_description = ''
     bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
 
+    @classmethod
+    def poll(cls, context):
+        return bpy.context.object.mode == 'OBJECT'
+
     def execute(self, context):
         start_time = time.time()
         scn = context.scene
@@ -70,44 +74,45 @@ class GenTex(bpy.types.Operator):
                                         tex_slot = mat.texture_slots[j]
                                         break
                         if tex_slot:
-                            if (max(x_list) > 1) or (max(y_list) > 1):
-                                tex = tex_slot.texture
-                                if tex:
-                                    img_name = bpy.path.abspath(tex.image.filepath).split(os.sep)[-1].split('.')[0]
-                                    check_for_file = pathlib.Path(bpy.path.abspath(tex.image.filepath))
-                                    if not check_for_file.is_file():
-                                        broken_links.append(img_name)
-                                        continue
-                                    img = Image.open(bpy.path.abspath(tex.image.filepath))
-                                    w, h = img.size
-                                    max_x = max(x_list)
-                                    max_y = max(y_list)
-                                    if max_x == 0:
-                                        max_x = 1
-                                    if max_y == 0:
-                                        max_y = 1
-                                    if max_x > 64:
-                                        max_x = 1
-                                    if max_y > 64:
-                                        max_y = 1
-                                    result = Image.new('RGBA', (w * max_x, h * max_y))
-                                    for i in range(max_x):
-                                        for j in range(max_y):
-                                            x = i * w
-                                            y = j * h
-                                            result.paste(img, (x, y, x + w, y + h))
-                                    result.save(os.path.join(save_path, img_name + '_uv.png'), 'PNG')
-                                    tex = bpy.data.textures.new(img_name + '_uv', 'IMAGE')
-                                    tex.image = bpy.data.images.load(os.path.join(save_path, img_name + '_uv.png'))
-                                    tex_slot.texture = tex
-                                    for face in obj.data.polygons:
-                                        if face.material_index == index:
-                                            if len(face.loop_indices) > 0:
-                                                face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
-                                                               face.loop_indices]
-                                                for z in face_coords:
-                                                    z.x = z.x / max_x
-                                                    z.y = z.y / max_y
+                            if x_list and y_list:
+                                if (max(x_list) > 1) or (max(y_list) > 1):
+                                    tex = tex_slot.texture
+                                    if tex:
+                                        img_name = bpy.path.abspath(tex.image.filepath).split(os.sep)[-1].split('.')[0]
+                                        check_for_file = pathlib.Path(bpy.path.abspath(tex.image.filepath))
+                                        if not check_for_file.is_file():
+                                            broken_links.append(img_name)
+                                            continue
+                                        img = Image.open(bpy.path.abspath(tex.image.filepath))
+                                        w, h = img.size
+                                        max_x = max(x_list)
+                                        max_y = max(y_list)
+                                        if max_x == 0:
+                                            max_x = 1
+                                        if max_y == 0:
+                                            max_y = 1
+                                        if max_x > 64:
+                                            max_x = 1
+                                        if max_y > 64:
+                                            max_y = 1
+                                        result = Image.new('RGBA', (w * max_x, h * max_y))
+                                        for i in range(max_x):
+                                            for j in range(max_y):
+                                                x = i * w
+                                                y = j * h
+                                                result.paste(img, (x, y, x + w, y + h))
+                                        result.save(os.path.join(save_path, img_name + '_uv.png'), 'PNG')
+                                        tex = bpy.data.textures.new(img_name + '_uv', 'IMAGE')
+                                        tex.image = bpy.data.images.load(os.path.join(save_path, img_name + '_uv.png'))
+                                        tex_slot.texture = tex
+                                        for face in obj.data.polygons:
+                                            if face.material_index == index:
+                                                if len(face.loop_indices) > 0:
+                                                    face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
+                                                                   face.loop_indices]
+                                                    for z in face_coords:
+                                                        z.x = z.x / max_x
+                                                        z.y = z.y / max_y
         bpy.ops.shotariya.list_actions(action='GENERATE_MAT')
         bpy.ops.shotariya.list_actions(action='GENERATE_TEX')
         if broken_links:

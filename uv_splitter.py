@@ -33,6 +33,10 @@ class SplitUV(bpy.types.Operator):
     bl_description = ''
     bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
 
+    @classmethod
+    def poll(cls, context):
+        return bpy.context.object.mode == 'OBJECT'
+
     def split(self, uv_size, obj, cicled):
         bpy.ops.shotariya.uv_fixer()
         mesh = obj.data
