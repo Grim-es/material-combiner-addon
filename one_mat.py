@@ -244,21 +244,22 @@ class GenMat(bpy.types.Operator):
                                         break
                         if tex_slot:
                             tex = tex_slot.texture
-                            texture_path = bpy.path.abspath(tex.image.filepath)
-                            if texture_path == img['path']:
-                                for face in obj.data.polygons:
-                                    if face.material_index == i:
-                                        if len(face.loop_indices) > 0:
-                                            face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
-                                                           face.loop_indices]
-                                            for z in face_coords:
-                                                reset_x = z.x * (img['w'] - 2) / size[0]
-                                                reset_y = 1 + z.y * (img['h'] - 2) / size[1] - img['h'] / size[1]
-                                                z.x = reset_x + (img['fit']['x'] + 1) / size[0]
-                                                z.y = reset_y - (img['fit']['y'] - 1) / size[1]
-                                            face.material_index = obj.data.materials.find(mat_name)
-                                if mat.name not in mats:
-                                    mats.append(mat.name)
+                            if tex.image:
+                                texture_path = bpy.path.abspath(tex.image.filepath)
+                                if texture_path == img['path']:
+                                    for face in obj.data.polygons:
+                                        if face.material_index == i:
+                                            if len(face.loop_indices) > 0:
+                                                face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in
+                                                               face.loop_indices]
+                                                for z in face_coords:
+                                                    reset_x = z.x * (img['w'] - 2) / size[0]
+                                                    reset_y = 1 + z.y * (img['h'] - 2) / size[1] - img['h'] / size[1]
+                                                    z.x = reset_x + (img['fit']['x'] + 1) / size[0]
+                                                    z.y = reset_y - (img['fit']['y'] - 1) / size[1]
+                                                face.material_index = obj.data.materials.find(mat_name)
+                                    if mat.name not in mats:
+                                        mats.append(mat.name)
                         else:
                             if mat.to_combine:
                                 if img['path'] == mat.name:
