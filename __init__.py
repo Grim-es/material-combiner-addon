@@ -43,7 +43,7 @@ bl_info = {
     'author': 'shotariya (shotariya#4269)',
     'location': 'View 3D > Tool Shelf > Shotariya-don',
     'description': 'Tool with some functions',
-    'version': [1, 1, 6],
+    'version': [1, 1, '6b'],
     'blender': (2, 79, 0),
     'wiki_url': 'https://github.com/Grim-es/material-combiner-addon/blob/master/README.md',
     'tracker_url': 'https://discordapp.com/users/275608234595713024',
