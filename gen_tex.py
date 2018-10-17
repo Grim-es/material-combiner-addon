@@ -40,7 +40,7 @@ class GenTex(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return bpy.context.object.mode == 'OBJECT'
+        return bpy.context.mode == 'OBJECT'
 
     def execute(self, context):
         start_time = time.time()
