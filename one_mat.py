@@ -23,14 +23,11 @@
 
 import bpy
 import os
-import sys
 import time
 import random
 import pathlib
-from .Packer import Packer
-
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from PIL import Image
+from . Packer import Packer
+from . PIL import Image
 
 
 class L(list):
