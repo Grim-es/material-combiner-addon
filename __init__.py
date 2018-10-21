@@ -272,7 +272,7 @@ class ExecuteMat(Operator):
 
     @classmethod
     def poll(cls, context):
-        return bpy.context.object.mode == 'OBJECT'
+        return bpy.context.mode == 'OBJECT'
 
     def show_message(self, context):
         def draw(self, context):
