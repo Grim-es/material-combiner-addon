@@ -26,6 +26,7 @@ import os
 import time
 import math
 import pathlib
+from collections import defaultdict
 from . PIL import Image
 
 
@@ -52,13 +53,12 @@ class GenTex(bpy.types.Operator):
             if obj.type == 'MESH':
                 if not obj.data.uv_layers.active or obj.hide:
                     continue
-                mat_len = len(obj.material_slots)
-                mat_info = [[] for x in range(mat_len)]
+                mat_info = defaultdict(list)
                 for face in obj.data.polygons:
                     if len(face.loop_indices) > 0:
                         face_coords = [obj.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
                         mat_info[face.material_index].append(face_coords)
-                for index, faces in enumerate(mat_info):
+                for index, faces in mat_info.items():
                     x_list = [math.ceil(poly.x) for face in faces for poly in face if not math.isnan(poly.x)]
                     y_list = [math.ceil(poly.y) for face in faces for poly in face if not math.isnan(poly.y)]
                     mat = obj.material_slots[index].material
