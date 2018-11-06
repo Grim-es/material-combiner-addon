@@ -33,6 +33,7 @@ from ._util import py3
 import logging
 import warnings
 import math
+import importlib
 
 logger = logging.getLogger(__name__)
 
@@ -415,7 +416,7 @@ def init():
     for plugin in _plugins:
         try:
             logger.debug("Importing %s", plugin)
-            __import__("PIL.%s" % plugin, globals(), locals(), [])
+            importlib.import_module("material-combiner-addon.PIL.%s" % plugin)
         except ImportError as e:
             logger.debug("Image: failed to import %s: %s", plugin, e)
 
