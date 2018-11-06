@@ -23,7 +23,10 @@
 
 import bpy
 import os
+import sys
 import importlib
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__))) 
 
 from bpy.props import *
 from bpy.app.handlers import persistent
