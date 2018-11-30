@@ -82,12 +82,8 @@ class GenTex(bpy.types.Operator):
                                             continue
                                         img = Image.open(bpy.path.abspath(tex.image.filepath))
                                         w, h = img.size
-                                        max_x = max(x_list)
-                                        max_y = max(y_list)
-                                        if max_x == 0:
-                                            max_x = 1
-                                        if max_y == 0:
-                                            max_y = 1
+                                        max_x = max(max(x_list), 1)
+                                        max_y = max(max(y_list), 1)
                                         if max_x > 64:
                                             max_x = 1
                                         if max_y > 64:
