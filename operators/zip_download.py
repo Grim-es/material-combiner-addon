@@ -13,10 +13,12 @@ class OpenBrowser(bpy.types.Operator):
     link = StringProperty(default='')
 
     def execute(self, context):
-        libs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, 'libs')
+        assets_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, 'assets')
+        if not os.path.exists(assets_path):
+            os.makedirs(assets_path)
         resp = urlopen(self.link)
         zipfile = ZipFile(BytesIO(resp.read()))
-        zipfile.extractall(libs_path)
+        zipfile.extractall(assets_path)
         zipfile.close()
         self.report({'INFO'}, 'Download Complete')
         return {'FINISHED'}
