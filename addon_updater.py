@@ -27,7 +27,6 @@ import ssl
 import urllib.request
 import urllib
 import os
-import re
 import json
 import zipfile
 import shutil
@@ -868,10 +867,9 @@ class Singleton_updater(object):
                 error = "failed to create clean existing addon folder"
                 print(error, str(error))
 
-        exclude = {self._updater_path, self._assets}
-
         for path, dirs, files in os.walk(base):
-            dirs[:] = [d for d in dirs if d not in exclude]
+            dirs[:] = [d for d in dirs if os.path.join(path, d) not in self._updater_path]
+            dirs[:] = [d for d in dirs if os.path.join(path, d) not in self._assets]
             for file in files:
                 for ptrn in self.remove_pre_update_patterns:
                     if fnmatch.filter([file], ptrn):
@@ -884,7 +882,8 @@ class Singleton_updater(object):
                             print("Failed to pre-remove "+file)
 
         for path, dirs, files in os.walk(merger):
-            dirs[:] = [d for d in dirs if d not in exclude]
+            dirs[:] = [d for d in dirs if os.path.join(path, d) not in self._updater_path]
+            dirs[:] = [d for d in dirs if os.path.join(path, d) not in self._assets]
             relPath = os.path.relpath(path, merger)
             destPath = os.path.join(base, relPath)
             if not os.path.exists(destPath):
