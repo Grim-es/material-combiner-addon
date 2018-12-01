@@ -32,14 +32,19 @@ bl_info = {
     'wiki_url': 'https://vrcat.club/threads/material-combiner-blender-addon.2255/',
     'category': 'Object'}
 
+import bpy
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets'))
+if 'pip' not in sys.modules:
+    os.system('{} "{}"'.format(bpy.app.binary_path_python,
+                               os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py')))
+
+os.system('{} -m pip install Pillow -U'.format(bpy.app.binary_path_python))
+
 
 from . import developer_utils
 modules = developer_utils.setup_addon_modules(__path__, __name__, 'bpy' in locals())
 
-import bpy
 import bpy.utils.previews
 from . registration import register_all, unregister_all
 

@@ -113,7 +113,6 @@ class Singleton_updater(object):
         self._addon = __package__.lower()
         self._addon_package = __package__  # must not change
         self._updater_path = os.path.join(os.path.dirname(__file__), self._addon+"_updater")
-        self._assets = os.path.join(os.path.dirname(__file__), "assets")
         self._addon_root = os.path.dirname(__file__)
         self._json = {}
         self._error = None
@@ -869,7 +868,6 @@ class Singleton_updater(object):
 
         for path, dirs, files in os.walk(base):
             dirs[:] = [d for d in dirs if os.path.join(path, d) not in self._updater_path]
-            dirs[:] = [d for d in dirs if os.path.join(path, d) not in self._assets]
             for file in files:
                 for ptrn in self.remove_pre_update_patterns:
                     if fnmatch.filter([file], ptrn):
@@ -883,7 +881,6 @@ class Singleton_updater(object):
 
         for path, dirs, files in os.walk(merger):
             dirs[:] = [d for d in dirs if os.path.join(path, d) not in self._updater_path]
-            dirs[:] = [d for d in dirs if os.path.join(path, d) not in self._assets]
             relPath = os.path.relpath(path, merger)
             destPath = os.path.join(base, relPath)
             if not os.path.exists(destPath):
