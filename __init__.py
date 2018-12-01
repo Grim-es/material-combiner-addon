@@ -34,8 +34,9 @@ bl_info = {
 
 import bpy
 import os
-import sys
-if 'pip' not in sys.modules:
+try:
+    import pip
+except:
     os.system('{} "{}"'.format(bpy.app.binary_path_python,
                                os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py')))
 
