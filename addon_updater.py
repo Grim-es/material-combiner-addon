@@ -112,8 +112,8 @@ class Singleton_updater(object):
 		# get from module data
 		self._addon = __package__.lower()
 		self._addon_package = __package__  # must not change
-		self._updater_path = os.path.join(os.path.dirname(__file__),
-										self._addon+"_updater")
+		self._updater_path = os.path.join(os.path.dirname(__file__), self._addon+"_updater")
+		self._assets = os.path.join(os.path.dirname(__file__), "assets")
 		self._addon_root = os.path.dirname(__file__)
 		self._json = {}
 		self._error = None
@@ -850,7 +850,7 @@ class Singleton_updater(object):
 		# note: will not delete the update.json, update folder, staging, or staging
 		# but will delete all other folders/files in addon directory
 		error = None
-		if clean==True:
+		if clean:
 			try:
 				# implement clearing of all folders/files, except the
 				# updater folder and updater json
@@ -867,24 +867,25 @@ class Singleton_updater(object):
 					os.remove(os.path.join(base,f))
 					print("Clean removing file {}".format(os.path.join(base,f)))
 				for f in folders:
-					if os.path.join(base,f)==self._updater_path: continue
-					shutil.rmtree(os.path.join(base,f))
-					print("Clean removing folder and contents {}".format(os.path.join(base,f)))
+					if os.path.join(base, f) == any([self._updater_path, self._assets]): continue
+					shutil.rmtree(os.path.join(base, f))
+					print("Clean removing folder and contents {}".format(os.path.join(base, f)))
 
 			except error:
 				error = "failed to create clean existing addon folder"
-				print(error,str(e))
+				print(error, str(error))
 
 		# Walk through the base addon folder for rules on pre-removing
 		# but avoid removing/altering backup and updater file
 		for path, dirs, files in os.walk(base):
 			# prune ie skip updater folder
-			dirs[:] = [d for d in dirs if os.path.join(path,d) not in [self._updater_path]]
+			dirs[:] = [d for d in dirs if os.path.join(path, d) not in self._updater_path or self._assets]
+			print(self._assets, '\n', self._updater_path)
 			for file in files:
 				for ptrn in self.remove_pre_update_patterns:
-					if fnmatch.filter([file],ptrn):
+					if fnmatch.filter([file], ptrn):
 						try:
-							fl = os.path.join(path,file)
+							fl = os.path.join(path, file)
 							os.remove(fl)
 							if self._verbose: print("Pre-removed file "+file)
 						except OSError:
@@ -896,7 +897,7 @@ class Singleton_updater(object):
 		# actual file copying/replacements
 		for path, dirs, files in os.walk(merger):
 			# verify this structure works to prune updater sub folder overwriting
-			dirs[:] = [d for d in dirs if os.path.join(path,d) not in [self._updater_path]]
+			dirs[:] = [d for d in dirs if os.path.join(path,d) not in self._updater_path or self._assets]
 			relPath = os.path.relpath(path, merger)
 			destPath = os.path.join(base, relPath)
 			if not os.path.exists(destPath):
@@ -910,10 +911,10 @@ class Singleton_updater(object):
 				# decide whether to replace if file already exists, and copy new over
 				if os.path.isfile(destFile):
 					# otherwise, check each file to see if matches an overwrite pattern
-					replaced=False
+					replaced = False
 					for ptrn in self._overwrite_patterns:
-						if fnmatch.filter([destFile],ptrn):
-							replaced=True
+						if fnmatch.filter([destFile], ptrn):
+							replaced = True
 							break
 					if replaced:
 						os.remove(destFile)
@@ -933,11 +934,10 @@ class Singleton_updater(object):
 			error = "Error: Failed to remove existing staging directory, consider manually removing "+staging_path
 			if self._verbose: print(error)
 
-
 	def reload_addon(self):
 		# if post_update false, skip this function
 		# else, unload/reload addon & trigger popup
-		if self._auto_reload_post_update == False:
+		if self._auto_reload_post_update is False:
 			print("Restart blender to reload addon and complete update")
 			return
 

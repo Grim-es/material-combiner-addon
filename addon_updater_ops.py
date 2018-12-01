@@ -810,7 +810,8 @@ def update_settings_ui(self, context, element=None):
 	if updater.auto_reload_post_update is False:
 		saved_state = updater.json
 		if "just_updated" in saved_state and saved_state["just_updated"] is True:
-			row.label("Restart Blender to complete update.", icon="ERROR")
+			col.separator()
+			col.label("Restart Blender to complete update.", icon="ERROR")
 			return
 
 	row = box.row()
@@ -1057,7 +1058,7 @@ def register():
 	updater.backup_ignore_patterns = ["*"]
 	updater.overwrite_patterns = ["*"]
 	updater.remove_pre_update_patterns = ["*"]
-	updater.include_branches = True
+	updater.include_branches = False
 	updater.use_releases = False
 	updater.include_branch_list = [""]
 	updater.manual_only = False
