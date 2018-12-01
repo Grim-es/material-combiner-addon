@@ -2,7 +2,10 @@ import bpy
 import os
 import math
 import random
-from PIL import Image, ImageChops
+try:
+    from PIL import Image, ImageChops
+except ImportError(Image, ImageChops):
+    pass
 from collections import defaultdict
 from ... utils . materials import get_texture, get_diffuse
 from ... utils . textures import tex_path

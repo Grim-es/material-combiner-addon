@@ -1,5 +1,10 @@
 import bpy
 from .. icons import get_icon_id
+try:
+    import PIL
+    pil_exist = True
+except ImportError:
+    pil_exist = True
 
 
 class MaterialMenu(bpy.types.Panel):
@@ -55,7 +60,13 @@ class MaterialMenu(bpy.types.Panel):
                         box_col.prop(scn, 'smc_size_height')
                     box.prop(scn, 'smc_compress', text='Compress combined image')
                     col = layout.column()
-                    col.operator('smc.combiner', icon_value=get_icon_id('null'))
+                    if pil_exist:
+                        col.operator('smc.combiner', icon_value=get_icon_id('null'))
+                    else:
+                        col.label('Pillow is not installed, please', icon='ERROR')
+                        col.label('check your internet connection.', icon_value=get_icon_id('null'))
+                        col.label('If error still occur, use options to', icon_value=get_icon_id('help'))
+                        col.label('report on the "Credits" window.', icon_value=get_icon_id('null'))
                     col.operator('smc.combine_menu_type', text='Back', icon_value=get_icon_id('null'))
             else:
                 col.label('No materials found.', icon_value=get_icon_id('no_data'))
