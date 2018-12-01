@@ -4,7 +4,7 @@ import math
 import random
 try:
     from PIL import Image, ImageChops
-except ImportError(Image, ImageChops):
+except ImportError:
     pass
 from collections import defaultdict
 from ... utils . materials import get_texture, get_diffuse

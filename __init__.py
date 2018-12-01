@@ -40,7 +40,7 @@ except ImportError:
     os.system('"{}" "{}"'.format(bpy.app.binary_path_python,
                                  os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py')))
 try:
-    os.system('"{}" -m pip install Pillow -U'.format(bpy.app.binary_path_python))
+    os.system('"{}" -m pip install Pillow --user --upgrade'.format(bpy.app.binary_path_python))
 except Exception as e:
     print(e)
     pass
