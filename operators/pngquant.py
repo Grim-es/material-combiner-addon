@@ -12,7 +12,7 @@ class OpenBrowser(bpy.types.Operator):
         scn = context.scene
         pngquant = os.path.abspath(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, 'assets', 'pngquant', 'pngquant.exe'))
-        if not os.path.isfile(os.path.join(pngquant)):
+        if not os.path.isfile(pngquant):
             bpy.ops.smc.zip_download(link='https://pngquant.org/pngquant-windows.zip')
         command = '"{}" -f --ext .png --skip-if-larger -v "{}"'.format(pngquant, scn.smc_save_path)
         call(command, shell=True)
