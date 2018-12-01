@@ -36,12 +36,14 @@ import bpy
 import os
 try:
     import pip
-except:
-    os.system('{} "{}"'.format(bpy.app.binary_path_python,
-                               os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py')))
-
-os.system('{} -m pip install Pillow -U'.format(bpy.app.binary_path_python))
-
+except ImportError:
+    os.system('"{}" "{}"'.format(bpy.app.binary_path_python,
+                                 os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py')))
+try:
+    os.system('"{}" -m pip install Pillow -U'.format(bpy.app.binary_path_python))
+except Exception as e:
+    print(e)
+    pass
 
 from . import developer_utils
 modules = developer_utils.setup_addon_modules(__path__, __name__, 'bpy' in locals())
