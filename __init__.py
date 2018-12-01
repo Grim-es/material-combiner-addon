@@ -43,7 +43,6 @@ try:
     os.system('"{}" -m pip install Pillow --user --upgrade'.format(bpy.app.binary_path_python))
 except Exception as e:
     print(e)
-    pass
 
 from . import developer_utils
 modules = developer_utils.setup_addon_modules(__path__, __name__, 'bpy' in locals())
