@@ -8,13 +8,13 @@ except ImportError:
     pass
 from collections import defaultdict
 from ... utils . materials import get_texture, get_diffuse
-from ... utils . textures import tex_path
+from ... utils . textures import tex_img, tex_path
 
 
 def get_materials_uv(scn):
     uv = defaultdict(list)
     for i in scn.smc_ob_data:
-        if (i.type == 0) and i.used:
+        if (i.data_type == 0) and i.used:
             for face in i.ob.data.polygons:
                 face_uv = [i.ob.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
                 min_x = min([math.floor(uv.x) for uv in face_uv if not math.isnan(uv.x)])
@@ -32,9 +32,10 @@ def get_materials_uv(scn):
 def get_materials_data(scn, uv):
     data = []
     for i in scn.smc_ob_data:
-        if (i.type == 1) and i.used and not any((x['mat'] == i.mat) or (i.mat in x['duplicates']) for x in data):
+        if (i.data_type == 1) and i.used and not any((x['mat'] == i.mat) or (i.mat in x['duplicates']) for x in data):
             if i.mat in uv:
-                path = tex_path(get_texture(i.mat))
+                img = tex_img(get_texture(i.mat))
+                path = tex_path(img)
                 diffuse = get_diffuse(i.mat)
                 root_data = next((x for x in data if (x['path'] == path) and (x['diffuse'] == diffuse)), None)
                 if root_data:
@@ -44,6 +45,7 @@ def get_materials_data(scn, uv):
                     data.append({
                         'mat': i.mat,
                         'uv': uv[i.mat],
+                        'tex_img': img,
                         'path': path,
                         'diffuse': diffuse,
                         'duplicates': [],
@@ -73,8 +75,9 @@ def fill_uv(data):
                             h * i['img'].size[1] + i['img'].size[1]
                         ))
                 i['img'] = uv_img
-            diffuse_img = Image.new('RGBA', (i['img'].size[0], i['img'].size[1]), i['diffuse'])
-            i['img'] = ImageChops.multiply(i['img'], diffuse_img)
+            if i['mat'].smc_diffuse:
+                diffuse_img = Image.new('RGBA', (i['img'].size[0], i['img'].size[1]), i['diffuse'])
+                i['img'] = ImageChops.multiply(i['img'], diffuse_img)
         else:
             i['img'] = Image.new('RGBA', (8, 8), i['diffuse'])
         i['w'] = i['img'].size[0]
@@ -97,14 +100,46 @@ def create_atlas(scn, data):
                 i['fit']['y'] + i['h']
             ))
     if scn.smc_size == 'CUST':
-        img.thumbnail(size=(scn.smc_size_width, scn.smc_size_height))
-    return img, size
+        img.thumbnail((scn.smc_size_width, scn.smc_size_height), Image.ANTIALIAS)
+    return [img], size
+
+
+def create_multi_atlas(scn, data, size):
+    if scn.smc_size == 'PO2':
+        size = (max(size),) * 2
+    amt = max([len(i['tex_img'].smc_img_list) for i in data])
+    img_list = []
+    for n in range(amt):
+        img = Image.new('RGBA', size)
+        for i in data:
+            if i['fit']:
+                if n <= len(i['tex_img'].smc_img_list) - 1:
+                    if i['tex_img'].smc_img_list[n]['img_type'] == 1:
+                            diffuse = i['tex_img'].smc_img_list[n]['img_color']
+                            diffuse_img = Image.new('RGBA', (i['w'], i['h']), (int(diffuse[0] * 255),
+                                                                               int(diffuse[1] * 255),
+                                                                               int(diffuse[2] * 255)))
+                            r_img = Image.open(i['tex_img'].smc_img_list[n]['img_path']).convert(
+                                'RGBA').resize((i['w'], i['h']), Image.ANTIALIAS)
+                            r_img = ImageChops.multiply(r_img, diffuse_img)
+                            img.paste(r_img, (i['fit']['x'], i['fit']['y'],
+                                              i['fit']['x'] + i['w'], i['fit']['y'] + i['h']))
+                    elif i['tex_img'].smc_img_list[n]['img_type'] == 2:
+                        diffuse = i['tex_img'].smc_img_list[n]['img_color']
+                        img.paste((int(diffuse[0] * 255), int(diffuse[1] * 255), int(diffuse[2] * 255)),
+                                  (i['fit']['x'], i['fit']['y'], i['fit']['x'] + i['w'], i['fit']['y'] + i['h']))
+        if scn.smc_size == 'CUST':
+            img.thumbnail((scn.smc_size_width, scn.smc_size_height), Image.ANTIALIAS)
+        img_list.append(img)
+    return img_list
 
 
 def create_combined_mat(scn, img):
     unique_id = str(random.randrange(9999999999))
-    path = os.path.join(os.path.dirname(bpy.data.filepath), 'combined_image_{}.png'.format(unique_id))
+    path = os.path.dirname(bpy.data.filepath)
     scn.smc_save_path = path
+    for idx, i in enumerate(img):
+        i.save(os.path.join(scn.smc_save_path, 'combined_image_{}_{}.png'.format(idx, unique_id)))
     mat = bpy.data.materials.new(name='combined_material_{}'.format(unique_id))
     mat.texture_slots.add().texture = bpy.data.textures.new('combined_texture_{}'.format(unique_id), 'IMAGE')
     mat.use_shadeless = True
@@ -112,16 +147,16 @@ def create_combined_mat(scn, img):
     mat.use_transparency = True
     mat.diffuse_color = (1, 1, 1)
     mat.texture_slots[0].use_map_alpha = True
-    img.save(str(path))
-    mat.texture_slots[0].texture.image = bpy.data.images.load(path)
-    return mat
+    mat.texture_slots[0].texture.image = bpy.data.images.load(
+        os.path.join(scn.smc_save_path, 'combined_image_0_{}.png'.format(unique_id)))
+    return mat, unique_id
 
 
 def combine_uv(scn, data, size, mat):
     for i in scn.smc_ob_data:
-        if (i.type == 0) and i.used:
+        if (i.data_type == 0) and i.used:
             i.ob.data.materials.append(mat)
-        if (i.type == 1) and i.used:
+        if (i.data_type == 1) and i.used:
             i_data = next((x for x in data if (x['mat'] == i.mat) or (i.mat in x['duplicates'])), None)
             mat_idx = i.ob.data.materials.find(i.mat.name)
             for face in i.ob.data.polygons:
@@ -140,7 +175,7 @@ def combine_uv(scn, data, size, mat):
 def combine_copies(scn, data):
     bpy.ops.smc.refresh_ob_data()
     for i in scn.smc_ob_data:
-        if (i.type == 1) and i.used:
+        if (i.data_type == 1) and i.used:
             if data[0]['mat'] != i.mat:
                 mat_idx = i.ob.data.materials.find(i.mat.name)
                 for face in i.ob.data.polygons:

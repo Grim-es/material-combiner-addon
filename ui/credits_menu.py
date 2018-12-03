@@ -1,4 +1,5 @@
 import bpy
+from .. import bl_info
 from .. icons import get_icon_id
 
 
@@ -16,7 +17,7 @@ class CreditsMenu(bpy.types.Panel):
         m_col = layout.column()
         box = m_col.box()
         col = box.column(align=True)
-        col.label('Material Combiner (2.0.1)', icon_value=get_icon_id('smc'))
+        col.label('Material Combiner ({})'.format(bl_info['version']), icon_value=get_icon_id('smc'))
         col.separator()
         col.label('Author: shotariya')
         col.separator()

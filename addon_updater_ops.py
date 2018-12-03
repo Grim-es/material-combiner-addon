@@ -52,7 +52,7 @@ except Exception as e:
 # Must declare this before classes are loaded
 # otherwise the bl_idname's will not match and have errors.
 # Must be all lowercase and no spaces
-updater.addon = "material_combiner"
+updater.addon = 'smc'
 
 
 # -----------------------------------------------------------------------------
@@ -160,7 +160,6 @@ class addon_updater_install_popup(bpy.types.Operator):
         return {'FINISHED'}
 
 
-# User preference check-now operator
 class addon_updater_check_now(bpy.types.Operator):
     bl_label = "Check for updates"
     bl_idname = updater.addon+".updater_check_now"
@@ -183,7 +182,10 @@ class addon_updater_check_now(bpy.types.Operator):
                     minutes=settings.updater_intrval_minutes
                     )
         updater.check_for_update_now(ui_refresh)
-
+        try:
+            os.system('"{}" -m pip install Pillow --user --upgrade'.format(bpy.app.binary_path_python))
+        except:
+            pass
         return {'FINISHED'}
 
 
