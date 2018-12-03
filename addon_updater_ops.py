@@ -175,7 +175,7 @@ class addon_updater_check_now(bpy.types.Operator):
             return {'CANCELLED'}
 
         settings = context.user_preferences.addons[__package__].preferences
-        updater.set_check_interval(enable=settings.auto_check_update,
+        updater.set_check_interval(enable=True,
                     months=settings.updater_intrval_months,
                     days=settings.updater_intrval_days,
                     hours=settings.updater_intrval_hours,
@@ -665,7 +665,7 @@ def check_for_update_background():
     if not addon_prefs:
         return
     settings = addon_prefs.preferences
-    updater.set_check_interval(enable=settings.auto_check_update,
+    updater.set_check_interval(enable=True,
                 months=settings.updater_intrval_months,
                 days=settings.updater_intrval_days,
                 hours=settings.updater_intrval_hours,
@@ -693,7 +693,7 @@ def check_for_update_nonthreaded(self, context):
     # should be the async wrapper call here
 
     settings = context.user_preferences.addons[__package__].preferences
-    updater.set_check_interval(enable=settings.auto_check_update,
+    updater.set_check_interval(enable=True,
                 months=settings.updater_intrval_months,
                 days=settings.updater_intrval_days,
                 hours=settings.updater_intrval_hours,
