@@ -16,11 +16,11 @@ def get_icon(identifier):
     return smc_icons.load(identifier, os.path.join(icons_directory, identifier + '.png'), 'IMAGE')
 
 
-def get_tex_icon_id(identifier, path):
-    return get_tex_icon(identifier, path).icon_id
+def get_img_icon_id(identifier, path):
+    return get_img_icon(identifier, path).icon_id
 
 
-def get_tex_icon(identifier, path):
+def get_img_icon(identifier, path):
     if identifier in smc_icons:
         return smc_icons[identifier]
     return smc_icons.load(identifier, path, 'IMAGE')

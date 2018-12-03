@@ -25,7 +25,7 @@ bl_info = {
     'name': 'Shotariya\'s Material Combiner',
     'description': 'Public Release Material Combiner 2',
     'author': 'shotariya',
-    'version': (2, 0, 1, 4),
+    'version': (2, 0, 2, 0),
     'blender': (2, 79, 0),
     'location': 'View3D',
     # 'warning': '',
@@ -40,9 +40,9 @@ except ImportError:
     os.system('"{}" "{}"'.format(bpy.app.binary_path_python,
                                  os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py')))
 try:
+    from PIL import Image
+except ImportError:
     os.system('"{}" -m pip install Pillow --user --upgrade'.format(bpy.app.binary_path_python))
-except Exception as e:
-    print(e)
 
 from . import developer_utils
 modules = developer_utils.setup_addon_modules(__path__, __name__, 'bpy' in locals())

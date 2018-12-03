@@ -2,8 +2,8 @@ import bpy
 import os
 from time import time
 from bpy.props import *
-from . operators import get_materials_uv, get_materials_data, fill_uv
-from . operators import create_atlas, create_combined_mat, combine_uv, combine_copies
+from . operators import get_materials_uv, get_materials_data, fill_uv, create_atlas
+from . operators import create_multi_atlas, create_combined_mat, combine_uv, combine_copies
 from . packing import BinPacker
 
 
@@ -43,7 +43,6 @@ class Combiner(bpy.types.Operator):
         cur_time = time()
         data = get_materials_data(scn, uv)
         print('get_materials_data: {}'.format(time() - cur_time))
-        print(len(data), data[0]['duplicates'])
         if (len(data) == 1) and data[0]['duplicates']:
             combine_copies(scn, data)
             bpy.ops.smc.refresh_ob_data()
@@ -58,15 +57,20 @@ class Combiner(bpy.types.Operator):
         cur_time = time()
         img, size = create_atlas(scn, data)
         print('create_atlas: {}'.format(time() - cur_time))
+        if scn.smc_multi:
+            cur_time = time()
+            img += create_multi_atlas(scn, data, size)
+            print('create_multi_atlas: {}'.format(time() - cur_time))
         cur_time = time()
-        mat = create_combined_mat(scn, img)
+        mat, unique_id = create_combined_mat(scn, img)
         print('comb_mat: {}'.format(time() - cur_time))
         cur_time = time()
         combine_uv(scn, data, size, mat)
         print('combine_uv: {}'.format(time() - cur_time))
         if os.name == 'nt' and scn.smc_compress:
             cur_time = time()
-            bpy.ops.smc.compress()
+            for idx in range(len(img)):
+                bpy.ops.smc.compress(file='combined_image_{}_{}.png'.format(idx, unique_id))
             print('Compression: {}'.format(time() - cur_time))
         bpy.ops.smc.refresh_ob_data()
         print('{} seconds passed'.format(time() - start_time))

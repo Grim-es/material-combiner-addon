@@ -18,15 +18,15 @@ class RefreshObData(bpy.types.Operator):
             item = scn.smc_ob_data.add()
             item.ob = ob
             item.ob_id = ob_id
-            item.type = 0
+            item.data_type = 0
             for mat in mat_list:
                 item = scn.smc_ob_data.add()
                 item.ob = ob
                 item.ob_id = ob_id
                 item.mat = mat
-                item.type = 1
+                item.data_type = 1
             item = scn.smc_ob_data.add()
-            item.type = 2
+            item.data_type = 2
         return {'FINISHED'}
 
 
@@ -41,8 +41,8 @@ class CombineItemMat(bpy.types.Operator):
         scn = context.scene
         items = scn.smc_ob_data
         item = items[self.list_id]
-        if item.type:
-            ob_item = next((ob for ob in items if (ob.ob_id == item.ob_id) and not ob.type), None)
+        if item.data_type:
+            ob_item = next((ob for ob in items if (ob.ob_id == item.ob_id) and not ob.data_type), None)
             if ob_item:
                 if item.used:
                     item.used = False
@@ -50,7 +50,7 @@ class CombineItemMat(bpy.types.Operator):
                     ob_item.used = True
                     item.used = True
         else:
-            ob_item_list = [mat for mat in items if (mat.ob_id == item.ob_id) and mat.type]
+            ob_item_list = [mat for mat in items if (mat.ob_id == item.ob_id) and mat.data_type]
             if ob_item_list:
                 if item.used:
                     for ob_item in ob_item_list:
@@ -66,13 +66,14 @@ class CombineItemMat(bpy.types.Operator):
 class CombineMenuType(bpy.types.Operator):
     bl_idname = 'smc.combine_menu_type'
     bl_label = 'Combine Menu State'
-    bl_description = 'Menu Window'
+    bl_description = 'Combine Menu'
+
+    state = StringProperty(default='')
 
     def execute(self, context):
         scn = context.scene
-        if scn.smc_combine_state:
+        scn.smc_combine_state = self.state
+        scn.smc_multi = True if self.state == 'MULT' else False
+        if scn.smc_combine_state == 'COMB':
             bpy.ops.smc.refresh_ob_data()
-            scn.smc_combine_state = False
-        else:
-            scn.smc_combine_state = True
         return {'FINISHED'}
