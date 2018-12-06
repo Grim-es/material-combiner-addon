@@ -7,7 +7,7 @@ class UpdateMenu(bpy.types.Panel):
     bl_idname = 'smc.update_menu'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
-    bl_category = 'Material Combiner'
+    bl_category = 'MatCombiner'
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):

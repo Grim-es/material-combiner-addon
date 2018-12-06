@@ -20,6 +20,7 @@ import bpy
 from bpy.app.handlers import persistent
 import os
 from . import bl_info
+from subprocess import call
 
 # updater import, import safely
 # Prevents popups for users with invalid python installs e.g. missing libraries
@@ -179,13 +180,17 @@ class addon_updater_check_now(bpy.types.Operator):
                     months=settings.updater_intrval_months,
                     days=settings.updater_intrval_days,
                     hours=settings.updater_intrval_hours,
-                    minutes=settings.updater_intrval_minutes
-                    )
+                    minutes=settings.updater_intrval_minutes)
         updater.check_for_update_now(ui_refresh)
         try:
-            os.system('"{}" -m pip install Pillow --user --upgrade'.format(bpy.app.binary_path_python))
-        except:
-            pass
+            import pip
+            try:
+                call([bpy.app.binary_path_python, '-m', 'pip', 'install', 'Pillow', '--user', '--upgrade'], shell=True)
+            except:
+                pass
+        except ImportError:
+            call([bpy.app.binary_path_python,
+                  os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py')], shell=True)
         return {'FINISHED'}
 
 

@@ -19,8 +19,7 @@ class ObDataItems(bpy.types.UIList):
             row.separator()
             row = row.row(align=True)
             row.label(text='', icon_value=item.mat.preview.icon_id)
-            row.prop(item, 'layer', text='{}'
-                     .format(item.mat.name))
+            row.prop(item.mat, 'name', text='')
             if item.used:
                 used_icon = 'FILE_TICK'
             else:

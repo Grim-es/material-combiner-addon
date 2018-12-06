@@ -35,7 +35,7 @@ def get_materials_data(scn, uv):
         if (i.data_type == 1) and i.used and not any((x['mat'] == i.mat) or (i.mat in x['duplicates']) for x in data):
             if i.mat in uv:
                 img = tex_img(get_texture(i.mat))
-                path = tex_path(img)
+                path = tex_path(img) if img else None
                 diffuse = get_diffuse(i.mat)
                 root_data = next((x for x in data if (x['path'] == path) and (x['diffuse'] == diffuse)), None)
                 if root_data:
@@ -135,9 +135,7 @@ def create_multi_atlas(scn, data, size):
 
 
 def create_combined_mat(scn, img):
-    unique_id = str(random.randrange(9999999999))
-    path = os.path.dirname(bpy.data.filepath)
-    scn.smc_save_path = path
+    unique_id = random.randrange(9999999999)
     for idx, i in enumerate(img):
         i.save(os.path.join(scn.smc_save_path, 'combined_image_{}_{}.png'.format(idx, unique_id)))
     mat = bpy.data.materials.new(name='combined_material_{}'.format(unique_id))

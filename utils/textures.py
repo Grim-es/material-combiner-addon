@@ -3,7 +3,7 @@ import os
 
 
 def tex_img(tex):
-    return tex.image if tex and tex.image else ''
+    return tex.image if tex and tex.image else None
 
 
 def tex_path(img):

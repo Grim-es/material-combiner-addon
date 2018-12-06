@@ -2,19 +2,11 @@ import bpy
 import bpy.utils.previews
 from bpy.props import *
 from . import addon_updater_ops
-from . operators . combining . operators import get_materials_uv, get_materials_data
 
 preview_collections = {}
 preview = None
 image_preview = None
 images = []
-
-
-def images_list(self, context):
-    global images
-    scn = context.scene
-    if scn.smc_multi:
-        images = [i['tex_img'] for i in get_materials_data(scn, get_materials_uv(scn))]
 
 
 def mats_preview(self, context):
@@ -29,11 +21,12 @@ def mats_preview(self, context):
     return pcoll.smc_mats_previews
 
 
-def get_image_previews(self, context):
+def images_preview(self, context):
+    scn = context.scene
     image_previews = []
     index = 0
-    for img in images:
-        image_previews.append((img.name, img.name, '', img.preview.icon_id, index))
+    for item in scn.smc_multi_list:
+        image_previews.append((item.image.name, item.image.name, '', item.image.preview.icon_id, index))
         index += 1
     pcoll = preview_collections['smc_image']
     pcoll.smc_image_previews = image_previews
@@ -58,6 +51,12 @@ class ObData(bpy.types.PropertyGroup):
     data_type = IntProperty(default=0)
 
 
+class ImagePreview(bpy.types.PropertyGroup):
+    image = PointerProperty(
+        name='Images to multicombine',
+        type=bpy.types.Image)
+
+
 class ImageItems(bpy.types.PropertyGroup):
     img_name = StringProperty(default='')
     img_path = StringProperty(default='')
@@ -74,10 +73,16 @@ class ImageItems(bpy.types.PropertyGroup):
     )
 
 
+def include_layout(self, context):
+    scn = context.scene
+    col = scn.smc_include
+    col.label('test')
+
+
 class UpdatePreferences(bpy.types.AddonPreferences):
     bl_idname = __package__
 
-    auto_check_update = bpy.props.BoolProperty(
+    auto_check_update = BoolProperty(
         name="Auto-check for Update",
         description="If enabled, auto-check for updates using an interval",
         default=True,
@@ -88,20 +93,20 @@ class UpdatePreferences(bpy.types.AddonPreferences):
         default=0,
         min=0
         )
-    updater_intrval_days = bpy.props.IntProperty(
+    updater_intrval_days = IntProperty(
         name='Days',
         description="Number of days between checking for updates",
         default=1,
         min=1
         )
-    updater_intrval_hours = bpy.props.IntProperty(
+    updater_intrval_hours = IntProperty(
         name='Hours',
         description="Number of hours between checking for updates",
         default=0,
         min=0,
         max=0
         )
-    updater_intrval_minutes = bpy.props.IntProperty(
+    updater_intrval_minutes = IntProperty(
         name='Minutes',
         description="Number of minutes between checking for updates",
         default=0,
@@ -121,10 +126,9 @@ def register():
     preview = bpy.utils.previews.new()
     preview.smc_mats_preview = ()
     preview_collections['smc_mats'] = preview
-
     bpy.types.Scene.smc_image_preview = EnumProperty(
         name='Images to combine list',
-        items=get_image_previews)
+        items=images_preview)
     global image_preview
     image_preview = bpy.utils.previews.new()
     image_preview.smc_image_preview = ()
@@ -171,13 +175,15 @@ def register():
         default='COMB')
     bpy.types.Scene.smc_ob_data = CollectionProperty(type=ObData)
     bpy.types.Scene.smc_ob_data_id = IntProperty(default=0)
-    bpy.types.Scene.smc_save_path = StringProperty(default='')
+    bpy.types.Scene.smc_save_path = StringProperty(
+        description='Select a path for combined texture',
+        default='')
     bpy.types.Scene.smc_compress = BoolProperty(default=True)
     bpy.types.Scene.smc_multi = BoolProperty(
         name='Multicombining',
         description='Select to combine all material texture layers',
-        default=False,
-        update=images_list)
+        default=False)
+    bpy.types.Scene.smc_multi_list = CollectionProperty(type=ImagePreview)
 
     bpy.types.Material.smc_size = BoolProperty(
         name='Use custom material size',

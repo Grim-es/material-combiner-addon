@@ -16,9 +16,8 @@ class OpenBrowser(bpy.types.Operator):
             os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, 'assets', 'pngquant', 'pngquant.exe'))
         if not os.path.isfile(pngquant):
             bpy.ops.smc.zip_download(link='https://pngquant.org/pngquant-windows.zip')
-        command = '"{}" -f --ext .png --skip-if-larger -v "{}"'.format(
-            pngquant, os.path.join(scn.smc_save_path, self.file))
+        command = [pngquant, '-f', '--ext', '.png', '--skip-if-larger',
+                   '-v', os.path.join(scn.smc_save_path, self.file)]
         call(command, shell=True)
         self.report({'INFO'}, 'Files compressed')
-
         return {'FINISHED'}

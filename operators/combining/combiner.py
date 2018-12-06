@@ -7,36 +7,21 @@ from . operators import create_multi_atlas, create_combined_mat, combine_uv, com
 from . packing import BinPacker
 
 
-class SavePath(bpy.types.Operator):
-    bl_idname = 'smc.save_path'
-    bl_label = 'Select a Folder for Combined Image'
-    bl_description = 'Select a path for combined image'
-    bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
-
-    filepath = StringProperty(subtype='DIR_PATH')
-    filter_glob = StringProperty(default='', options={'HIDDEN'})
-
-    def execute(self, context):
-        scn = context.scene
-        scn.smc_save_path = self.filepath.rstrip(os.sep).lower()
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        scn = context.scene
-        self.filepath = scn.smc_save_path + os.sep
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
-
-
 class Combiner(bpy.types.Operator):
     bl_idname = 'smc.combiner'
     bl_label = 'Combine'
     bl_description = 'Combine materials'
     bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
 
+    directory = StringProperty(maxlen=1024, default='', subtype='FILE_PATH', options={'HIDDEN'})
+    filter_glob = StringProperty(default='', options={'HIDDEN'})
+
     def execute(self, context):
         start_time = time()
         scn = context.scene
+        scn.smc_save_path = self.directory
+        if not scn.smc_ob_data:
+            bpy.ops.smc.refresh_ob_data()
         cur_time = time()
         uv = get_materials_uv(scn)
         print('get_materials: {}'.format(time() - cur_time))
@@ -76,3 +61,7 @@ class Combiner(bpy.types.Operator):
         print('{} seconds passed'.format(time() - start_time))
         self.report({'INFO'}, 'Materials were combined.')
         return {'FINISHED'}
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}

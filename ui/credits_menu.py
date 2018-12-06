@@ -8,7 +8,7 @@ class CreditsMenu(bpy.types.Panel):
     bl_idname = 'smc.credits_menu'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
-    bl_category = 'Material Combiner'
+    bl_category = 'MatCombiner'
 
     def draw(self, context):
         vrcat = 'https://vrcat.club/threads/material-combiner-blender-addon.2255'
@@ -17,7 +17,7 @@ class CreditsMenu(bpy.types.Panel):
         m_col = layout.column()
         box = m_col.box()
         col = box.column(align=True)
-        col.label('Material Combiner ({})'.format(bl_info['version']), icon_value=get_icon_id('smc'))
+        col.label('Material Combiner {}'.format(bl_info['version']), icon_value=get_icon_id('smc'))
         col.separator()
         col.label('Author: shotariya')
         col.separator()
