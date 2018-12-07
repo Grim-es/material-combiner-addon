@@ -25,7 +25,7 @@ bl_info = {
     'name': "Shotariya's Material Combiner",
     'description': 'Public Release Material Combiner 2',
     'author': 'shotariya',
-    'version': (2, 0, 3, 0),
+    'version': (2, 0, 3, 1),
     'blender': (2, 79, 0),
     'location': 'View3D',
     # 'warning': '',
@@ -37,13 +37,13 @@ import os
 from subprocess import call
 try:
     import pip
-    try:
-        from PIL import Image
-    except ImportError:
-        call([bpy.app.binary_path_python, '-m', 'pip', 'install', 'Pillow', '--user', '--upgrade'], shell=True)
 except ImportError:
     call([bpy.app.binary_path_python,
           os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py')], shell=True)
+try:
+        from PIL import Image
+    except ImportError:
+        call([bpy.app.binary_path_python, '-m', 'pip', 'install', 'Pillow', '--user', '--upgrade'], shell=True)
 
 from . import developer_utils
 modules = developer_utils.setup_addon_modules(__path__, __name__, 'bpy' in locals())
