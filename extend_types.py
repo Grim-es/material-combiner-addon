@@ -180,25 +180,25 @@ def register():
     bpy.types.Scene.smc_multi_list = CollectionProperty(type=ImagePreview)
 
     bpy.types.Material.smc_size = BoolProperty(
-        name='Use custom material image size',
+        name='Custom size for current material image',
         description='Select to resize material image on combined image',
         default=False)
     bpy.types.Material.smc_size_width = IntProperty(
         name='Max width',
-        description='Select max width for combined image',
+        description='Select max width for material image',
         min=8,
         max=8192,
         step=1,
         default=1024)
     bpy.types.Material.smc_size_height = IntProperty(
         name='Max height',
-        description='Select max height for combined image',
+        description='Select max height for material image',
         min=8,
         max=8192,
         step=1,
         default=1024)
     bpy.types.Material.smc_diffuse = BoolProperty(
-        name='Apply material diffuse',
+        name='Apply diffuse on current material image',
         description='Multiply material color with material image',
         default=True)
 
