@@ -9,7 +9,7 @@ from . packing import BinPacker
 
 class Combiner(bpy.types.Operator):
     bl_idname = 'smc.combiner'
-    bl_label = 'Combine'
+    bl_label = 'Save'
     bl_description = 'Combine materials'
     bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
 

@@ -81,6 +81,8 @@ class MaterialMenu(bpy.types.Panel):
                     col.operator('smc.combine_menu_type', text='Continue',
                                  icon_value=get_icon_id('null')).state = 'COMB'
             else:
-                col.label('No materials found.', icon_value=get_icon_id('no_data'))
+                box = col.box()
+                box.label('No materials found!', icon_value=get_icon_id('no_data'))
         else:
-            col.label('No objects on the scene.', icon_value=get_icon_id('no_data'))
+            box = col.box()
+            box.label('No objects on the scene!', icon_value=get_icon_id('no_data'))
