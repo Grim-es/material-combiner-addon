@@ -63,7 +63,7 @@ class Combiner(bpy.types.Operator):
             self.report({'INFO'}, 'Copies were combined')
             return {'FINISHED'}
         elif not self.data or (len(self.data) == 1):
-            self.report({'ERROR'}, 'Nothing to Combine')
+            self.report({'ERROR'}, 'No materials selected')
             return {'FINISHED'}
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
