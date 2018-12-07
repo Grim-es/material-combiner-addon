@@ -200,7 +200,7 @@ def register():
     bpy.types.Material.smc_diffuse = BoolProperty(
         name='Apply material diffuse',
         description='Multiply material color with material image',
-        default=False)
+        default=True)
 
     bpy.types.Image.smc_img_list = CollectionProperty(type=ImageItems)
     bpy.types.Image.smc_img_list_id = IntProperty(default=0)

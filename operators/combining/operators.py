@@ -172,6 +172,8 @@ def combine_uv(scn, data, size, mat):
 
 def combine_copies(scn, data):
     bpy.ops.smc.refresh_ob_data()
+    unique_id = random.randrange(9999999999)
+    data[0]['mat'].name = 'combined_material_{}'.format(unique_id)
     for i in scn.smc_ob_data:
         if (i.data_type == 1) and i.used:
             if data[0]['mat'] != i.mat:

@@ -9,48 +9,33 @@ from . packing import BinPacker
 
 class Combiner(bpy.types.Operator):
     bl_idname = 'smc.combiner'
-    bl_label = 'Save'
+    bl_label = 'Create Atlas'
     bl_description = 'Combine materials'
     bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
 
     directory = StringProperty(maxlen=1024, default='', subtype='FILE_PATH', options={'HIDDEN'})
     filter_glob = StringProperty(default='', options={'HIDDEN'})
+    data = None
 
     def execute(self, context):
         start_time = time()
         scn = context.scene
         scn.smc_save_path = self.directory
-        if not scn.smc_ob_data:
-            bpy.ops.smc.refresh_ob_data()
         cur_time = time()
-        uv = get_materials_uv(scn)
-        print('get_materials: {}'.format(time() - cur_time))
-        cur_time = time()
-        data = get_materials_data(scn, uv)
-        print('get_materials_data: {}'.format(time() - cur_time))
-        if (len(data) == 1) and data[0]['duplicates']:
-            combine_copies(scn, data)
-            bpy.ops.smc.refresh_ob_data()
-            self.report({'INFO'}, 'Copies were combined')
-            return {'FINISHED'}
-        elif not data or (len(data) == 1):
-            self.report({'ERROR'}, 'Nothing to Combine')
-            return {'FINISHED'}
-        cur_time = time()
-        data = BinPacker(fill_uv(data)).fit()
+        self.data = BinPacker(fill_uv(self.data)).fit()
         print('data_bin: {}'.format(time() - cur_time))
         cur_time = time()
-        img, size = create_atlas(scn, data)
+        img, size = create_atlas(scn, self.data)
         print('create_atlas: {}'.format(time() - cur_time))
         if scn.smc_multi:
             cur_time = time()
-            img += create_multi_atlas(scn, data, size)
+            img += create_multi_atlas(scn, self.data, size)
             print('create_multi_atlas: {}'.format(time() - cur_time))
         cur_time = time()
         mat, unique_id = create_combined_mat(scn, img)
         print('comb_mat: {}'.format(time() - cur_time))
         cur_time = time()
-        combine_uv(scn, data, size, mat)
+        combine_uv(scn, self.data, size, mat)
         print('combine_uv: {}'.format(time() - cur_time))
         if os.name == 'nt' and scn.smc_compress:
             cur_time = time()
@@ -63,5 +48,22 @@ class Combiner(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
+        scn = context.scene
+        if not scn.smc_ob_data:
+            bpy.ops.smc.refresh_ob_data()
+        cur_time = time()
+        uv = get_materials_uv(scn)
+        print('get_materials: {}'.format(time() - cur_time))
+        cur_time = time()
+        self.data = get_materials_data(scn, uv)
+        print('get_materials_data: {}'.format(time() - cur_time))
+        if (len(self.data) == 1) and self.data[0]['duplicates']:
+            combine_copies(scn, self.data)
+            bpy.ops.smc.refresh_ob_data()
+            self.report({'INFO'}, 'Copies were combined')
+            return {'FINISHED'}
+        elif not self.data or (len(self.data) == 1):
+            self.report({'ERROR'}, 'Nothing to Combine')
+            return {'FINISHED'}
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}

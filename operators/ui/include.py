@@ -26,7 +26,7 @@ def draw_ui(context, m_col):
             if pil_exist:
                 col = m_col.column()
                 col.scale_y = 1.5
-                col.operator('smc.combiner', text='Create Atlas and Save', icon_value=get_icon_id('null'))
+                col.operator('smc.combiner', text='Save Atlas to..', icon_value=get_icon_id('null'))
             else:
                 box = m_col.box()
                 col = box.column(align=True)
