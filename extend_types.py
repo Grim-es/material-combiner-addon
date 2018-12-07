@@ -180,8 +180,8 @@ def register():
     bpy.types.Scene.smc_multi_list = CollectionProperty(type=ImagePreview)
 
     bpy.types.Material.smc_size = BoolProperty(
-        name='Use custom material size',
-        description='Select to have same side sized combined image',
+        name='Use custom material image size',
+        description='Select to resize material image on combined image',
         default=False)
     bpy.types.Material.smc_size_width = IntProperty(
         name='Max width',
