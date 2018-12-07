@@ -184,13 +184,13 @@ class addon_updater_check_now(bpy.types.Operator):
         updater.check_for_update_now(ui_refresh)
         try:
             import pip
-            try:
-                call([bpy.app.binary_path_python, '-m', 'pip', 'install', 'Pillow', '--user', '--upgrade'], shell=True)
-            except:
-                pass
         except ImportError:
             call([bpy.app.binary_path_python,
                   os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py')], shell=True)
+        try:
+            call([bpy.app.binary_path_python, '-m', 'pip', 'install', 'Pillow', '--user', '--upgrade'], shell=True)
+        except:
+            pass
         return {'FINISHED'}
 
 
