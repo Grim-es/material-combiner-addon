@@ -46,7 +46,7 @@ class MaterialMenu(bpy.types.Panel):
                         col.label('Try to run Blender as Administrator.', icon_value=get_icon_id('null'))
                         col.label('or check your Internet Connection.', icon_value=get_icon_id('null'))
                         col.label('If error still occur, use options to', icon_value=get_icon_id('help'))
-                        col.label('report on the "Credits" window.', icon_value=get_icon_id('null'))
+                        col.label('report on "Credits" window.', icon_value=get_icon_id('null'))
                     col.operator('smc.combine_menu_type', text='Back', icon_value=get_icon_id('null')).state = 'MATS'
                 elif scn.smc_combine_state == 'MULT':
                     box = col.box()
