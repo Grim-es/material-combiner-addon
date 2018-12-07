@@ -31,7 +31,7 @@ def draw_ui(context, m_col):
                 box = m_col.box()
                 col = box.column(align=True)
                 col.label('Pillow was not found!', icon='ERROR')
-                col.label('Try to run Blender as administrator')
+                col.label('Try to run Blender as administrator', icon_value=get_icon_id('null'))
                 col.label('or check your Internet Connection', icon_value=get_icon_id('null'))
                 col.label('and restart Blender', icon_value=get_icon_id('null'))
                 col.separator()
