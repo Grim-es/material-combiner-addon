@@ -73,12 +73,6 @@ class ImageItems(bpy.types.PropertyGroup):
     )
 
 
-def include_layout(self, context):
-    scn = context.scene
-    col = scn.smc_include
-    col.label('test')
-
-
 class UpdatePreferences(bpy.types.AddonPreferences):
     bl_idname = __package__
 
