@@ -41,9 +41,9 @@ except ImportError:
     call([bpy.app.binary_path_python,
           os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py')], shell=True)
 try:
-        from PIL import Image
-    except ImportError:
-        call([bpy.app.binary_path_python, '-m', 'pip', 'install', 'Pillow', '--user', '--upgrade'], shell=True)
+    from PIL import Image
+except ImportError:
+    call([bpy.app.binary_path_python, '-m', 'pip', 'install', 'Pillow', '--user', '--upgrade'], shell=True)
 
 from . import developer_utils
 modules = developer_utils.setup_addon_modules(__path__, __name__, 'bpy' in locals())
