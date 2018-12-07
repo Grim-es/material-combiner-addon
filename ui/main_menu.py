@@ -4,7 +4,7 @@ try:
     from PIL import Image, ImageChops
     pil_exist = True
 except ImportError:
-    pil_exist = True
+    pil_exist = False
 
 
 class MaterialMenu(bpy.types.Panel):
