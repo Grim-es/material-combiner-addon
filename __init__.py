@@ -45,7 +45,6 @@ try:
 except ImportError:
     call([bpy.app.binary_path_python, '-m', 'pip', 'install', 'Pillow', '--user', '--upgrade'], shell=True)
 
-
 from . import developer_utils
 modules = developer_utils.setup_addon_modules(__path__, __name__, 'bpy' in locals())
 
