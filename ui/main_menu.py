@@ -42,8 +42,9 @@ class MaterialMenu(bpy.types.Panel):
                         col.operator('smc.combine_menu_type', text='Multicombine',
                                      icon_value=get_icon_id('null')).state = 'MULT'
                     else:
-                        col.label('Pillow is not installed, please', icon='ERROR')
-                        col.label('check your internet connection.', icon_value=get_icon_id('null'))
+                        col.label('Pillow was not found!', icon='ERROR')
+                        col.label('Try to run Blender as Administrator.', icon_value=get_icon_id('null'))
+                        col.label('or check your Internet Connection.', icon_value=get_icon_id('null'))
                         col.label('If error still occur, use options to', icon_value=get_icon_id('help'))
                         col.label('report on the "Credits" window.', icon_value=get_icon_id('null'))
                     col.operator('smc.combine_menu_type', text='Back', icon_value=get_icon_id('null')).state = 'MATS'

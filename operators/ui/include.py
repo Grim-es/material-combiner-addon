@@ -4,7 +4,7 @@ try:
     import PIL
     pil_exist = True
 except ImportError:
-    pil_exist = True
+    pil_exist = False
 
 
 def draw_ui(context, m_col):
@@ -31,7 +31,8 @@ def draw_ui(context, m_col):
                 box = m_col.box()
                 col = box.column(align=True)
                 col.label('Pillow was not found!', icon='ERROR')
-                col.label('Check your Internet Connection', icon_value=get_icon_id('null'))
+                col.label('Try to run Blender as administrator', icon_value=get_icon_id('null'))
+                col.label('or check your Internet Connection', icon_value=get_icon_id('null'))
                 col.label('and restart Blender', icon_value=get_icon_id('null'))
                 col.separator()
                 col.label('If error still occur:', icon_value=get_icon_id('report'))

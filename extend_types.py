@@ -175,30 +175,30 @@ def register():
     bpy.types.Scene.smc_compress = BoolProperty(default=True)
     bpy.types.Scene.smc_multi = BoolProperty(
         name='Multicombining',
-        description='Select to combine all material texture layers',
+        description='Extra layers as combined images',
         default=False)
     bpy.types.Scene.smc_multi_list = CollectionProperty(type=ImagePreview)
 
     bpy.types.Material.smc_size = BoolProperty(
-        name='Use custom material size',
-        description='Select to have same side sized combined image',
+        name='Custom image size for selected material',
+        description='Select to resize material image on combined image',
         default=False)
     bpy.types.Material.smc_size_width = IntProperty(
         name='Max width',
-        description='Select max width for combined image',
+        description='Select max width for material image',
         min=8,
         max=8192,
         step=1,
         default=1024)
     bpy.types.Material.smc_size_height = IntProperty(
         name='Max height',
-        description='Select max height for combined image',
+        description='Select max height for material image',
         min=8,
         max=8192,
         step=1,
         default=1024)
     bpy.types.Material.smc_diffuse = BoolProperty(
-        name='Apply material diffuse',
+        name='Apply diffuse on selected material',
         description='Multiply material color with material image',
         default=True)
 
