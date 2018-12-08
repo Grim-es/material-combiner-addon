@@ -6,10 +6,10 @@ material-combiner-addon
 [![](http://webgrimes.com/patreon.png)](https://www.patreon.com/join/shotariya?)
 
 ## FEATURES
-* Combining multiple materials, allow selection, compatible with multiple objects.
-* Generation of textures by UV size (allow to pack UV to 0-1 bounds), allow selection.
-* Moving UV close as possible to bounds.
-* Packing UV into the selected scale bounds by splitting mesh faces, compatible with rigged models.
+* Combining multiple materials. (allow to apply diffuse colors and choose each image and atlas sizes)
+* Multicombining. (add layers for each image which are combine into different atlases, allow to generate Normal map, Specular map, etc atlases)
+* Packing UV into the selected scale bounds by splitting mesh faces, compatible with rigged models. (Currently Disabled)
+* Atlas image compression.
 
 
 ## BUGS / SUGGESTIONS
