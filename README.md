@@ -11,6 +11,12 @@ material-combiner-addon
 * Packing UV into the selected scale bounds by splitting mesh faces, compatible with rigged models. (Currently Disabled)
 * Atlas image compression.
 
+## INSTALLATION
+1. Download an addon: [Material-combiner](https://github.com/Grim-es/material-combiner-addon/archive/master.zip)
+1. Go to File > User Preferences > Addons
+1. Click on Install Add-on from File
+1. Choose material-combiner-addon-master.zip archive
+1. Activate Material Combiner
 
 ## BUGS / SUGGESTIONS
 If you have found a bug or have suggestions to improve the tool, you can contact me on Discord: [shotariya#4269](https://discordapp.com/users/275608234595713024)
