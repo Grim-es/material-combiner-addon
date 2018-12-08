@@ -32,18 +32,24 @@ bl_info = {
     'wiki_url': 'https://vrcat.club/threads/material-combiner-blender-addon.2255/',
     'category': 'Object'}
 
+iamready = True
+
 import bpy
 import os
 from subprocess import call
 try:
     import pip
+    try:
+        from PIL import Image, ImageChops
+    except ImportError:
+        call([bpy.app.binary_path_python, '-m', 'pip', 'install', 'Pillow', '--user', '--upgrade'], shell=True)
+        iamready = False
 except ImportError:
     call([bpy.app.binary_path_python,
-          os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py')], shell=True)
-try:
-    from PIL import Image, ImageChops
-except ImportError:
+          os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py'), '--user'], shell=True)
     call([bpy.app.binary_path_python, '-m', 'pip', 'install', 'Pillow', '--user', '--upgrade'], shell=True)
+    iamready = False
+
 
 from . import developer_utils
 modules = developer_utils.setup_addon_modules(__path__, __name__, 'bpy' in locals())
