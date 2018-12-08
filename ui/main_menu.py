@@ -40,7 +40,7 @@ class MaterialMenu(bpy.types.Panel):
                         box.separator()
                         col = layout.column()
                         if pil_exist:
-                            col.operator('smc.combiner', icon_value=get_icon_id('null'))
+                            col.operator('smc.combiner', text='Combine', icon_value=get_icon_id('null'))
                             col.operator('smc.combine_menu_type', text='Multicombine',
                                          icon_value=get_icon_id('null')).state = 'MULT'
                         else:
@@ -65,7 +65,7 @@ class MaterialMenu(bpy.types.Panel):
                             r_col.separator()
                             r_col.operator('smc.img_move', icon='TRIA_UP', text='').type = 'UP'
                             r_col.operator('smc.img_move', icon='TRIA_DOWN', text='').type = 'DOWN'
-                            col.operator('smc.combiner', icon_value=get_icon_id('null'))
+                            col.operator('smc.combiner', text='Combine', icon_value=get_icon_id('null'))
                         else:
                             box.label('Selected materials to combine have no images')
                         col.operator('smc.combine_menu_type', text='Back',

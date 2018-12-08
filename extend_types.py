@@ -136,7 +136,7 @@ def register():
             ('AUTO', 'Automatic', 'Combined image has minimal size'),
             ('CUST', 'Custom', 'Use max width and height')),
         description='Select combined image size',
-        default='PO2')
+        default='AUTO')
     bpy.types.Scene.smc_size_width = IntProperty(
         name='Max width',
         description='Select max width for combined image',
@@ -155,8 +155,8 @@ def register():
         name='Combine menu state',
         items=(('MATS', 'Materials', 'Materials setup page'),
                ('COMB', 'Combine', 'Select items to combine page'),
-               ('MULT', 'Multicombining', 'Multicombining page'))
-    )
+               ('MULT', 'Multicombining', 'Multicombining page')),
+        default='MATS')
     bpy.types.Scene.smc_help_state = EnumProperty(
         name='Material Combiner by Shotariya#4269',
         items=(
