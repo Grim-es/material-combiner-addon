@@ -131,7 +131,8 @@ def register():
     bpy.types.Scene.smc_size = EnumProperty(
         name='Image size',
         items=(
-            ('PO2', 'Power of 2', 'Combined image has same width and height'),
+            ('PO2', 'Power of 2', 'Combined image size is power of 2'),
+            ('QUAD', 'Quadratic', 'Combined image has same width and height'),
             ('AUTO', 'Automatic', 'Combined image has minimal size'),
             ('CUST', 'Custom', 'Use max width and height')),
         description='Select combined image size',

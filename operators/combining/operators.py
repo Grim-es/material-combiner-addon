@@ -89,6 +89,8 @@ def create_atlas(scn, data):
     size = (max([i['fit']['x'] + i['w'] for i in data]),
             max([i['fit']['y'] + i['h'] for i in data]))
     if scn.smc_size == 'PO2':
+        size = (1 << (max(size)-1).bit_length(),) * 2
+    if scn.smc_size == 'QUAD':
         size = (max(size),) * 2
     img = Image.new('RGBA', size)
     for i in data:
