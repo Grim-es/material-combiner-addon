@@ -6,11 +6,17 @@ material-combiner-addon
 [![](http://webgrimes.com/patreon.png)](https://www.patreon.com/join/shotariya?)
 
 ## FEATURES
-* Combining multiple materials, allow selection, compatible with multiple objects.
-* Generation of textures by UV size (allow to pack UV to 0-1 bounds), allow selection.
-* Moving UV close as possible to bounds.
-* Packing UV into the selected scale bounds by splitting mesh faces, compatible with rigged models.
+* Combining multiple materials. (allow to apply diffuse colors and choose each image and atlas sizes)
+* Multicombining. (add layers for each image which are combine into different atlases, allow to generate Normal map, Specular map, etc atlases)
+* Packing UV into the selected scale bounds by splitting mesh faces, compatible with rigged models. (Currently Disabled)
+* Atlas image compression.
 
+## INSTALLATION
+1. Download an addon: [Material-combiner](https://github.com/Grim-es/material-combiner-addon/archive/master.zip)
+1. Go to File > User Preferences > Addons
+1. Click on Install Add-on from File
+1. Choose material-combiner-addon-master.zip archive
+1. Activate Material Combiner
 
 ## BUGS / SUGGESTIONS
 If you have found a bug or have suggestions to improve the tool, you can contact me on Discord: [shotariya#4269](https://discordapp.com/users/275608234595713024)
