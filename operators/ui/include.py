@@ -51,4 +51,4 @@ def draw_ui(context, m_col):
     else:
         box = m_col.box()
         box.label(text='Installation complete!', icon='ERROR')
-        box.label(text='Please Restart Blender', icon_value=get_icon_id('null'))
+        box.label(text='Please restart Blender', icon_value=get_icon_id('null'))

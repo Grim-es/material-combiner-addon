@@ -95,4 +95,4 @@ class MaterialMenu(bpy.types.Panel):
             col = col.column(align=True)
             box = col.box()
             box.label(text='Installation complete!', icon='ERROR')
-            box.label(text='Please Restart Blender', icon_value=get_icon_id('null'))
+            box.label(text='Please restart Blender', icon_value=get_icon_id('null'))
