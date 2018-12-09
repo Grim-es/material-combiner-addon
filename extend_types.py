@@ -136,7 +136,7 @@ def register():
             ('AUTO', 'Automatic', 'Combined image has minimal size'),
             ('CUST', 'Custom', 'Use max width and height')),
         description='Select combined image size',
-        default='AUTO')
+        default='QUAD')
     bpy.types.Scene.smc_size_width = IntProperty(
         name='Max width',
         description='Select max width for combined image',
