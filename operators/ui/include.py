@@ -28,7 +28,7 @@ def draw_ui(context, m_col):
                 if pil_exist:
                     col = m_col.column()
                     col.scale_y = 1.5
-                    col.operator('smc.combiner', text='Save Atlas to..', icon_value=get_icon_id('null'))
+                    col.operator('smc.combiner', text='Save Atlas to..', icon_value=get_icon_id('null')).adds = 'QUAD'
                 else:
                     box = m_col.box()
                     col = box.column(align=True)
@@ -40,8 +40,10 @@ def draw_ui(context, m_col):
                     col.label('If error still occur:', icon_value=get_icon_id('report'))
                     col = box.column(align=True)
                     col.scale_y = 1.2
-                    col.operator('smc.browser', text='Post it on forum (VRcat.club)', icon_value=get_icon_id('vrcat')).link = vrcat
-                    col.operator('smc.browser', text='Contact me on Discord', icon_value=get_icon_id('discord')).link = discord
+                    col.operator('smc.browser', text='Post it on forum (VRcat.club)',
+                                 icon_value=get_icon_id('vrcat')).link = vrcat
+                    col.operator('smc.browser', text='Contact me on Discord',
+                                 icon_value=get_icon_id('discord')).link = discord
             else:
                 box = m_col.box()
                 box.label(text='No materials found!', icon='ERROR')

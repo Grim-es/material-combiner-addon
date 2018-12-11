@@ -13,6 +13,7 @@ class Combiner(bpy.types.Operator):
     bl_description = 'Combine materials'
     bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
 
+    adds = StringProperty(default='')
     directory = StringProperty(maxlen=1024, default='', subtype='FILE_PATH', options={'HIDDEN'})
     filter_glob = StringProperty(default='', options={'HIDDEN'})
     data = None
@@ -21,6 +22,8 @@ class Combiner(bpy.types.Operator):
         start_time = time()
         scn = context.scene
         scn.smc_save_path = self.directory
+        if self.adds == 'QUAD':
+            scn.smc_size = 'QUAD'
         cur_time = time()
         self.data = BinPacker(fill_uv(self.data)).fit()
         print('data_bin: {}'.format(time() - cur_time))

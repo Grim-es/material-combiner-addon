@@ -13,7 +13,7 @@ def setup_addon_modules(path, package_name, reload):
             if is_package:
                 sub_path = os.path.join(path, module_name)
                 sub_root = root + module_name + '.'
-                if os.path.basename(sub_path) != 'assets':
+                if os.path.basename(sub_path) not in ['assets', 'PIL']:
                     module_names.extend(get_submodule_names(sub_path, sub_root))
             else:
                 module_names.append(root + module_name)
