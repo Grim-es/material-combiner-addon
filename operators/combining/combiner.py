@@ -55,6 +55,7 @@ class Combiner(bpy.types.Operator):
         if not scn.smc_ob_data:
             bpy.ops.smc.refresh_ob_data()
         cur_time = time()
+        bpy.ops.object.mode_set(mode='OBJECT')
         uv = get_materials_uv(scn)
         print('get_materials: {}'.format(time() - cur_time))
         cur_time = time()

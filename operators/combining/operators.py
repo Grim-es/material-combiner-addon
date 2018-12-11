@@ -16,7 +16,8 @@ def get_materials_uv(scn):
     for i in scn.smc_ob_data:
         if (i.data_type == 0) and i.used:
             for face in i.ob.data.polygons:
-                face_uv = [i.ob.data.uv_layers.active.data[loop_idx].uv for loop_idx in face.loop_indices]
+                face_uv = [i.ob.data.uv_layers.active.data[loop_idx].uv
+                           for loop_idx in face.loop_indices if face.loop_indices]
                 min_x = min([math.floor(uv.x) for uv in face_uv if not math.isnan(uv.x)])
                 min_y = min([math.floor(uv.y) for uv in face_uv if not math.isnan(uv.y)])
                 for uvv in face_uv:
