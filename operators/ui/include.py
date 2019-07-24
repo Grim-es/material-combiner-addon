@@ -20,16 +20,18 @@ def draw_ui(context, m_col):
         col.scale_y = 1.5
         col.operator('smc.combiner', text='Save Atlas to..', icon_value=get_icon_id('null'))
         col.separator()
-        row = m_col.column().row()
-        col = row.column()
-        col.scale_y = 1.2
-        row.label(text='Feel free to support Material Combiner:')
-        col = row.column()
-        col.scale_x = 1.5
-        col.scale_y = 1.2
-        col.operator('smc.browser', text='',
-                     icon_value=get_icon_id('patreon')).link = patreon
-
+        col = m_col.column()
+        col.label(text='If you saved your time:')
+        col.operator('smc.browser', text='Support Material Combiner', icon_value=get_icon_id('patreon')).link = patreon
+        # row = m_col.column().row()
+        # col = row.column()
+        # col.scale_y = 1.2
+        # row.label(text='Feel free to Support SMC:')
+        # col = row.column()
+        # col.scale_x = 1.5
+        # col.scale_y = 1.2
+        # col.operator('smc.browser', text='',
+        #              icon_value=get_icon_id('patreon')).link = patreon
     else:
         if globs.smc_pi:
             col = m_col.box().column()
