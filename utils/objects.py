@@ -4,7 +4,7 @@ from collections import defaultdict
 
 
 def get_obs(obs):
-    return [ob for ob in obs if ob.type == 'MESH' and ob.data.uv_layers.active and not ob.hide]
+    return [ob for ob in obs if ob.type == 'MESH' and ob.data.uv_layers.active and not (ob.hide_get() if bpy.app.version >= (2, 80, 0) else ob.hide)]
 
 
 def get_polys(ob):
