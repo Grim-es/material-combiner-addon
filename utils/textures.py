@@ -1,11 +1,11 @@
 import bpy
-import os
 
 
-def tex_img(tex):
-    return tex.image if tex and tex.image else None
+def get_texture(mat):
+    return next((mat.texture_slots[slot_idx].texture for slot_idx in range(len(mat.texture_slots))
+                 if (mat.texture_slots[slot_idx] is not None) and mat.use_textures[slot_idx]), None)
 
 
-def tex_path(img):
-    path = bpy.path.abspath(img.filepath)
-    return path if os.path.isfile(path) else ''
+def get_textures(mat):
+    return {slot_idx: mat.texture_slots[slot_idx].texture for slot_idx in range(len(mat.texture_slots))
+            if (mat.texture_slots[slot_idx] is not None) and mat.use_textures[slot_idx]}

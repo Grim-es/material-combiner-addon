@@ -1,98 +1,79 @@
 import bpy
-from .. import iamready
 from .. icons import get_icon_id
-try:
-    from PIL import Image, ImageChops
-    pil_exist = True
-except ImportError:
-    pil_exist = False
+from .. import globs
 
 
 class MaterialMenu(bpy.types.Panel):
     bl_label = 'Main Menu'
-    bl_idname = 'smc.main_menu'
+    bl_idname = 'SMC_PT_Main_Menu'
     bl_space_type = 'VIEW_3D'
-    bl_region_type = 'TOOLS'
+    bl_region_type = 'TOOLS' if bpy.app.version < (2, 80) else 'UI'
     bl_category = 'MatCombiner'
 
     def draw(self, context):
         scn = context.scene
+        manual = 'https://vrcat.club/threads/material-combiner-blender-addon-2-0-3-2.2255/page-3#post-9712'
         layout = self.layout
-        col = layout.column()
-        if iamready:
-            if scn.objects:
-                if bpy.data.materials:
-                    if scn.smc_combine_state == 'COMB':
-                        col = col.column(align=True)
-                        box = col.box()
-                        box.label('Select materials to combine:')
-                        col.template_list('ObDataItems', 'combine_list', scn, 'smc_ob_data',
-                                          scn, 'smc_ob_data_id', rows=12, type='DEFAULT')
-                        col.operator('smc.refresh_ob_data', text='Refresh list', icon_value=get_icon_id('null'))
-                        box = col.box()
-                        box.label('Combine settings:')
-                        box.prop(scn, 'smc_size')
-                        if scn.smc_size == 'CUST':
-                            box_col = box.column(align=True)
-                            box_col.prop(scn, 'smc_size_width')
-                            box_col.prop(scn, 'smc_size_height')
-                        box.prop(scn, 'smc_compress', text='Compress combined image')
-                        box.separator()
-                        col = layout.column()
-                        if pil_exist:
-                            col.operator('smc.combiner', text='Combine', icon_value=get_icon_id('null'))
-                            col.operator('smc.combine_menu_type', text='Multicombine',
-                                         icon_value=get_icon_id('null')).state = 'MULT'
-                        else:
-                            col.label('Pillow was not found!', icon='ERROR')
-                            col.label('Try to run Blender as Administrator.', icon_value=get_icon_id('null'))
-                            col.label('or check your Internet Connection.', icon_value=get_icon_id('null'))
-                            col.label('If error still occur, use options to', icon_value=get_icon_id('help'))
-                            col.label('report on "Credits" window.', icon_value=get_icon_id('null'))
-                        col.operator('smc.combine_menu_type', text='Back',
-                                     icon_value=get_icon_id('null')).state = 'MATS'
-                    elif scn.smc_combine_state == 'MULT':
-                        box = col.box()
-                        if scn.smc_multi_list:
-                            box.template_icon_view(scn, 'smc_image_preview')
-                            row = box.row()
-                            img = bpy.data.images[scn.smc_image_preview]
-                            row.template_list('ImageItems', 'img_name', img, 'smc_img_list',
-                                              img, 'smc_img_list_id', rows=5, type='DEFAULT')
-                            r_col = row.column(align=True)
-                            r_col.operator('smc.img_add', text='', icon='ZOOMIN')
-                            r_col.operator('smc.img_remove', text='', icon='ZOOMOUT')
-                            r_col.separator()
-                            r_col.operator('smc.img_move', icon='TRIA_UP', text='').type = 'UP'
-                            r_col.operator('smc.img_move', icon='TRIA_DOWN', text='').type = 'DOWN'
-                            col.operator('smc.combiner', text='Combine', icon_value=get_icon_id('null'))
-                        else:
-                            box.label('Selected materials to combine have no images')
-                        col.operator('smc.combine_menu_type', text='Back',
-                                     icon_value=get_icon_id('null')).state = 'COMB'
-                    else:
-                        mat = bpy.data.materials[scn.smc_mats_preview]
-                        box = col.box()
-                        box.template_icon_view(scn, 'smc_mats_preview')
-                        split = box.split(percentage=0.75, align=True)
-                        split.prop(scn, 'smc_mats_preview', text='')
-                        split.prop(mat, 'diffuse_color', text='')
-                        box.prop(mat, 'smc_size')
-                        if mat.smc_size:
-                            box_col = box.column(align=True)
-                            box_col.prop(mat, 'smc_size_width')
-                            box_col.prop(mat, 'smc_size_height')
-                        box.prop(mat, 'smc_diffuse')
-                        col.operator('smc.combine_menu_type', text='Continue',
-                                     icon_value=get_icon_id('null')).state = 'COMB'
-                else:
-                    box = col.box()
-                    box.label('No materials found!', icon_value=get_icon_id('no_data'))
-            else:
-                box = col.box()
-                box.label('No objects on the scene!', icon_value=get_icon_id('no_data'))
-        else:
+        col = layout.column(align=True)
+        if globs.pil_exist:
+            col.label(text='Materials to combine:')
+            col.template_list('SMC_UL_Combine_List', 'combine_list', scn, 'smc_ob_data',
+                              scn, 'smc_ob_data_id', rows=12, type='DEFAULT')
             col = col.column(align=True)
+            col.scale_y = 1.2
+            col.operator('smc.refresh_ob_data',
+                         text='Update Material List' if scn.smc_ob_data else 'Generate Material List',
+                         icon_value=get_icon_id('null'))
+            col = layout.column()
+            col.label(text='Properties:')
             box = col.box()
-            box.label(text='Installation complete!', icon='ERROR')
-            box.label(text='Please restart Blender', icon_value=get_icon_id('null'))
+            box.scale_y = 1.2
+            box.prop(scn, 'smc_size')
+            if scn.smc_size == 'CUST':
+                box.prop(scn, 'smc_size_width')
+                box.prop(scn, 'smc_size_height')
+            box.scale_y = 1.2
+            box.prop(scn, 'smc_crop')
+            row = box.row()
+            col = row.column()
+            col.scale_y = 1.2
+            col.label(text='Size of materials without image')
+            col = row.column()
+            col.scale_x = .75
+            col.scale_y = 1.2
+            col.alignment = 'RIGHT'
+            col.prop(scn, 'smc_diffuse_size', text='')
+            row = box.row()
+            col = row.column()
+            col.scale_y = 1.2
+            col.label(text='Size of gaps between images')
+            col = row.column()
+            col.scale_x = .75
+            col.scale_y = 1.2
+            col.alignment = 'RIGHT'
+            col.prop(scn, 'smc_gaps', text='')
+            col = box.column()
+            col.label(text='Multicombining currently disabled', icon_value=get_icon_id('info'))
+            col = layout.column()
+            col.scale_y = 1.5
+            col.operator('smc.combiner', text='Save Atlas to..', icon_value=get_icon_id('null'))
+        else:
+            if globs.smc_pi:
+                col = col.box().column()
+                col.label(text='Installation complete', icon_value=get_icon_id('done'))
+                col.label(text='Please restart Blender', icon_value=get_icon_id('null'))
+            else:
+                col.label(text='Python Imaging Library required to continue')
+                col.separator()
+                row = col.row()
+                row.scale_y = 1.5
+                row.operator('smc.get_pillow', text='Install Pillow', icon_value=get_icon_id('download'))
+                col.separator()
+                col.separator()
+                col = col.box().column()
+                col.label(text='If the installation process is repeated')
+                col.label(text='try to run Blender as Administrator')
+                col.label(text='or check your Internet Connection.')
+                col.separator()
+                col.label(text='If the error persists, try installing manually:')
+                col.operator('smc.browser', text='Manual Install', icon_value=get_icon_id('help')).link = manual
