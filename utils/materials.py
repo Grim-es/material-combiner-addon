@@ -18,6 +18,12 @@ def sort_materials(mat_list):
             path = None
             if mat.node_tree and mat.node_tree.nodes and 'mmd_base_tex' in mat.node_tree.nodes:
                 path = get_image_path(mat.node_tree.nodes['mmd_base_tex'].image)
+            elif mat.node_tree and mat.node_tree.nodes and 'Group' in mat.node_tree.nodes and 'Image Texture' in \
+                    mat.node_tree.nodes and mat.node_tree.nodes['Group'].node_tree.name == 'MToon_unversioned':
+                path = get_image_path(mat.node_tree.nodes['Image Texture'].image)
+            elif mat.node_tree and mat.node_tree.nodes and 'Principled BSDF' in mat.node_tree.nodes and \
+                    'Image Texture' in mat.node_tree.nodes:
+                path = get_image_path(mat.node_tree.nodes['Image Texture'].image)
         else:
             path = get_image_path(get_image(get_texture(mat)))
         if path:
@@ -42,6 +48,9 @@ def get_diffuse(mat):
     if bpy.app.version >= (2, 80, 0):
         if mat.node_tree and mat.node_tree.nodes and 'mmd_shader' in mat.node_tree.nodes:
             return rgb_to_255_scale(mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'].default_value[:])
+        elif mat.node_tree and mat.node_tree.nodes and 'Group' in mat.node_tree.nodes and \
+                mat.node_tree.nodes['Group'].node_tree.name == 'MToon_unversioned':
+            return rgb_to_255_scale(mat.node_tree.nodes['Group'].inputs[10].default_value[:])
         return tuple((255, 255, 255))
     else:
         return rgb_to_255_scale(mat.diffuse_color)

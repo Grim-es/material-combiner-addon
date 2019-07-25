@@ -32,5 +32,5 @@ class CreditsMenu(bpy.types.Panel):
         col.operator('smc.browser', text='Contact me on Discord (shotariya#4269)',
                      icon_value=get_icon_id('discord')).link = discord
         col.separator()
-        col.label(text='If you saved your time:')
+        col.label(text='If this saved you time:')
         col.operator('smc.browser', text='Support Material Combiner', icon_value=get_icon_id('patreon')).link = patreon

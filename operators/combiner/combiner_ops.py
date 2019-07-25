@@ -112,6 +112,12 @@ def get_size(scn, data):
             img = None
             if mat.node_tree.nodes and 'mmd_base_tex' in mat.node_tree.nodes:
                 img = mat.node_tree.nodes['mmd_base_tex'].image
+            elif mat.node_tree and mat.node_tree.nodes and 'Group' in mat.node_tree.nodes and 'Image Texture' in \
+                    mat.node_tree.nodes and mat.node_tree.nodes['Group'].node_tree.name == 'MToon_unversioned':
+                img = mat.node_tree.nodes['Image Texture'].image
+            elif mat.node_tree and mat.node_tree.nodes and 'Principled BSDF' in mat.node_tree.nodes and \
+                    'Image Texture' in mat.node_tree.nodes:
+                img = mat.node_tree.nodes['Image Texture'].image
         else:
             img = get_image(get_texture(mat))
         path = get_image_path(img)
@@ -172,8 +178,15 @@ def get_atlas(scn, data, size):
         size = (max(size),) * 2
     for mat, item in data.items():
         if bpy.app.version >= (2, 80, 0):
-            item['gfx']['img'] = get_image_path(mat.node_tree.nodes['mmd_base_tex'].image) \
-                if mat.node_tree.nodes and 'mmd_base_tex' in mat.node_tree.nodes else None
+            item['gfx']['img'] = None
+            if mat.node_tree.nodes and 'mmd_base_tex' in mat.node_tree.nodes:
+                item['gfx']['img'] = get_image_path(mat.node_tree.nodes['mmd_base_tex'].image)
+            elif mat.node_tree and mat.node_tree.nodes and 'Group' in mat.node_tree.nodes and 'Image Texture' in \
+                    mat.node_tree.nodes and mat.node_tree.nodes['Group'].node_tree.name == 'MToon_unversioned':
+                item['gfx']['img'] = get_image_path(mat.node_tree.nodes['Image Texture'].image)
+            elif mat.node_tree and mat.node_tree.nodes and 'Principled BSDF' in mat.node_tree.nodes and \
+                    'Image Texture' in mat.node_tree.nodes:
+                item['gfx']['img'] = get_image_path(mat.node_tree.nodes['Image Texture'].image)
         else:
             item['gfx']['img'] = get_image_path(get_image(get_texture(mat)))
     img = Image.new('RGBA', size)

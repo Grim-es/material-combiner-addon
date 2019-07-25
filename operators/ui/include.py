@@ -21,7 +21,7 @@ def draw_ui(context, m_col):
         col.operator('smc.combiner', text='Save Atlas to..', icon_value=get_icon_id('null'))
         col.separator()
         col = m_col.column()
-        col.label(text='If you saved your time:')
+        col.label(text='If this saved you time:')
         col.operator('smc.browser', text='Support Material Combiner', icon_value=get_icon_id('patreon')).link = patreon
     else:
         if globs.smc_pi:
