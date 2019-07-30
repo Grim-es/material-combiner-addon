@@ -1,34 +1,28 @@
-import bpy
-import os
 import math
+import os
 import random
-try:
-    from PIL import (
-        Image,
-        ImageChops
-    )
-except ImportError:
-    pass
+from collections import OrderedDict
+from collections import defaultdict
 
-from collections import (
-    defaultdict,
-    OrderedDict
-)
-from ... utils . objects import (
-    get_obs,
-    get_polys,
-    get_uv,
-    align_uv
-)
-from ... utils . materials import (
-    get_diffuse,
-    sort_materials
-)
-from ... utils . textures import get_texture
-from ... utils . images import (
-    get_image,
-    get_image_path
-)
+import bpy
+
+try:
+    from PIL import Image
+    from PIL import ImageChops
+except ImportError:
+    Image = None
+    ImageChops = None
+from ... import globs
+from ...utils.objects import get_obs
+from ...utils.objects import get_polys
+from ...utils.objects import get_uv
+from ...utils.objects import align_uv
+from ...utils.materials import shader_type
+from ...utils.materials import get_diffuse
+from ...utils.materials import sort_materials
+from ...utils.textures import get_texture
+from ...utils.images import get_image
+from ...utils.images import get_image_path
 
 
 def set_ob_mode(scn):
@@ -108,15 +102,12 @@ def clear_duplicates(data):
 
 def get_size(scn, data):
     for mat, i in data.items():
-        if bpy.app.version >= (2, 80, 0):
+        if globs.version:
             img = None
-            if mat.node_tree.nodes and 'mmd_base_tex' in mat.node_tree.nodes:
+            shader = shader_type(mat)
+            if shader == 'mmd':
                 img = mat.node_tree.nodes['mmd_base_tex'].image
-            elif mat.node_tree and mat.node_tree.nodes and 'Group' in mat.node_tree.nodes and 'Image Texture' in \
-                    mat.node_tree.nodes and mat.node_tree.nodes['Group'].node_tree.name == 'MToon_unversioned':
-                img = mat.node_tree.nodes['Image Texture'].image
-            elif mat.node_tree and mat.node_tree.nodes and 'Principled BSDF' in mat.node_tree.nodes and \
-                    'Image Texture' in mat.node_tree.nodes:
+            elif shader == 'vrm' or shader == 'xnalara':
                 img = mat.node_tree.nodes['Image Texture'].image
         else:
             img = get_image(get_texture(mat))
@@ -128,12 +119,14 @@ def get_size(scn, data):
             i['gfx']['uv_size'] = tuple(map(math.ceil, i['gfx']['uv_size']))
         if path:
             if mat.smc_size:
-                img_size = (min(mat.smc_size_width, img.size[0]), min(mat.smc_size_height, img.size[1]))
+                img_size = (min(mat.smc_size_width, img.size[0]),
+                            min(mat.smc_size_height, img.size[1]))
             else:
                 img_size = (img.size[0], img.size[1])
-            i['gfx']['size'] = tuple(int(s * uv_s + scn.smc_gaps) for s, uv_s in zip(img_size, i['gfx']['uv_size']))
+            i['gfx']['size'] = tuple(
+                int(s * uv_s + int(scn.smc_gaps)) for s, uv_s in zip(img_size, i['gfx']['uv_size']))
         else:
-            i['gfx']['size'] = (scn.smc_diffuse_size + scn.smc_gaps,) * 2
+            i['gfx']['size'] = (scn.smc_diffuse_size + int(scn.smc_gaps),) * 2
     return OrderedDict(sorted(data.items(), key=lambda x: min(x[1]['gfx']['size']), reverse=True))
 
 
@@ -151,7 +144,7 @@ def get_uv_image(item, img, size):
 
 
 def get_gfx(scn, mat, item, src):
-    size = tuple(size - scn.smc_gaps for size in item['gfx']['size'])
+    size = tuple(size - int(scn.smc_gaps) for size in item['gfx']['size'])
     if isinstance(src, str):
         if src:
             img = Image.open(src).convert('RGBA')
@@ -177,15 +170,12 @@ def get_atlas(scn, data, size):
     elif scn.smc_size == 'QUAD':
         size = (max(size),) * 2
     for mat, item in data.items():
-        if bpy.app.version >= (2, 80, 0):
-            item['gfx']['img'] = None
-            if mat.node_tree.nodes and 'mmd_base_tex' in mat.node_tree.nodes:
+        if globs.version:
+            item['gfx']['img'] = ''
+            shader = shader_type(mat)
+            if shader == 'mmd':
                 item['gfx']['img'] = get_image_path(mat.node_tree.nodes['mmd_base_tex'].image)
-            elif mat.node_tree and mat.node_tree.nodes and 'Group' in mat.node_tree.nodes and 'Image Texture' in \
-                    mat.node_tree.nodes and mat.node_tree.nodes['Group'].node_tree.name == 'MToon_unversioned':
-                item['gfx']['img'] = get_image_path(mat.node_tree.nodes['Image Texture'].image)
-            elif mat.node_tree and mat.node_tree.nodes and 'Principled BSDF' in mat.node_tree.nodes and \
-                    'Image Texture' in mat.node_tree.nodes:
+            elif (shader == 'vrm') or (shader == 'xnalara'):
                 item['gfx']['img'] = get_image_path(mat.node_tree.nodes['Image Texture'].image)
         else:
             item['gfx']['img'] = get_image_path(get_image(get_texture(mat)))
@@ -205,24 +195,26 @@ def get_aligned_uv(scn, data, size):
         w, h = i['gfx']['size']
         uv_w, uv_h = i['gfx']['uv_size']
         for uv in i['uv']:
-            reset_x = uv.x / uv_w * (w - 2 - scn.smc_gaps) / size[0]
-            reset_y = 1 + uv.y / uv_h * (h - 2 - scn.smc_gaps) / size[1] - h / size[1]
-            uv.x = reset_x + (i['gfx']['fit']['x'] + 1 + scn.smc_gaps / 2) / size[0]
-            uv.y = reset_y - (i['gfx']['fit']['y'] - 1 - scn.smc_gaps / 2) / size[1]
+            reset_x = uv.x / uv_w * (w - 2 - int(scn.smc_gaps)) / size[0]
+            reset_y = 1 + uv.y / uv_h * (h - 2 - int(scn.smc_gaps)) / size[1] - h / size[1]
+            uv.x = reset_x + (i['gfx']['fit']['x'] + 1 + int(scn.smc_gaps / 2)) / size[0]
+            uv.y = reset_y - (i['gfx']['fit']['y'] - 1 - int(scn.smc_gaps / 2)) / size[1]
 
 
 def get_comb_mats(scn, atlas, mats_uv):
     layers = set(i.layer for i in scn.smc_ob_data if (i.type == 1) and i.used and (i.mat in mats_uv[i.ob].keys()))
-    unique_id = random.randrange(9999999999)
-    path = os.path.join(scn.smc_save_path, 'combined_texture_{0}.png'.format(unique_id))
+    existed_ids = [int(i.mat.name.split('_')[-2]) for i in scn.smc_ob_data if (i.type == 1) and
+                   i.mat.name.startswith('material_atlas_')]
+    unique_id = random.choice([i for i in range(10000, 99999) if i not in existed_ids])
+    path = os.path.join(scn.smc_save_path, 'Atlas_{0}.png'.format(unique_id))
     atlas.save(path)
-    texture = bpy.data.textures.new('combined_texture_{0}'.format(unique_id), 'IMAGE')
+    texture = bpy.data.textures.new('texture_atlas_{0}'.format(unique_id), 'IMAGE')
     image = bpy.data.images.load(path)
     texture.image = image
     mats = {}
     for idx in layers:
-        mat = bpy.data.materials.new(name='combined_material_{0}_{1}'.format(unique_id, idx))
-        if bpy.app.version >= (2, 80, 0):
+        mat = bpy.data.materials.new(name='material_atlas_{0}_{1}'.format(unique_id, idx))
+        if globs.version:
             mat.blend_method = 'CLIP'
             mat.use_nodes = True
             node_texture = mat.node_tree.nodes.new(type='ShaderNodeTexImage')

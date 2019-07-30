@@ -1,11 +1,10 @@
+from collections import defaultdict
+
 import bpy
 from bpy.props import *
-from collections import defaultdict
-from ... utils . objects import get_obs
-from ... utils . materials import (
-    get_materials,
-    sort_materials
-)
+from ...utils.materials import get_materials
+from ...utils.materials import sort_materials
+from ...utils.objects import get_obs
 
 
 class RefreshObData(bpy.types.Operator):

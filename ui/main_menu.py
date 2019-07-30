@@ -1,13 +1,13 @@
 import bpy
-from .. icons import get_icon_id
 from .. import globs
+from ..icons import get_icon_id
 
 
 class MaterialMenu(bpy.types.Panel):
     bl_label = 'Main Menu'
     bl_idname = 'SMC_PT_Main_Menu'
     bl_space_type = 'VIEW_3D'
-    bl_region_type = 'TOOLS' if bpy.app.version < (2, 80) else 'UI'
+    bl_region_type = 'UI' if globs.version else 'TOOLS'
     bl_category = 'MatCombiner'
 
     def draw(self, context):

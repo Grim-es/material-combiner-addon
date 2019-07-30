@@ -1,5 +1,6 @@
-import bpy
 import webbrowser
+
+import bpy
 from bpy.props import *
 
 

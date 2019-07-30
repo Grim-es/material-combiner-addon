@@ -1,5 +1,6 @@
-import bpy
 import os
+
+import bpy
 from bpy.props import *
 
 

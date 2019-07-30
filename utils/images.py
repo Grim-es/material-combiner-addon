@@ -1,5 +1,6 @@
-import bpy
 import os
+
+import bpy
 
 
 def get_image(tex):

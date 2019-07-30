@@ -1,7 +1,7 @@
-import bpy
 import os
-from bpy.props import *
 from subprocess import call
+
+import bpy
 from .. import globs
 
 

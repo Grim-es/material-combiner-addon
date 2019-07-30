@@ -1,7 +1,9 @@
 import bpy
 from bpy.props import *
-from .. utils . textures import get_texture
-from .. utils . images import get_image
+from .. import globs
+from ..utils.images import get_image
+from ..utils.materials import shader_type
+from ..utils.textures import get_texture
 
 
 class PropertiesMenu(bpy.types.Operator):
@@ -14,7 +16,7 @@ class PropertiesMenu(bpy.types.Operator):
 
     def invoke(self, context, event):
         scn = context.scene
-        dpi = bpy.context.preferences.system.dpi if bpy.app.version >= (2, 80, 0) else bpy.context.user_preferences.system.dpi
+        dpi = bpy.context.preferences.system.dpi if globs.version else bpy.context.user_preferences.system.dpi
         wm = context.window_manager
         scn.smc_list_id = self.list_id
         return wm.invoke_props_dialog(self, width=dpi * 4)
@@ -28,7 +30,7 @@ class PropertiesMenu(bpy.types.Operator):
     def draw(self, context):
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
-        if bpy.app.version >= (2, 80, 0):
+        if globs.version:
             img = None
             if item.mat.node_tree and item.mat.node_tree.nodes and 'mmd_base_tex' in item.mat.node_tree.nodes:
                 img = item.mat.node_tree.nodes['mmd_base_tex'].image
@@ -43,8 +45,13 @@ class PropertiesMenu(bpy.types.Operator):
             col.separator()
             col.prop(item.mat, 'smc_diffuse')
             if item.mat.smc_diffuse:
-                if bpy.app.version >= (2, 80, 0):
-                    col.prop(item.mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'], 'default_value', text='')
+                if globs.version:
+                    shader = shader_type(item.mat)
+                    if shader == 'mmd':
+                        col.prop(item.mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'], 'default_value',
+                                 text='')
+                    elif shader == 'vrm':
+                        col.prop(item.mat.node_tree.nodes['Group'].inputs[10], 'default_value', text='')
                 else:
                     col.prop(item.mat, 'diffuse_color', text='')
                 col.separator()

@@ -1,5 +1,6 @@
-import bpy
 import os
+
+import bpy
 import bpy.utils.previews
 
 smc_icons = None

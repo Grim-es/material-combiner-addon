@@ -34,44 +34,44 @@ class BinPacker(object):
         self.root = {'x': 0, 'y': 0, 'w': w, 'h': h}
         for img in images.values():
             w, h = img['gfx']['size']
-            if self.findNode(self.root, w, h):
-                node = self.findNode(self.root, w, h)
-                img['gfx']['fit'] = self.splitNode(node, w, h)
+            if self.find_node(self.root, w, h):
+                node = self.find_node(self.root, w, h)
+                img['gfx']['fit'] = self.split_node(node, w, h)
             else:
-                img['gfx']['fit'] = self.growNode(w, h)
+                img['gfx']['fit'] = self.grow_node(w, h)
         return images
 
-    def findNode(self, root, w, h):
+    def find_node(self, root, w, h):
         if 'used' in root and root['used']:
-                return self.findNode(root['right'], w, h) or self.findNode(root['down'], w, h)
+            return self.find_node(root['right'], w, h) or self.find_node(root['down'], w, h)
         elif (w <= root['w']) and (h <= root['h']):
             return root
         return None
 
-    def splitNode(self, node, w, h):
+    def split_node(self, node, w, h):
         node['used'] = True
         node['down'] = {'x': node['x'], 'y': node['y'] + h, 'w': node['w'], 'h': node['h'] - h}
         node['right'] = {'x': node['x'] + w, 'y': node['y'], 'w': node['w'] - w, 'h': h}
         return node
 
-    def growNode(self, w, h):
-        canGrowDown = (w <= self.root['w'])
-        canGrowRight = (h <= self.root['h'])
+    def grow_node(self, w, h):
+        can_grow_right = (h <= self.root['h'])
+        can_grow_down = (w <= self.root['w'])
 
-        shouldGrowRight = canGrowRight and (self.root['h'] >= (self.root['w'] + w))
-        shouldGrowDown = canGrowDown and (self.root['w'] >= (self.root['h'] + h))
+        should_grow_right = can_grow_right and (self.root['h'] >= (self.root['w'] + w))
+        should_grow_down = can_grow_down and (self.root['w'] >= (self.root['h'] + h))
 
-        if shouldGrowRight:
-            return self.growRight(w, h)
-        elif shouldGrowDown:
-            return self.growDown(w, h)
-        elif canGrowRight:
-            return self.growRight(w, h)
-        elif canGrowDown:
-            return self.growDown(w, h)
+        if should_grow_right:
+            return self.grow_right(w, h)
+        elif should_grow_down:
+            return self.grow_down(w, h)
+        elif can_grow_right:
+            return self.grow_right(w, h)
+        elif can_grow_down:
+            return self.grow_down(w, h)
         return None
 
-    def growRight(self, w, h):
+    def grow_right(self, w, h):
         self.root = {
             'used': True,
             'x': 0,
@@ -80,12 +80,12 @@ class BinPacker(object):
             'h': self.root['h'],
             'down': self.root,
             'right': {'x': self.root['w'], 'y': 0, 'w': w, 'h': self.root['h']}}
-        if self.findNode(self.root, w, h):
-            node = self.findNode(self.root, w, h)
-            return self.splitNode(node, w, h)
+        if self.find_node(self.root, w, h):
+            node = self.find_node(self.root, w, h)
+            return self.split_node(node, w, h)
         return None
 
-    def growDown(self, w, h):
+    def grow_down(self, w, h):
         self.root = {
             'used': True,
             'x': 0,
@@ -95,7 +95,7 @@ class BinPacker(object):
             'down': {'x': 0, 'y': self.root['h'], 'w': self.root['w'], 'h': h},
             'right': self.root
         }
-        if self.findNode(self.root, w, h):
-            node = self.findNode(self.root, w, h)
-            return self.splitNode(node, w, h)
+        if self.find_node(self.root, w, h):
+            node = self.find_node(self.root, w, h)
+            return self.split_node(node, w, h)
         return None

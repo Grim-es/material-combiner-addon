@@ -1,7 +1,7 @@
-import bpy
 from bpy.props import *
-from . combiner_ops import *
-from . packer import BinPacker
+from .combiner_ops import *
+from .packer import BinPacker
+from ... import globs
 
 
 class Combiner(bpy.types.Operator):
@@ -36,13 +36,13 @@ class Combiner(bpy.types.Operator):
     def invoke(self, context, event):
         scn = context.scene
         bpy.ops.smc.refresh_ob_data()
-        set_ob_mode(context.view_layer if bpy.app.version >= (2, 80, 0) else scn)
+        set_ob_mode(context.view_layer if globs.version else scn)
         self.data = get_data(scn.smc_ob_data)
         self.mats_uv = get_mats_uv(self.data)
         clear_empty_mats(self.data, self.mats_uv)
         get_duplicates(self.mats_uv)
         self.structure = get_structure(self.data, self.mats_uv)
-        if bpy.app.version < (2, 80, 0):
+        if not globs.version:
             context.space_data.viewport_shade = 'MATERIAL'
         if (len(self.structure) == 1) and next(iter(self.structure.values()))['dup']:
             clear_duplicates(self.structure)

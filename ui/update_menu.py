@@ -1,12 +1,13 @@
 import bpy
 from .. import addon_updater_ops
+from .. import globs
 
 
 class UpdateMenu(bpy.types.Panel):
     bl_label = 'Updates'
     bl_idname = 'SMC_PT_Update_Menu'
     bl_space_type = 'VIEW_3D'
-    bl_region_type = 'TOOLS' if bpy.app.version < (2, 80) else 'UI'
+    bl_region_type = 'UI' if globs.version else 'TOOLS'
     bl_category = 'MatCombiner'
     bl_options = {'DEFAULT_CLOSED'}
 

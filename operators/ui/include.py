@@ -1,6 +1,5 @@
-import bpy
-from ... icons import get_icon_id
 from ... import globs
+from ...icons import get_icon_id
 
 
 def draw_ui(context, m_col):

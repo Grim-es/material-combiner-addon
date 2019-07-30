@@ -1,6 +1,6 @@
 import bpy
 from .. import bl_info
-from .. icons import get_icon_id
+from ..icons import get_icon_id
 
 
 class CreditsMenu(bpy.types.Panel):

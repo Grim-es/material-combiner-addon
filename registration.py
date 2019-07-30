@@ -1,11 +1,12 @@
 import bpy
-from . icons import initialize_smc_icons, unload_smc_icons
 from . import addon_updater_ops
-
-from . import ui
-from . import operators
-from . import extend_types
 from . import extend_lists
+from . import extend_types
+from . import globs
+from . import operators
+from . import ui
+from .icons import initialize_smc_icons
+from .icons import unload_smc_icons
 
 __bl_classes = [
     ui.credits_menu.CreditsMenu,
@@ -36,6 +37,7 @@ def register_all(bl_info):
     register_classes()
     initialize_smc_icons()
     addon_updater_ops.register(bl_info)
+    addon_updater_ops.check_for_update_background()
     extend_types.register()
 
 
@@ -75,7 +77,7 @@ def unregister_classes():
 
 
 def make_annotations(cls):
-    if bpy.app.version >= (2, 80, 0):
+    if globs.version:
         bl_props = {k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
         if bl_props:
             if '__annotations__' not in cls.__dict__:
@@ -85,4 +87,3 @@ def make_annotations(cls):
                 annotations[k] = v
                 delattr(cls, k)
     return cls
-

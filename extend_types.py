@@ -12,7 +12,7 @@ class CombineList(bpy.types.PropertyGroup):
         name='Current Object Material',
         type=bpy.types.Material)
     layer = IntProperty(
-        description='Assign material to another atlas',
+        description='Assign material to another material atlas',
         min=1,
         max=99,
         step=1,
@@ -23,38 +23,37 @@ class CombineList(bpy.types.PropertyGroup):
 
 class UpdatePreferences(bpy.types.AddonPreferences):
     bl_idname = __package__
-
     auto_check_update = BoolProperty(
         name="Auto-check for Update",
         description="If enabled, auto-check for updates using an interval",
         default=True,
-        )
+    )
     updater_intrval_months = bpy.props.IntProperty(
         name='Months',
         description="Number of months between checking for updates",
         default=0,
         min=0
-        )
+    )
     updater_intrval_days = IntProperty(
         name='Days',
         description="Number of days between checking for updates",
         default=1,
         min=1
-        )
+    )
     updater_intrval_hours = IntProperty(
         name='Hours',
         description="Number of hours between checking for updates",
         default=0,
         min=0,
         max=0
-        )
+    )
     updater_intrval_minutes = IntProperty(
         name='Minutes',
         description="Number of minutes between checking for updates",
         default=0,
         min=0,
         max=0
-        )
+    )
 
     def draw(self, context):
         addon_updater_ops.update_settings_ui(self, context)
@@ -99,13 +98,15 @@ def register():
         max=256,
         step=1,
         default=32)
-    bpy.types.Scene.smc_gaps = IntProperty(
+    bpy.types.Scene.smc_gaps = FloatProperty(
         name='Size of gaps between images',
         description='Select size of gaps between images',
         min=2,
         max=32,
-        step=2,
-        default=2)
+        precision=0,
+        step=200,
+        default=2,
+        options={'HIDDEN'})
     bpy.types.Scene.smc_save_path = StringProperty(
         description='Select a path for combined texture',
         default='')
