@@ -25,32 +25,32 @@ class CombineList(bpy.types.PropertyGroup):
 class UpdatePreferences(bpy.types.AddonPreferences):
     bl_idname = __package__
     auto_check_update = BoolProperty(
-        name="Auto-check for Update",
-        description="If enabled, auto-check for updates using an interval",
+        name='Auto-check for Update',
+        description='If enabled, auto-check for updates using an interval',
         default=True,
     )
     updater_intrval_months = bpy.props.IntProperty(
         name='Months',
-        description="Number of months between checking for updates",
+        description='Number of months between checking for updates',
         default=0,
         min=0
     )
     updater_intrval_days = IntProperty(
         name='Days',
-        description="Number of days between checking for updates",
+        description='Number of days between checking for updates',
         default=1,
         min=1
     )
     updater_intrval_hours = IntProperty(
         name='Hours',
-        description="Number of hours between checking for updates",
+        description='Number of hours between checking for updates',
         default=0,
         min=0,
         max=0
     )
     updater_intrval_minutes = IntProperty(
         name='Minutes',
-        description="Number of minutes between checking for updates",
+        description='Number of minutes between checking for updates',
         default=0,
         min=0,
         max=0
@@ -88,8 +88,8 @@ def register():
         step=1,
         default=8192)
     bpy.types.Scene.smc_crop = BoolProperty(
-        name='Crop images by UV',
-        description="This cuts away unused space from images",
+        name='Crop outside images by UV',
+        description='Crop images by UV if materials UV outside of bounds',
         default=True
     )
     bpy.types.Scene.smc_diffuse_size = IntProperty(
