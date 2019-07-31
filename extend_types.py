@@ -89,7 +89,7 @@ def register():
         default=8192)
     bpy.types.Scene.smc_crop = BoolProperty(
         name='Crop images by UV',
-        description="Crop images by UV",
+        description="Cut away unused space from images",
         default=True
     )
     bpy.types.Scene.smc_diffuse_size = IntProperty(
