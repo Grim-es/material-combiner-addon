@@ -10,7 +10,7 @@ from ...utils.objects import get_obs
 class RefreshObData(bpy.types.Operator):
     bl_idname = 'smc.refresh_ob_data'
     bl_label = 'Combine List'
-    bl_description = 'Refresh Combine List'
+    bl_description = 'Updates the material list'
 
     def execute(self, context):
         scn = context.scene
@@ -47,7 +47,7 @@ class RefreshObData(bpy.types.Operator):
 class CombineSwitch(bpy.types.Operator):
     bl_idname = 'smc.combine_switch'
     bl_label = 'Add Item'
-    bl_description = 'Select / Deselect'
+    bl_description = 'Selected materials will be combined into one texture atlas'
 
     list_id = IntProperty(default=0)
 

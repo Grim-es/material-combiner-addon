@@ -8,6 +8,7 @@ from .. import globs
 class InstallPIL(bpy.types.Operator):
     bl_idname = 'smc.get_pillow'
     bl_label = 'Install PIL'
+    bl_description = 'Click to install Pillow. This could take a while and might require you to start Blender as admin'
 
     def execute(self, context):
         try:

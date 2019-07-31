@@ -12,7 +12,8 @@ class CombineList(bpy.types.PropertyGroup):
         name='Current Object Material',
         type=bpy.types.Material)
     layer = IntProperty(
-        description='Assign material to another material atlas',
+        description='Materials with the same number will be merged together.'
+                    '\nUse this to create multiple materials linked to the same atlas file',
         min=1,
         max=99,
         step=1,
@@ -87,13 +88,13 @@ def register():
         step=1,
         default=8192)
     bpy.types.Scene.smc_crop = BoolProperty(
-        name='Crop outside images by UV',
-        description="Crop images by UV if material's UV outside of bounds",
+        name='Crop images by UV',
+        description="Crop images by UV",
         default=True
     )
     bpy.types.Scene.smc_diffuse_size = IntProperty(
         name='Size of materials without image',
-        description='Select size of materials without image',
+        description='Select the size of materials that only consist of a color',
         min=8,
         max=256,
         step=1,
@@ -108,19 +109,20 @@ def register():
         default=2,
         options={'HIDDEN'})
     bpy.types.Scene.smc_save_path = StringProperty(
-        description='Select a path for combined texture',
+        description='Select the directory in which the generated texture atlas will be saved',
         default='')
 
     bpy.types.Material.root_mat = PointerProperty(
         name='Material Root',
         type=bpy.types.Material)
     bpy.types.Material.smc_diffuse = BoolProperty(
-        name='Multiply material color with material image',
-        description='Multiply material diffuse color with material image',
+        name='Multiply image with diffuse color',
+        description='Multiply the materials image with its diffuse color.'
+                    '\nINFO: If this color is white the final image will be the same',
         default=True)
     bpy.types.Material.smc_size = BoolProperty(
-        name='Custom size for material image',
-        description='Select to resize material image on combined image',
+        name='Custom image size',
+        description='Select the max size for this materials image in the texture atlas',
         default=False)
     bpy.types.Material.smc_size_width = IntProperty(
         name='Max width (px)',
