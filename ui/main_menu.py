@@ -56,7 +56,7 @@ class MaterialMenu(bpy.types.Panel):
             col.label(text='Multicombining currently disabled', icon_value=get_icon_id('info'))
             col = layout.column()
             col.scale_y = 1.5
-            col.operator('smc.combiner', text='Save Atlas to..', icon_value=get_icon_id('null'))
+            col.operator('smc.combiner', text='Save Atlas to..', icon_value=get_icon_id('null')).cats = False
         else:
             if globs.smc_pi:
                 col = col.box().column()
