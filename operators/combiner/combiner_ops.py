@@ -78,12 +78,7 @@ def get_structure(data, mats_uv):
                         'gfx': {
                             'img': None,
                             'size': (),
-                            'uv_size': (),
-                            'crop': {
-                                'size': None,
-                                'offset_min': None,
-                                'offset_max': None
-                            }
+                            'uv_size': ()
                         },
                         'dup': [],
                         'ob': [],
@@ -117,13 +112,10 @@ def get_size(scn, data):
         else:
             img = get_image(get_texture(mat))
         path = get_image_path(img)
-        uv_x = [uv.x if not math.isnan(uv.x) else 0 for uv in i['uv']]
-        uv_y = [uv.y if not math.isnan(uv.y) else 0 for uv in i['uv']]
-        i['gfx']['uv_size'] = tuple(map(lambda x: max(max(x), 1) if max(x) < 25 else 1, [uv_x, uv_y]))
-        if scn.smc_crop:
-            i['gfx']['crop']['offset_min'] = tuple(map(lambda x: min(x), [uv_x, uv_y]))
-            i['gfx']['crop']['offset_max'] = tuple(map(lambda x: max(x), [uv_x, uv_y]))
-        else:
+        max_x = max(max([uv.x for uv in i['uv'] if not math.isnan(uv.x)], default=1), 1)
+        max_y = max(max([uv.y for uv in i['uv'] if not math.isnan(uv.y)], default=1), 1)
+        i['gfx']['uv_size'] = tuple(map(lambda x: x if x < 25 else 1, [max_x, max_y]))
+        if not scn.smc_crop:
             i['gfx']['uv_size'] = tuple(map(math.ceil, i['gfx']['uv_size']))
         if path:
             if mat.smc_size:
@@ -133,11 +125,6 @@ def get_size(scn, data):
                 img_size = (img.size[0], img.size[1])
             i['gfx']['size'] = tuple(
                 int(s * uv_s + int(scn.smc_gaps)) for s, uv_s in zip(img_size, i['gfx']['uv_size']))
-            if scn.smc_crop:
-                i['gfx']['crop']['size'] = tuple(
-                    int(s * c_s / uv_s) for s, c_s, uv_s in
-                    zip(i['gfx']['size'], tuple(map(lambda x: abs(min(x) - max(x)), [uv_x, uv_y])),
-                        i['gfx']['uv_size']))
         else:
             i['gfx']['size'] = (scn.smc_diffuse_size + int(scn.smc_gaps),) * 2
     return OrderedDict(sorted(data.items(), key=lambda x: min(x[1]['gfx']['size']), reverse=True))
@@ -170,15 +157,6 @@ def get_gfx(scn, mat, item, src):
             if mat.smc_diffuse:
                 diffuse_img = Image.new('RGBA', size, get_diffuse(mat))
                 img = ImageChops.multiply(img, diffuse_img)
-            if scn.smc_crop:
-                img = img.crop((
-                    math.floor(img.size[0] * item['gfx']['crop']['offset_min'][0] / item['gfx']['uv_size'][0]),
-                    math.ceil(img.size[1] * (item['gfx']['uv_size'][1] - item['gfx']['crop']['offset_max'][1]) /
-                              item['gfx']['uv_size'][1]),
-                    math.floor(img.size[0] * item['gfx']['crop']['offset_max'][0] / item['gfx']['uv_size'][0]),
-                    math.ceil(img.size[1] * (item['gfx']['uv_size'][1] - item['gfx']['crop']['offset_min'][1]) /
-                              item['gfx']['uv_size'][1])
-                ))
         else:
             img = Image.new('RGBA', size, get_diffuse(mat))
     else:
@@ -214,22 +192,11 @@ def get_atlas(scn, data, size):
 
 def get_aligned_uv(scn, data, size):
     for mat, i in data.items():
-        if i['gfx']['crop']['size'] is None:
-            w, h = i['gfx']['size']
-            uv_w, uv_h = i['gfx']['uv_size']
-        else:
-            w, h = i['gfx']['crop']['size']
-            uv_x = [uv.x if not math.isnan(uv.x) else 0 for uv in i['uv']]
-            uv_y = [uv.y if not math.isnan(uv.y) else 0 for uv in i['uv']]
-            uv_w, uv_h = tuple(map(lambda x: max(abs(min(x) - max(x)), 0.001), [uv_x, uv_y]))
+        w, h = i['gfx']['size']
+        uv_w, uv_h = i['gfx']['uv_size']
         for uv in i['uv']:
-            if i['gfx']['crop']['size'] is None:
-                reset_x = uv.x / uv_w * (w - 2 - int(scn.smc_gaps)) / size[0]
-                reset_y = 1 + uv.y / uv_h * (h - 2 - int(scn.smc_gaps)) / size[1] - h / size[1]
-            else:
-                reset_x = (uv.x - i['gfx']['crop']['offset_min'][0]) / uv_w * (w - 2 - int(scn.smc_gaps)) / size[0]
-                reset_y = 1 + (uv.y - i['gfx']['crop']['offset_min'][1]) / uv_h * (h - 2 - int(scn.smc_gaps)) / size[
-                    1] - h / size[1]
+            reset_x = uv.x / uv_w * (w - 2 - int(scn.smc_gaps)) / size[0]
+            reset_y = 1 + uv.y / uv_h * (h - 2 - int(scn.smc_gaps)) / size[1] - h / size[1]
             uv.x = reset_x + (i['gfx']['fit']['x'] + 1 + int(scn.smc_gaps / 2)) / size[0]
             uv.y = reset_y - (i['gfx']['fit']['y'] - 1 - int(scn.smc_gaps / 2)) / size[1]
 
