@@ -7,7 +7,7 @@ from ... import globs
 class Combiner(bpy.types.Operator):
     bl_idname = 'smc.combiner'
     bl_label = 'Create Atlas'
-    bl_description = 'Combine materials'
+    bl_description = 'Select where you want to save the generated texture atlas'
     bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
 
     directory = StringProperty(maxlen=1024, default='', subtype='FILE_PATH', options={'HIDDEN'})
