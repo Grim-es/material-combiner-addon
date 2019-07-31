@@ -21,6 +21,9 @@ def shader_type(mat):
     elif (mat.node_tree and mat.node_tree.nodes and 'Principled BSDF' in mat.node_tree.nodes and
           'Image Texture' in mat.node_tree.nodes):
         return 'xnalara'
+    elif (mat.node_tree and mat.node_tree.nodes and 'Diffuse BSDF' in mat.node_tree.nodes and
+          'Image Texture' in mat.node_tree.nodes):
+        return 'diffuse'
 
 
 def sort_materials(mat_list):
@@ -33,7 +36,7 @@ def sort_materials(mat_list):
             shader = shader_type(mat)
             if shader == 'mmd':
                 path = get_image_path(mat.node_tree.nodes['mmd_base_tex'].image)
-            elif (shader == 'vrm') or (shader == 'xnalara'):
+            elif (shader == 'vrm') or (shader == 'xnalara') or (shader == 'diffuse'):
                 path = get_image_path(mat.node_tree.nodes['Image Texture'].image)
         else:
             path = get_image_path(get_image(get_texture(mat)))
@@ -62,6 +65,8 @@ def get_diffuse(mat):
             return rgb_to_255_scale(mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'].default_value[:])
         elif shader == 'vrm':
             return rgb_to_255_scale(mat.node_tree.nodes['Group'].inputs[10].default_value[:])
+        elif shader == 'diffuse':
+            return rgb_to_255_scale(mat.node_tree.nodes['Diffuse BSDF'].inputs['Color'].default_value[:])
         return tuple((255, 255, 255))
     else:
         return rgb_to_255_scale(mat.diffuse_color)
