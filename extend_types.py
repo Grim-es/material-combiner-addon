@@ -102,7 +102,7 @@ def register():
     bpy.types.Scene.smc_gaps = FloatProperty(
         name='Size of gaps between images',
         description='Select size of gaps between images',
-        min=2,
+        min=0,
         max=32,
         precision=0,
         step=200,
