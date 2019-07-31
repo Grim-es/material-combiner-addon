@@ -7,10 +7,10 @@ from ..utils.textures import get_texture
 
 
 class PropertiesMenu(bpy.types.Operator):
-    bl_label = 'Material Properties'
+    bl_label = 'Settings for material:'
     bl_idname = 'smc.properties_menu'
-    bl_description = 'Properties Menu'
-    bl_options = {'UNDO'}
+    bl_description = 'Show settings for this material'
+    bl_options = {'UNDO', 'INTERNAL'}
 
     list_id = IntProperty(default=0)
 
