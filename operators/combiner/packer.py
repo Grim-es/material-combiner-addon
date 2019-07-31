@@ -30,10 +30,12 @@ class BinPacker(object):
         w = 0
         h = 0
         if img_len > 0:
-            w, h = images[next(iter(images))]['gfx']['size']
+            w, h = images[next(iter(images))]['gfx']['size'] if \
+                images[next(iter(images))]['gfx']['crop']['size'] is None else \
+                images[next(iter(images))]['gfx']['crop']['size']
         self.root = {'x': 0, 'y': 0, 'w': w, 'h': h}
         for img in images.values():
-            w, h = img['gfx']['size']
+            w, h = img['gfx']['size'] if img['gfx']['crop']['size'] is None else img['gfx']['crop']['size']
             if self.find_node(self.root, w, h):
                 node = self.find_node(self.root, w, h)
                 img['gfx']['fit'] = self.split_node(node, w, h)
