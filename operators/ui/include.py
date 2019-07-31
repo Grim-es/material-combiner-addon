@@ -17,7 +17,7 @@ def draw_ui(context, m_col):
                      icon_value=get_icon_id('null'))
         col = m_col.column()
         col.scale_y = 1.5
-        col.operator('smc.combiner', text='Save Atlas to..', icon_value=get_icon_id('null'))
+        col.operator('smc.combiner', text='Save Atlas to..', icon_value=get_icon_id('null')).cats = True
         col.separator()
         col = m_col.column()
         col.label(text='If this saved you time:')
