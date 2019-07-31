@@ -69,9 +69,11 @@ def unregister_classes():
         try:
             bpy.utils.unregister_class(cls)
             count += 1
-        except ValueError:
+        except ValueError as e:
+            print('Error:', cls, e)
             pass
-        except RuntimeError:
+        except RuntimeError as e:
+            print('Error:', cls, e)
             pass
     print('Unregistered', count, 'Material Combiner classes.')
 
