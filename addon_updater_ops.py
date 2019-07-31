@@ -530,8 +530,12 @@ def updater_run_success_popup_handler(_):
         return
 
     try:
-        bpy.app.handlers.depsgraph_update_post.remove(
-            updater_run_success_popup_handler)
+        if hasattr(bpy.app.handlers, 'depsgraph_update_post'):
+            bpy.app.handlers.depsgraph_update_post.remove(
+                updater_run_success_popup_handler)
+        else:
+            bpy.app.handlers.scene_update_post.remove(
+                updater_run_success_popup_handler)
     except ValueError:
         pass
 
@@ -548,8 +552,12 @@ def updater_run_install_popup_handler(_):
         return
 
     try:
-        bpy.app.handlers.depsgraph_update_post.remove(
-            updater_run_install_popup_handler)
+        if hasattr(bpy.app.handlers, 'depsgraph_update_post'):
+            bpy.app.handlers.depsgraph_update_post.remove(
+                updater_run_install_popup_handler)
+        else:
+            bpy.app.handlers.scene_update_post.remove(
+                updater_run_install_popup_handler)
     except ValueError:
         pass
 
@@ -577,9 +585,13 @@ def background_update_callback(update_ready):
         return
     if update_ready is not True:
         return
-    if updater_run_install_popup_handler not in bpy.app.handlers.depsgraph_update_post and \
-            ran_autocheck_install_popup is False:
+    if hasattr(bpy.app.handlers, 'depsgraph_update_post') and updater_run_install_popup_handler not in \
+            bpy.app.handlers.depsgraph_update_post and ran_autocheck_install_popup is False:
         bpy.app.handlers.depsgraph_update_post.append(updater_run_install_popup_handler)
+        ran_autocheck_install_popup = True
+    elif updater_run_install_popup_handler not in bpy.app.handlers.scene_update_post and \
+            ran_autocheck_install_popup is False:
+        bpy.app.handlers.scene_update_post.append(updater_run_install_popup_handler)
         ran_autocheck_install_popup = True
 
 
@@ -674,9 +686,13 @@ def show_reload_popup():
         if Updater.auto_reload_post_update is False:
             return
 
-        if updater_run_success_popup_handler not in bpy.app.handlers.depsgraph_update_post and \
-                ran_update_sucess_popup is False:
+        if hasattr(bpy.app.handlers, 'depsgraph_update_post') and updater_run_success_popup_handler not in \
+                bpy.app.handlers.depsgraph_update_post and ran_update_sucess_popup is False:
             bpy.app.handlers.depsgraph_update_post.append(updater_run_success_popup_handler)
+            ran_update_sucess_popup = True
+        elif updater_run_success_popup_handler not in bpy.app.handlers.scene_update_post and \
+                ran_update_sucess_popup is False:
+            bpy.app.handlers.scene_update_post.append(updater_run_success_popup_handler)
             ran_update_sucess_popup = True
 
 
