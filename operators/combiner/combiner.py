@@ -12,6 +12,7 @@ class Combiner(bpy.types.Operator):
 
     directory = StringProperty(maxlen=1024, default='', subtype='FILE_PATH', options={'HIDDEN'})
     filter_glob = StringProperty(default='', options={'HIDDEN'})
+    cats = BoolProperty(default=False)
     data = None
     mats_uv = None
     structure = None
@@ -36,6 +37,9 @@ class Combiner(bpy.types.Operator):
     def invoke(self, context, event):
         scn = context.scene
         bpy.ops.smc.refresh_ob_data()
+        if self.cats:
+            scn.smc_size = 'PO2'
+            scn.smc_gaps = 16.0
         set_ob_mode(context.view_layer if globs.version else scn)
         self.data = get_data(scn.smc_ob_data)
         self.mats_uv = get_mats_uv(self.data)
