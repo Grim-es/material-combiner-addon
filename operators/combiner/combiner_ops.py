@@ -56,7 +56,7 @@ def clear_empty_mats(data, mats_uv):
         for mat in i.keys():
             if mat not in mats_uv[ob].keys():
                 mat_idx = ob.data.materials.find(mat.name)
-                ob.data.materials.pop(mat_idx, update_data=True)
+                ob.data.materials.pop(index=mat_idx, update_data=True)
 
 
 def get_duplicates(mats_uv):
