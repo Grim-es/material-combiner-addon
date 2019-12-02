@@ -4,7 +4,7 @@ import bpy
 
 
 def get_image(tex):
-    return tex.image if tex and tex.image else None
+    return tex.image if tex and hasattr(tex, 'image') and tex.image else None
 
 
 def get_image_path(img):

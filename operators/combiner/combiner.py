@@ -7,7 +7,7 @@ from ... import globs
 class Combiner(bpy.types.Operator):
     bl_idname = 'smc.combiner'
     bl_label = 'Create Atlas'
-    bl_description = 'Select where you want to save the generated texture atlas'
+    bl_description = 'Combine materials'
     bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
 
     directory = StringProperty(maxlen=1024, default='', subtype='FILE_PATH', options={'HIDDEN'})
@@ -40,13 +40,13 @@ class Combiner(bpy.types.Operator):
         if self.cats:
             scn.smc_size = 'PO2'
             scn.smc_gaps = 16.0
-        set_ob_mode(context.view_layer if globs.version else scn)
+        set_ob_mode(context.view_layer if globs.version > 0 else scn)
         self.data = get_data(scn.smc_ob_data)
         self.mats_uv = get_mats_uv(self.data)
         clear_empty_mats(self.data, self.mats_uv)
         get_duplicates(self.mats_uv)
         self.structure = get_structure(self.data, self.mats_uv)
-        if not globs.version:
+        if globs.version == 0:
             context.space_data.viewport_shade = 'MATERIAL'
         if (len(self.structure) == 1) and next(iter(self.structure.values()))['dup']:
             clear_duplicates(self.structure)

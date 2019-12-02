@@ -56,7 +56,10 @@ def clear_empty_mats(data, mats_uv):
         for mat in i.keys():
             if mat not in mats_uv[ob].keys():
                 mat_idx = ob.data.materials.find(mat.name)
-                ob.data.materials.pop(index=mat_idx, update_data=True)
+                if globs.version > 1:
+                    ob.data.materials.pop(index=mat_idx)
+                else:
+                    ob.data.materials.pop(index=mat_idx, update_data=True)
 
 
 def get_duplicates(mats_uv):
@@ -97,24 +100,27 @@ def clear_duplicates(data):
         for ob in i['ob']:
             for dup in i['dup']:
                 mat_idx = ob.data.materials.find(dup.name)
-                ob.data.materials.pop(index=mat_idx, update_data=True)
+                if globs.version > 1:
+                    ob.data.materials.pop(index=mat_idx)
+                else:
+                    ob.data.materials.pop(index=mat_idx, update_data=True)
 
 
 def get_size(scn, data):
     for mat, i in data.items():
-        if globs.version:
+        if globs.version > 0:
             img = None
             shader = shader_type(mat)
             if shader == 'mmd':
                 img = mat.node_tree.nodes['mmd_base_tex'].image
-            elif (shader == 'vrm') or (shader == 'xnalara') or (shader == 'diffuse'):
+            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse':
                 img = mat.node_tree.nodes['Image Texture'].image
         else:
             img = get_image(get_texture(mat))
         path = get_image_path(img)
         max_x = max(max([uv.x for uv in i['uv'] if not math.isnan(uv.x)], default=1), 1)
         max_y = max(max([uv.y for uv in i['uv'] if not math.isnan(uv.y)], default=1), 1)
-        i['gfx']['uv_size'] = tuple(map(lambda x: x if x < 25 else 1, [max_x, max_y]))
+        i['gfx']['uv_size'] = (max_x if max_x < 25 else 1, max_y if max_y < 25 else 1)
         if not scn.smc_crop:
             i['gfx']['uv_size'] = tuple(map(math.ceil, i['gfx']['uv_size']))
         if path:
@@ -170,12 +176,12 @@ def get_atlas(scn, data, size):
     elif scn.smc_size == 'QUAD':
         size = (max(size),) * 2
     for mat, item in data.items():
-        if globs.version:
+        if globs.version > 0:
             item['gfx']['img'] = ''
             shader = shader_type(mat)
             if shader == 'mmd':
                 item['gfx']['img'] = get_image_path(mat.node_tree.nodes['mmd_base_tex'].image)
-            elif (shader == 'vrm') or (shader == 'xnalara') or (shader == 'diffuse'):
+            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse':
                 item['gfx']['img'] = get_image_path(mat.node_tree.nodes['Image Texture'].image)
         else:
             item['gfx']['img'] = get_image_path(get_image(get_texture(mat)))
@@ -214,8 +220,9 @@ def get_comb_mats(scn, atlas, mats_uv):
     mats = {}
     for idx in layers:
         mat = bpy.data.materials.new(name='material_atlas_{0}_{1}'.format(unique_id, idx))
-        if globs.version:
+        if globs.version > 0:
             mat.blend_method = 'CLIP'
+            mat.use_backface_culling = True
             mat.use_nodes = True
             node_texture = mat.node_tree.nodes.new(type='ShaderNodeTexImage')
             node_texture.image = image
@@ -254,4 +261,7 @@ def clear_mats(mats_uv):
     for ob, i in mats_uv.items():
         for mat in i.keys():
             mat_idx = ob.data.materials.find(mat.name)
-            ob.data.materials.pop(index=mat_idx, update_data=True)
+            if globs.version > 1:
+                ob.data.materials.pop(index=mat_idx)
+            else:
+                ob.data.materials.pop(index=mat_idx, update_data=True)
