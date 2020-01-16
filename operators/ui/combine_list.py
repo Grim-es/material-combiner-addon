@@ -30,15 +30,16 @@ class RefreshObData(bpy.types.Operator):
             item.type = 0
             for mats in mat_dict.values():
                 for mat in mats:
-                    item = scn.smc_ob_data.add()
-                    if ob in combine_list.keys() and mat not in combine_list[ob]:
-                        item.used = False
-                    item.ob = ob
-                    item.ob_id = ob_id
-                    item.mat = mat
-                    item.type = 1
-                    if mat in layers[ob].keys():
-                        item.layer = layers[ob][mat]
+                    if mat:
+                        item = scn.smc_ob_data.add()
+                        if ob in combine_list.keys() and mat not in combine_list[ob]:
+                            item.used = False
+                        item.ob = ob
+                        item.ob_id = ob_id
+                        item.mat = mat
+                        item.type = 1
+                        if mat in layers[ob].keys():
+                            item.layer = layers[ob][mat]
             item = scn.smc_ob_data.add()
             item.type = 2
         return {'FINISHED'}

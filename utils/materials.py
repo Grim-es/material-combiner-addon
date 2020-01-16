@@ -48,7 +48,7 @@ def sort_materials(mat_list):
     for mat in mat_list:
         if globs.version:
             path = None
-            shader = shader_type(mat)
+            shader = shader_type(mat) if mat else False
             if shader == 'mmd':
                 path = get_image_path(mat.node_tree.nodes['mmd_base_tex'].image)
             elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse':
@@ -75,7 +75,7 @@ def rgb_to_255_scale(diffuse):
 
 def get_diffuse(mat):
     if globs.version:
-        shader = shader_type(mat)
+        shader = shader_type(mat) if mat else False
         if shader == 'mmdCol':
             return rgb_to_255_scale(mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'].default_value[:])
         elif shader == 'vrmCol':
