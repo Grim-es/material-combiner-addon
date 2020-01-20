@@ -7,8 +7,8 @@ material-combiner-addon
 
 ## FEATURES
 * Combining multiple materials. (allow to apply diffuse colors and choose each image and atlas sizes)
-* Multicombining. (add layers for each image which are combine into different atlases, allow to generate Normal map, Specular map, etc atlases) (Currently Disabled)
-* Packing UV into the selected scale bounds by splitting mesh faces, compatible with rigged models. (Currently Disabled)
+* Multicombining. (add layers for each image which are combine into different atlases, allow to generate Normal map, Specular map, etc atlases) (Currently Disabled | Supported in version 2.0.3.3)
+* Packing UV into the selected scale bounds by splitting mesh faces, compatible with rigged models. (Currently Disabled | Supported in version 1.1.6.3)
 
 ## INSTALLATION
 1. Download an addon: [Material-combiner](https://github.com/Grim-es/material-combiner-addon/archive/master.zip)
