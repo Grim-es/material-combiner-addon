@@ -29,16 +29,16 @@ def shader_type(mat):
         return 'xnalara'
     elif mat.node_tree and mat.node_tree.nodes and 'Principled BSDF' in mat.node_tree.nodes:
         return 'xnalaraCol'
-    elif (mat.node_tree and mat.node_tree.nodes and 'Principled BSDF' in mat.node_tree.nodes and
-          'Image Texture' in mat.node_tree.nodes):
-        return 'principled'
-    elif mat.node_tree and mat.node_tree.nodes and 'Principled BSDF' in mat.node_tree.nodes:
-        return 'principledCol'
     elif (mat.node_tree and mat.node_tree.nodes and 'Diffuse BSDF' in mat.node_tree.nodes and
           'Image Texture' in mat.node_tree.nodes):
         return 'diffuse'
     elif mat.node_tree and mat.node_tree.nodes and 'Diffuse BSDF' in mat.node_tree.nodes:
         return 'diffuseCol'
+    elif (mat.node_tree and mat.node_tree.nodes and 'Emission' in mat.node_tree.nodes and
+          'Image Texture' in mat.node_tree.nodes):
+        return 'emission'
+    elif mat.node_tree and mat.node_tree.nodes and 'Emission' in mat.node_tree.nodes:
+        return 'emissionCol'
 
 
 def sort_materials(mat_list):
@@ -46,12 +46,12 @@ def sort_materials(mat_list):
         mat.root_mat = None
     mat_dict = defaultdict(list)
     for mat in mat_list:
-        if globs.version:
+        if globs.version > 0:
             path = None
             shader = shader_type(mat) if mat else False
             if shader == 'mmd':
                 path = get_image_path(mat.node_tree.nodes['mmd_base_tex'].image)
-            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse':
+            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
                 path = get_image_path(mat.node_tree.nodes['Image Texture'].image)
         else:
             path = get_image_path(get_image(get_texture(mat)))

@@ -30,10 +30,13 @@ class PropertiesMenu(bpy.types.Operator):
     def draw(self, context):
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
-        if globs.version:
+        if globs.version > 0:
             img = None
-            if item.mat.node_tree and item.mat.node_tree.nodes and 'mmd_base_tex' in item.mat.node_tree.nodes:
+            shader = shader_type(item.mat) if item.mat else None
+            if shader == 'mmd':
                 img = item.mat.node_tree.nodes['mmd_base_tex'].image
+            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
+                img = item.mat.node_tree.nodes['Image Texture'].image
         else:
             img = get_image(get_texture(item.mat))
         layout = self.layout

@@ -113,7 +113,7 @@ def get_size(scn, data):
             shader = shader_type(mat) if mat else None
             if shader == 'mmd':
                 img = mat.node_tree.nodes['mmd_base_tex'].image
-            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse':
+            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
                 img = mat.node_tree.nodes['Image Texture'].image
         else:
             img = get_image(get_texture(mat))
@@ -181,7 +181,7 @@ def get_atlas(scn, data, size):
             shader = shader_type(mat) if mat else None
             if shader == 'mmd':
                 item['gfx']['img'] = get_image_path(mat.node_tree.nodes['mmd_base_tex'].image)
-            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse':
+            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
                 item['gfx']['img'] = get_image_path(mat.node_tree.nodes['Image Texture'].image)
         else:
             item['gfx']['img'] = get_image_path(get_image(get_texture(mat)))
