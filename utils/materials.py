@@ -78,8 +78,10 @@ def get_diffuse(mat):
         shader = shader_type(mat) if mat else False
         if shader == 'mmdCol':
             return rgb_to_255_scale(mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'].default_value[:])
-        elif shader == 'vrmCol':
+        elif shader == 'vrm':
             return rgb_to_255_scale(mat.node_tree.nodes['RGB'].outputs[0].default_value[:])
+        elif shader == 'vrmCol':
+            return rgb_to_255_scale(mat.node_tree.nodes['Group'].inputs[10].default_value[:])
         elif shader == 'diffuseCol':
             return rgb_to_255_scale(mat.node_tree.nodes['Diffuse BSDF'].inputs['Color'].default_value[:])
         elif shader == 'principledCol':
