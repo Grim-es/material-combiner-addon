@@ -54,7 +54,7 @@ class PropertiesMenu(bpy.types.Operator):
                         col.prop(item.mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'], 'default_value',
                                  text='')
                     elif shader == 'vrm':
-                        col.prop(item.mat.node_tree.nodes['Group'].inputs[10], 'default_value', text='')
+                        col.prop(item.mat.node_tree.nodes['RGB'].outputs[0], 'default_value', text='')
                 else:
                     col.prop(item.mat, 'diffuse_color', text='')
                 col.separator()
