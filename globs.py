@@ -1,4 +1,8 @@
 import bpy
+import sys
+import site
+
+sys.path.insert(0, site.getusersitepackages())
 
 try:
     from PIL import Image
