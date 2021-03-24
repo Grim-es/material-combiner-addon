@@ -106,7 +106,7 @@ def register():
         max=32,
         precision=0,
         step=200,
-        default=2,
+        default=0,
         options={'HIDDEN'})
     bpy.types.Scene.smc_save_path = StringProperty(
         description='Select the directory in which the generated texture atlas will be saved',

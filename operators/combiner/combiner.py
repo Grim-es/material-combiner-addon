@@ -39,7 +39,7 @@ class Combiner(bpy.types.Operator):
         bpy.ops.smc.refresh_ob_data()
         if self.cats:
             scn.smc_size = 'PO2'
-            scn.smc_gaps = 16.0
+            scn.smc_gaps = 0.0
         set_ob_mode(context.view_layer if globs.version > 0 else scn)
         self.data = get_data(scn.smc_ob_data)
         self.mats_uv = get_mats_uv(self.data)
