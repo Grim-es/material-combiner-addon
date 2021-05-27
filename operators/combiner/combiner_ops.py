@@ -24,6 +24,9 @@ from ...utils.textures import get_texture
 from ...utils.images import get_image
 from ...utils.images import get_image_path
 
+if Image:
+    Image.MAX_IMAGE_PIXELS = None
+
 
 def set_ob_mode(scn):
     obs = get_obs(scn.objects)
