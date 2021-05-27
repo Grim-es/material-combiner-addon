@@ -18,6 +18,8 @@ class Combiner(bpy.types.Operator):
     structure = None
 
     def execute(self, context):
+        if not self.data:
+            self.invoke(context, None)
         scn = context.scene
         scn.smc_save_path = self.directory
         self.structure = BinPacker(get_size(scn, self.structure)).fit()
@@ -57,5 +59,6 @@ class Combiner(bpy.types.Operator):
             bpy.ops.smc.refresh_ob_data()
             self.report({'ERROR'}, 'No unique materials selected')
             return {'FINISHED'}
-        context.window_manager.fileselect_add(self)
+        if event is not None:
+            context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
