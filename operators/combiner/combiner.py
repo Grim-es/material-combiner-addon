@@ -31,7 +31,7 @@ class Combiner(bpy.types.Operator):
         atlas = get_atlas(scn, self.structure, size)
         get_aligned_uv(scn, self.structure, atlas.size)
         assign_comb_mats(scn, self.data, self.mats_uv, atlas)
-        clear_mats(self.mats_uv)
+        clear_mats(scn, self.mats_uv)
         bpy.ops.smc.refresh_ob_data()
         self.report({'INFO'}, 'Materials were combined.')
         return {'FINISHED'}
@@ -44,14 +44,14 @@ class Combiner(bpy.types.Operator):
             scn.smc_gaps = 0.0
         set_ob_mode(context.view_layer if globs.version > 0 else scn)
         self.data = get_data(scn.smc_ob_data)
-        self.mats_uv = get_mats_uv(self.data)
-        clear_empty_mats(self.data, self.mats_uv)
+        self.mats_uv = get_mats_uv(scn, self.data)
+        clear_empty_mats(scn, self.data, self.mats_uv)
         get_duplicates(self.mats_uv)
-        self.structure = get_structure(self.data, self.mats_uv)
+        self.structure = get_structure(scn, self.data, self.mats_uv)
         if globs.version == 0:
             context.space_data.viewport_shade = 'MATERIAL'
         if (len(self.structure) == 1) and next(iter(self.structure.values()))['dup']:
-            clear_duplicates(self.structure)
+            clear_duplicates(scn, self.structure)
             bpy.ops.smc.refresh_ob_data()
             self.report({'INFO'}, 'Duplicates were combined')
             return {'FINISHED'}

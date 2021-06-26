@@ -39,25 +39,27 @@ def get_data(data):
     mats = defaultdict(dict)
     for i in data:
         if i.type == 1 and i.used:
-            mats[i.ob][i.mat] = i.layer
+            mats[i.ob.name][i.mat] = i.layer
     return mats
 
 
-def get_mats_uv(ob_mats):
+def get_mats_uv(scn, ob_mats):
     mats_uv = {}
-    for ob, i in ob_mats.items():
-        mats_uv[ob] = defaultdict(list)
+    for ob_n, i in ob_mats.items():
+        ob = scn.objects[ob_n]
+        mats_uv[ob_n] = defaultdict(list)
         for idx, polys in get_polys(ob).items():
             if ob.data.materials[idx] in i.keys():
                 for poly in polys:
-                    mats_uv[ob][ob.data.materials[idx]].extend(align_uv(get_uv(ob, poly)))
+                    mats_uv[ob_n][ob.data.materials[idx]].extend(align_uv(get_uv(ob, poly)))
     return mats_uv
 
 
-def clear_empty_mats(data, mats_uv):
-    for ob, i in data.items():
+def clear_empty_mats(scn, data, mats_uv):
+    for ob_n, i in data.items():
+        ob = scn.objects[ob_n]
         for mat in i.keys():
-            if mat not in mats_uv[ob].keys():
+            if mat not in mats_uv[ob_n].keys():
                 mat_idx = ob.data.materials.find(mat.name)
                 if globs.version > 1:
                     ob.data.materials.pop(index=mat_idx)
@@ -73,9 +75,10 @@ def get_duplicates(mats_uv):
             mat.root_mat = mats[0]
 
 
-def get_structure(data, mats_uv):
+def get_structure(scn, data, mats_uv):
     structure = {}
-    for ob, i in data.items():
+    for ob_n, i in data.items():
+        ob = scn.objects[ob_n]
         for mat in i.keys():
             if mat.name in ob.data.materials:
                 root_mat = mat.root_mat if mat.root_mat else mat
@@ -91,22 +94,34 @@ def get_structure(data, mats_uv):
                         'uv': []
                     }
                 if mat.root_mat and mat not in structure[root_mat]['dup']:
-                    structure[root_mat]['dup'].append(mat)
+                    structure[root_mat]['dup'].append(mat.name)
                 if ob not in structure[root_mat]['ob']:
-                    structure[root_mat]['ob'].append(ob)
-                structure[root_mat]['uv'].extend(mats_uv[ob][mat])
+                    structure[root_mat]['ob'].append(ob.name)
+                structure[root_mat]['uv'].extend(mats_uv[ob_n][mat])
     return structure
 
 
-def clear_duplicates(data):
-    for mat, i in data.items():
-        for ob in i['ob']:
-            for dup in i['dup']:
-                mat_idx = ob.data.materials.find(dup.name)
-                if globs.version > 1:
-                    ob.data.materials.pop(index=mat_idx)
-                else:
-                    ob.data.materials.pop(index=mat_idx, update_data=True)
+def clear_duplicates(scn, data):
+    for i in data.values():
+        for ob_n in i['ob']:
+            ob = scn.objects[ob_n]
+            for dup_n in i['dup']:
+                delete_material(ob, dup_n)
+
+
+def delete_material(mesh, mat_name):
+    mat_idx = get_material_index(mesh, mat_name)
+    if mat_idx:
+        if globs.version > 1:
+            mesh.data.materials.pop(index=mat_idx)
+        else:
+            mesh.data.materials.pop(index=mat_idx, update_data=True)
+
+
+def get_material_index(mesh, mat_name):
+    for i, mat in enumerate(mesh.data.materials):
+        if mat.name == mat_name:
+            return i
 
 
 def get_size(scn, data):
@@ -211,7 +226,7 @@ def get_aligned_uv(scn, data, size):
 
 
 def get_comb_mats(scn, atlas, mats_uv):
-    layers = set(i.layer for i in scn.smc_ob_data if (i.type == 1) and i.used and (i.mat in mats_uv[i.ob].keys()))
+    layers = set(i.layer for i in scn.smc_ob_data if (i.type == 1) and i.used and (i.mat in mats_uv[i.ob.name].keys()))
     existed_ids = [int(i.mat.name.split('_')[-2]) for i in scn.smc_ob_data if (i.type == 1) and
                    i.mat.name.startswith('material_atlas_')]
     unique_id = random.choice([i for i in range(10000, 99999) if i not in existed_ids])
@@ -249,7 +264,8 @@ def get_comb_mats(scn, atlas, mats_uv):
 
 def assign_comb_mats(scn, ob_mats, mats_uv, atlas):
     comb_mats = get_comb_mats(scn, atlas, mats_uv)
-    for ob, i in ob_mats.items():
+    for ob_n, i in ob_mats.items():
+        ob = scn.objects[ob_n]
         for idx in set(i.values()):
             if idx in comb_mats.keys():
                 ob.data.materials.append(comb_mats[idx])
@@ -260,8 +276,9 @@ def assign_comb_mats(scn, ob_mats, mats_uv, atlas):
                     poly.material_index = mat_idx
 
 
-def clear_mats(mats_uv):
-    for ob, i in mats_uv.items():
+def clear_mats(scn, mats_uv):
+    for ob_n, i in mats_uv.items():
+        ob = scn.objects[ob_n]
         for mat in i.keys():
             mat_idx = ob.data.materials.find(mat.name)
             if globs.version > 1:
