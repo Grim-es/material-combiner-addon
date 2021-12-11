@@ -4,8 +4,8 @@ from ...icons import get_icon_id
 
 def draw_ui(context, m_col):
     scn = context.scene
-    manual = 'https://vrcat.club/threads/material-combiner-blender-addon-2-0-3-2.2255/page-3#post-9712'
     patreon = 'https://www.patreon.com/shotariya'
+    discord = 'https://discordapp.com/users/275608234595713024'
     if globs.pil_exist:
         if scn.smc_ob_data:
             m_col.template_list('SMC_UL_Combine_List', 'combine_list', scn, 'smc_ob_data',
@@ -40,5 +40,5 @@ def draw_ui(context, m_col):
             col.label(text='try to run Blender as Administrator')
             col.label(text='or check your Internet Connection.')
             col.separator()
-            col.label(text='If the error persists, try installing manually:')
-            col.operator('smc.browser', text='Manual Install', icon_value=get_icon_id('help')).link = manual
+            col.label(text='If the error persists, contact me on Discord for a manual installation:')
+            col.operator('smc.browser', text='shotariya#4269', icon_value=get_icon_id('help')).link = discord
