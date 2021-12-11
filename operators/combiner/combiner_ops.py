@@ -9,6 +9,7 @@ import bpy
 try:
     from PIL import Image
     from PIL import ImageChops
+    from PIL import ImageFile
 except ImportError:
     Image = None
     ImageChops = None
@@ -26,6 +27,8 @@ from ...utils.images import get_image_path
 
 if Image:
     Image.MAX_IMAGE_PIXELS = None
+if ImageFile:
+    ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 def set_ob_mode(scn):
@@ -120,7 +123,7 @@ def delete_material(mesh, mat_name):
 
 def get_material_index(mesh, mat_name):
     for i, mat in enumerate(mesh.data.materials):
-        if mat.name == mat_name:
+        if mat and mat.name == mat_name:
             return i
 
 
