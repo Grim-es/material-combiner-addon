@@ -8,11 +8,19 @@ import bpy
 
 try:
     from PIL import Image
-    from PIL import ImageChops
-    from PIL import ImageFile
 except ImportError:
     Image = None
+
+try:
+    from PIL import ImageChops
+except ImportError:
     ImageChops = None
+
+try:
+    from PIL import ImageFile
+except ImportError:
+    ImageFile = None
+
 from ... import globs
 from ...utils.objects import get_obs
 from ...utils.objects import get_polys
