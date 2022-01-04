@@ -24,6 +24,12 @@ def shader_type(mat):
     elif (mat.node_tree and mat.node_tree.nodes and 'Group' in mat.node_tree.nodes and
           mat.node_tree.nodes['Group'].node_tree.name == 'MToon_unversioned'):
         return 'vrmCol'
+    elif (mat.node_tree and mat.node_tree.nodes and 'Group' in mat.node_tree.nodes and
+          mat.node_tree.nodes['Group'].node_tree.name == 'XPS Shader' and 'Image Texture' in mat.node_tree.nodes):
+        return 'xnalara'
+    elif (mat.node_tree and mat.node_tree.nodes and 'Group' in mat.node_tree.nodes and
+          mat.node_tree.nodes['Group'].node_tree.name == 'Group'):
+        return 'xnalaraNewCol'
     elif (mat.node_tree and mat.node_tree.nodes and 'Principled BSDF' in mat.node_tree.nodes and
           'Image Texture' in mat.node_tree.nodes):
         return 'xnalara'
@@ -84,6 +90,8 @@ def get_diffuse(mat):
             return rgb_to_255_scale(mat.node_tree.nodes['Group'].inputs[10].default_value[:])
         elif shader == 'diffuseCol':
             return rgb_to_255_scale(mat.node_tree.nodes['Diffuse BSDF'].inputs['Color'].default_value[:])
+        elif shader == 'xnalaraNewCol':
+            return rgb_to_255_scale(mat.node_tree.nodes['Group'].inputs['Diffuse'].default_value[:])
         elif shader == 'xnalaraCol':
             return rgb_to_255_scale(mat.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value[:])
         return tuple((255, 255, 255))
