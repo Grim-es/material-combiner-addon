@@ -3,7 +3,8 @@ material-combiner-addon
 #### An addon for Blender that allows to get lower draw calls in game engines by combining textures without quality loss and avoiding the problem of uv larger 0-1 bounds.
 
 #### If you like an addon you can support my work on Patreon.
-[![](http://webgrimes.com/patreon.png)](https://www.patreon.com/join/shotariya?)
+[<img src="http://webgrimes.com/buymeacoffee.svg" height="40px">](https://www.buymeacoffee.com/shotariya)
+[<img src="http://webgrimes.com/patreon.png" height="40px">](https://www.patreon.com/join/shotariya?)
 
 ## FEATURES
 * Combining multiple materials. (allow to apply diffuse colors and choose each image and atlas sizes)
