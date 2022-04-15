@@ -15,7 +15,11 @@ class SMC_UL_Combine_List(bpy.types.UIList):
                          emboss=False).list_id = index
         elif item.type == 1:
             row.separator()
-            row.label(text='', icon_value=item.mat.preview.icon_id)
+            mat_preview = item.mat.preview
+            if mat_preview:
+                row.label(text='', icon_value=mat_preview.icon_id)
+            else:
+                row.label(text='', icon='QUESTION')
             row.prop(item.mat, 'name', text='')
             col = row.column(align=True)
             col.alignment = 'RIGHT'
