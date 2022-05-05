@@ -1,9 +1,8 @@
 import bpy
 from bpy.props import *
 from .. import globs
-from ..utils.images import get_image
 from ..utils.materials import shader_type
-from ..utils.textures import get_texture
+from ..utils.textures import get_texture, get_image
 
 
 class PropertiesMenu(bpy.types.Operator):

@@ -24,7 +24,6 @@ __bl_classes = [
     operators.multicombine_list.MultiCombineImageReset,
     operators.multicombine_list.MultiCombineImageRemove,
     operators.browser.OpenBrowser,
-    operators.get_pillow.InstallPIL,
 
     extend_types.CombineList,
     extend_types.UpdatePreferences,

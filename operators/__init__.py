@@ -1,5 +1,4 @@
 from . import browser
-from . import get_pillow
 
 from .combiner import combiner
 
