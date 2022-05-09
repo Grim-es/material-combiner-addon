@@ -6,14 +6,14 @@ class SMC_UL_Combine_List(bpy.types.UIList):
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         row = layout.row(align=True)
-        if item.type == 0:
+        if item.type == globs.C_L_OBJECT:
             row.prop(item.ob, 'name', text='', icon='META_CUBE' if globs.version else 'VIEW3D', emboss=False)
             row = row.row()
             row.alignment = 'RIGHT'
             row.operator('smc.combine_switch',
                          text='Deselect All' if item.used else 'Select All',
                          emboss=False).list_id = index
-        elif item.type == 1:
+        elif item.type == globs.C_L_MATERIAL:
             row.separator()
             mat_preview = item.mat.preview
             if mat_preview:
@@ -39,11 +39,11 @@ class SMC_UL_Combine_List(bpy.types.UIList):
     def filter_items(self, context, data, propname):
         col = getattr(data, propname)
         filter_name = self.filter_name.lower()
-        flt_flags = [self.bitflag_filter_item if item.type == 1 and filter_name in item.mat.name.lower() or
-                     item.type == 0 else 0 for i, item in enumerate(col, 1)]
+        flt_flags = [self.bitflag_filter_item if item.type == globs.C_L_MATERIAL and filter_name in item.mat.name.lower() or
+                     item.type == globs.C_L_OBJECT else 0 for i, item in enumerate(col, 1)]
         if self.use_filter_sort_alpha:
             flt_neworder = [x[1] for x in sorted(zip([x[0] for x in sorted(
-                enumerate(col), key=lambda x: x[1].mat.name if x[1].type == 1 else '')], range(len(col))))]
+                enumerate(col), key=lambda x: x[1].mat.name if x[1].type == globs.C_L_MATERIAL else '')], range(len(col))))]
         else:
             flt_neworder = []
         return flt_flags, flt_neworder

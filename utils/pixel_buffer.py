@@ -15,7 +15,7 @@ pixel_dtype = np.single
 pixel_ctype = 'f'
 
 
-if bpy.version >= (2, 83):  # bpy_prop_array.foreach_get was added in Blender 2.83
+if bpy.app.version >= (2, 83):  # bpy_prop_array.foreach_get was added in Blender 2.83
     # 1.5988599996489938ms for 1024x1024
     # 15.224460000172257ms for 2048x2048
     # 60.937399999966146 for 4096x4096
@@ -26,7 +26,7 @@ if bpy.version >= (2, 83):  # bpy_prop_array.foreach_get was added in Blender 2.
         # Buffer must be flat when reading
         pixels.foreach_get(buffer)
         return buffer
-elif bpy.version >= (2, 80):  # Being able to use the memory of an existing buffer in bgl.Buffer was added in Blender 2.80, not that this behaviour is documented
+elif bpy.app.version >= (2, 80):  # Being able to use the memory of an existing buffer in bgl.Buffer was added in Blender 2.80, not that this behaviour is documented
     import bgl
     pixel_gltype = bgl.GL_FLOAT
     # 16.717200000130106ms for 1024x1024

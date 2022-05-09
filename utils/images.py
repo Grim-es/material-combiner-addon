@@ -17,7 +17,9 @@ def is_image_valid(img):
 
 
 def save_generated_image_to_file(image, filepath, file_format=None):
-    # Note that setting image.filepath and/or image.source = 'FILE' can't be done or it will reset the image
+    """Save a generated image to a filepath, this will set the filepath of the image and cause the
+    image source to be changed to 'FILE' instead of 'GENERATED'"""
+    # Note that setting image.filepath and/or image.source = 'FILE' can't be done, otherwise it will reset the image
     image.filepath_raw = filepath
     if file_format:
         image.file_format = file_format

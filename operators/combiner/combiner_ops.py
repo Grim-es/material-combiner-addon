@@ -31,7 +31,7 @@ def set_ob_mode(scn):
 def get_data(data):
     mats = defaultdict(dict)
     for i in data:
-        if i.type == 1 and i.used:
+        if i.type == globs.C_L_MATERIAL and i.used:
             mats[i.ob.name][i.mat] = i.layer
     return mats
 
@@ -41,10 +41,17 @@ def get_mats_uv(scn, ob_mats):
     for ob_n, i in ob_mats.items():
         ob = scn.objects[ob_n]
         mats_uv[ob_n] = defaultdict(list)
-        for idx, polys in get_polys(ob).items():
-            if ob.data.materials[idx] in i.keys():
+        # TODO: Optimise performance with numpy
+        for material_idx, polys in get_polys(ob).items():
+            mat = ob.data.materials[material_idx]
+            if mat in i.keys():
                 for poly in polys:
-                    mats_uv[ob_n][ob.data.materials[idx]].extend(align_uv(get_uv(ob, poly)))
+                    # Get the uvs for the object's active uv layer for this polygon
+                    uvs_for_poly = get_uv(ob, poly)
+                    # Offset all the uvs such that the minimum uv.x and uv.y lie within the range [0,1]
+                    align_uv(uvs_for_poly)
+                    # Add the uvs to the list of uvs for this material
+                    mats_uv[ob_n][mat].extend(uvs_for_poly)
     return mats_uv
 
 
@@ -118,7 +125,7 @@ def get_material_index(mesh, mat_name):
 
 
 def get_size(scn, data):
-    for mat, i in data.items():
+    for mat, mat_data in data.items():
         if globs.version > 0:
             img = None
             shader = shader_type(mat) if mat else None
@@ -128,29 +135,40 @@ def get_size(scn, data):
                 img = mat.node_tree.nodes['Image Texture'].image
         else:
             img = get_image(get_texture(mat))
-        max_x = max(max([uv.x for uv in i['uv'] if not math.isnan(uv.x)], default=1), 1)
-        max_y = max(max([uv.y for uv in i['uv'] if not math.isnan(uv.y)], default=1), 1)
-        i['gfx']['uv_size'] = (max_x if max_x < 25 else 1, max_y if max_y < 25 else 1)
+        # Get max x and max y of the uvs for this material. The uvs should already be aligned such that the minimum x
+        # and y are both within the bounds [0,1]
+        # TODO: If all values less than 1, then 1 gets chosen as the max because of the outer max(), couldn't we crop
+        #       the image to only the area that is needed? If we were to pick a margin value, we would want to make sure
+        #       it doesn't add more margin than would fit in the image
+        max_x = max(max([uv.x for uv in mat_data['uv'] if not math.isnan(uv.x)], default=1), 1)
+        max_y = max(max([uv.y for uv in mat_data['uv'] if not math.isnan(uv.y)], default=1), 1)
+        # TODO: Up to 25 copies of the same image sounds like it could be a bit high for most images, maybe it should be
+        #  made lower (or even higher) based on the dimensions of the image
+        mat_data['gfx']['uv_size'] = (max_x if max_x < 25 else 1, max_y if max_y < 25 else 1)
         if not scn.smc_crop:
             # FIXME: UVs are off by half a pixel. To reproduce, atlas a quad with uvs (0,0), (0,1), (1,0), (1,1).
             #        The corners of the quad's UVs will all be half a pixel towards the middle of the quad
-            # FIXME: UVs do not get scale properly when images in the atlas have to be made much smaller?
+            # FIXME: UVs do not get scaled properly when images in the atlas have to be made much smaller?
             #        Maybe something to do with resizing the atlas at the end?
-            i['gfx']['uv_size'] = tuple(map(math.ceil, i['gfx']['uv_size']))
+            mat_data['gfx']['uv_size'] = tuple(map(math.ceil, mat_data['gfx']['uv_size']))
         if is_image_valid(img):
             if mat.smc_size:
                 img_size = (min(mat.smc_size_width, img.size[0]),
                             min(mat.smc_size_height, img.size[1]))
             else:
                 img_size = (img.size[0], img.size[1])
-            i['gfx']['size'] = tuple(
-                int(s * uv_s + int(scn.smc_gaps)) for s, uv_s in zip(img_size, i['gfx']['uv_size']))
+            mat_data['gfx']['size'] = tuple(
+                int(s * uv_s + int(scn.smc_gaps)) for s, uv_s in zip(img_size, mat_data['gfx']['uv_size']))
         else:
-            i['gfx']['size'] = (scn.smc_diffuse_size + int(scn.smc_gaps),) * 2
+            mat_data['gfx']['size'] = (scn.smc_diffuse_size + int(scn.smc_gaps),) * 2
     return OrderedDict(sorted(data.items(), key=lambda x: min(x[1]['gfx']['size']), reverse=True))
 
 
 def get_uv_image(item, img_buffer, size):
+    """Repeat the input image adjacent to itself enough times to ensure that the all the uvs are within the bounds of
+    the image.
+
+    :return: A new image created by repeating the input image."""
     uv_img = new_pixel_buffer(size)
     img_w = img_buffer.shape[0]
     img_h = img_buffer.shape[1]
@@ -262,10 +280,18 @@ def get_aligned_uv(scn, data, size):
 
 
 def get_comb_mats(scn, atlas, mats_uv):
-    layers = set(i.layer for i in scn.smc_ob_data if (i.type == 1) and i.used and (i.mat in mats_uv[i.ob.name].keys()))
-    existed_ids = [int(i.mat.name.split('_')[-2]) for i in scn.smc_ob_data if (i.type == 1) and
-                   i.mat.name.startswith('material_atlas_')]
-    unique_id = random.choice([i for i in range(10000, 99999) if i not in existed_ids])
+    layers = set()
+    existed_ids = set()
+    for combine_list_item in scn.smc_ob_data:
+        if combine_list_item.type == globs.C_L_MATERIAL:
+            if combine_list_item.used and combine_list_item.mat in mats_uv[combine_list_item.ob.name]:
+                layers.add(combine_list_item.layer)
+            mat_name = combine_list_item.mat.name
+            if mat_name.startswith('material_atlas_'):
+                existed_id = int(mat_name.split('_')[-2])
+                existed_ids.add(existed_id)
+    available_ids = set(range(10000, 99999)) - existed_ids
+    unique_id = random.choice(list(available_ids))
     atlas_name = 'Atlas_{0}.png'.format(unique_id)
     path = os.path.join(scn.smc_save_path, atlas_name)
     atlas.name = atlas_name
@@ -273,8 +299,8 @@ def get_comb_mats(scn, atlas, mats_uv):
     texture = bpy.data.textures.new('texture_atlas_{0}'.format(unique_id), 'IMAGE')
     texture.image = atlas
     mats = {}
-    for idx in layers:
-        mat = bpy.data.materials.new(name='material_atlas_{0}_{1}'.format(unique_id, idx))
+    for layer in layers:
+        mat = bpy.data.materials.new(name='material_atlas_{0}_{1}'.format(unique_id, layer))
         if globs.version > 0:
             mat.blend_method = 'CLIP'
             mat.use_backface_culling = True
@@ -295,7 +321,7 @@ def get_comb_mats(scn, atlas, mats_uv):
             tex = mat.texture_slots.add()
             tex.texture = texture
             tex.use_map_alpha = True
-        mats[idx] = mat
+        mats[layer] = mat
     return mats
 
 
