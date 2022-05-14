@@ -211,14 +211,11 @@ def get_gfx(scn, mat, item, src):
             # Typical RGB only, we will assume alpha should be 1.0
             src = src + (1.0,)
         elif num_components == 2:
-            # Weird to be passing in only RG, I guess we can leave the last component as 0.0
+            # RG only, attach 0 for blue and 1 for alpha, similar to Open GL's glTexImage2D
             src = src + (0.0, 1.0)
         elif num_components == 1:
-            # R only, we could either spread the single component out into RGB or set G and B to 0.0.
-            # Alpha will be treated as 1.0.
-            # Expand single component to RGB
-            # TODO: Maybe convert luminance to greyscale instead?
-            src = src + (src[0], src[0], 1.0)
+            # R only, Alpha will be treated as 1.0, similar to Open GL's glTexImage2D
+            src = src + (0.0, 0.0, 1.0)
         elif num_components != 4:
             raise TypeError("Invalid colour '{}', must be tuple-like with at most 4 (RGBA) elements.".format(src))
         img_buffer = new_pixel_buffer(size, src)
