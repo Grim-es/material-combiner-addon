@@ -113,7 +113,7 @@ def get_diffuse(mat, convert_to_255_scale=True, linear=False):
             else:
                 return 1.0, 1.0, 1.0
     else:
-        color = mat.diffuse_color
+        color = tuple(mat.diffuse_color)
 
     # Shader node colors are linear
     convert_to_srgb = not linear

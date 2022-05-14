@@ -247,7 +247,10 @@ def get_atlas(scn, data, size):
                     item['gfx']['img'] = [0.0, 0.0, 0.0, 1.0]
                     print("DEBUG: No material, so used Black color")
         else:
-            item['gfx']['img'] = get_image(get_texture(mat))
+            src = get_image(get_texture(mat))
+            if src is None:
+                src = get_diffuse(mat, convert_to_255_scale=False, linear=True)
+            item['gfx']['img'] = src
     img = new_pixel_buffer(size)
     for mat, i in data.items():
         if i['gfx']['fit']:
