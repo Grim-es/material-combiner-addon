@@ -38,8 +38,6 @@ elif bpy.app.version >= (2, 80):  # Being able to use the memory of an existing 
     def __get_buffer_internal(image):
         # TODO: Check that transparency doesn't premultiply even if the image is set to premultiply, we want the raw
         #  pixels!
-        # FIXME: It seems that if you resize the image (through scale) and don't save it, glGetTexImage still thinks
-        #  the image is the old size. Maybe if image.is_dirty, we first do image.gl_free()? Mabye that will clean it up.
         pixels = image.pixels
         # Load the image into OpenGL and use that to get the pixels in a more performant manner
         # As per the documentation, the colours will be read in scene linear color space and have premultiplied or
@@ -199,7 +197,7 @@ def get_resized_pixel_buffer(img, size):
 
 
 def buffer_to_image(buffer, *, name):
-    image = bpy.data.images.new(name, buffer.shape[0], buffer.shape[1], alpha=buffer.shape[2] == 4)
+    image = bpy.data.images.new(name, buffer.shape[1], buffer.shape[0], alpha=buffer.shape[2] == 4)
     write_pixel_buffer(image, buffer)
     return image
 
@@ -261,8 +259,8 @@ def pixel_buffer_paste(target_buffer, source_buffer_or_pixel, corner_or_box):
         left, upper, right, lower = box
         left = max(left, 0)
         upper = max(upper, 0)
-        right = min(right, target_buffer.shape[0] + 1)
-        lower = min(lower, target_buffer.shape[1] + 1)
+        right = min(right, target_buffer.shape[1] + 1)
+        lower = min(lower, target_buffer.shape[0] + 1)
         return left, upper, right, lower
 
     if source_is_pixel:
@@ -280,20 +278,20 @@ def pixel_buffer_paste(target_buffer, source_buffer_or_pixel, corner_or_box):
     else:
         # box coordinates treat (0,0) as top left, but bottom left is (0,0) in blender, so view the buffer with flipped
         # y-axis
-        source_buffer_or_pixel = source_buffer_or_pixel[::-1, :, :]
+        source_buffer = source_buffer_or_pixel[::-1, :, :]
         # Parse a corner into a box
         if len(corner_or_box) == 2:
             # Only the top left corner to place the source buffer has been set, we will figure out the bottom right
             # corner
             left, upper = corner_or_box
-            right = left + source_buffer_or_pixel.shape[0]
-            lower = upper + source_buffer_or_pixel.shape[1]
+            right = left + source_buffer.shape[1]
+            lower = upper + source_buffer.shape[0]
         elif len(corner_or_box) == 4:
             left, upper, right, lower = corner_or_box
         else:
             raise TypeError("corner or box must be either a 2-tuple or 4-tuple, but was: {}".format(corner_or_box))
 
-        if target_buffer.shape[-1] >= source_buffer_or_pixel.shape[-1]:
+        if target_buffer.shape[-1] >= source_buffer.shape[-1]:
             fit_left, fit_upper, fit_right, fit_lower = fit_box((left, upper, right, lower))
             # TODO: Remove debug print
             if fit_left != left or fit_upper != upper or fit_right != right or fit_lower != lower:
@@ -302,10 +300,10 @@ def pixel_buffer_paste(target_buffer, source_buffer_or_pixel, corner_or_box):
             # the source image
             source_left = fit_left - left
             source_upper = fit_upper - upper
-            source_right = source_buffer_or_pixel.shape[0] - right + fit_right
-            source_lower = source_buffer_or_pixel.shape[1] - lower + fit_lower
-            num_source_channels = source_buffer_or_pixel.shape[2]
+            source_right = source_buffer.shape[1] - right + fit_right
+            source_lower = source_buffer.shape[0] - lower + fit_lower
+            num_source_channels = source_buffer.shape[2]
             print("DEBUG: Pasting into box {} of target from box {} of source".format((fit_left, fit_upper, fit_right, fit_lower), (source_left, source_upper, source_right, source_lower)))
-            target_buffer[fit_upper:fit_lower, fit_left:fit_right, :num_source_channels] = source_buffer_or_pixel[source_upper:source_lower, source_left:source_right]
+            target_buffer[fit_upper:fit_lower, fit_left:fit_right, :num_source_channels] = source_buffer[source_upper:source_lower, source_left:source_right]
         else:
             raise TypeError("Pixels in source have more channels than pixels in target, they cannot be pasted")

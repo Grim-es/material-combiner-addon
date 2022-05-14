@@ -164,21 +164,25 @@ def get_size(scn, data):
     return OrderedDict(sorted(data.items(), key=lambda x: min(x[1]['gfx']['size']), reverse=True))
 
 
+# FIXME: Broken, the image that should be tiled, is getting stretched out instead
+# TODO: Use np.tile
+# TODO: Even better might be to do the whole uv_image thing when pasting to the atlas instead of creating a new buffer
+#       as an intermediary
 def get_uv_image(item, img_buffer, size):
     """Repeat the input image adjacent to itself enough times to ensure that the all the uvs are within the bounds of
     the image.
 
     :return: A new image created by repeating the input image."""
     uv_img = new_pixel_buffer(size)
-    img_w = img_buffer.shape[0]
-    img_h = img_buffer.shape[1]
+    img_w = img_buffer.shape[1]
+    img_h = img_buffer.shape[0]
     for w in range(math.ceil(item['gfx']['uv_size'][0])):
         for h in range(math.ceil(item['gfx']['uv_size'][1])):
             pixel_buffer_paste(uv_img, img_buffer, (
                 w * img_w,
-                uv_img.shape[1] - img_h - h * img_h,
+                uv_img.shape[0] - img_h - h * img_h,
                 w * img_w + img_w,
-                uv_img.shape[1] - img_h - h * img_h + img_h
+                uv_img.shape[0] - img_h - h * img_h + img_h
             ))
     return uv_img
 
