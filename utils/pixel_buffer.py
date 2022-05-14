@@ -234,7 +234,7 @@ def new_pixel_buffer(size, color=(0.0, 0.0, 0.0, 0.0)):
     return buffer
 
 
-def pixel_buffer_paste(target_buffer, source_buffer_or_pixel, corner_or_box, swap_target_y=False, swap_target_x=False):
+def pixel_buffer_paste(target_buffer, source_buffer_or_pixel, corner_or_box):
     # box coordinates treat (0,0) as top left, but bottom left is (0,0) in blender, so view the buffer with flipped
     # y-axis
     target_buffer = target_buffer[::-1, :, :]
@@ -275,18 +275,7 @@ def pixel_buffer_paste(target_buffer, source_buffer_or_pixel, corner_or_box, swa
         # Remember that these corners are cartesian coordinates with (0,0) as the top left corner of the image.
         # A box with corners (0,0) and (1,1) only contains the pixels between (0,0) inclusive and (1,1) exclusive
         num_source_channels = len(source_buffer_or_pixel)
-        if swap_target_y:
-            height = target_buffer.shape[1]
-            flipped_lower = height - upper
-            flipped_upper = height - lower
-            lower = flipped_lower
-            upper = flipped_upper
-        if swap_target_x:
-            width = target_buffer.shape[0]
-            flipped_left = width - right
-            flipped_right = width - left
-            left = flipped_left
-            right = flipped_right
+        print("DEBUG: Pasting into box {} colour {}".format((left, upper, right, lower), source_buffer_or_pixel))
         target_buffer[upper:lower, left:right, :num_source_channels] = source_buffer_or_pixel
     else:
         # box coordinates treat (0,0) as top left, but bottom left is (0,0) in blender, so view the buffer with flipped
@@ -317,18 +306,6 @@ def pixel_buffer_paste(target_buffer, source_buffer_or_pixel, corner_or_box, swa
             source_lower = source_buffer_or_pixel.shape[1] - lower + fit_lower
             num_source_channels = source_buffer_or_pixel.shape[2]
             print("DEBUG: Pasting into box {} of target from box {} of source".format((fit_left, fit_upper, fit_right, fit_lower), (source_left, source_upper, source_right, source_lower)))
-            if swap_target_y:
-                height = target_buffer.shape[1]
-                flipped_lower = height - fit_upper
-                flipped_upper = height - fit_lower
-                fit_upper = flipped_upper
-                fit_lower = flipped_lower
-            if swap_target_x:
-                width = target_buffer.shape[0]
-                flipped_left = width - fit_right
-                flipped_right = width - fit_left
-                fit_left = flipped_left
-                fit_right = flipped_right
             target_buffer[fit_upper:fit_lower, fit_left:fit_right, :num_source_channels] = source_buffer_or_pixel[source_upper:source_lower, source_left:source_right]
         else:
             raise TypeError("Pixels in source have more channels than pixels in target, they cannot be pasted")

@@ -186,27 +186,23 @@ def get_uv_image(item, img_buffer, size):
 def get_gfx(scn, mat, item, src):
     size = tuple(size - int(scn.smc_gaps) for size in item['gfx']['size'])
     if isinstance(src, bpy.types.Image):
-        if src:
-            if mat.smc_size:
-                img_buffer = get_resized_pixel_buffer(src, (mat.smc_size_width, mat.smc_size_height))
-            elif tuple(src.size) != size:
-                img_buffer = get_resized_pixel_buffer(src, size)
-            else:
-                img_buffer = get_pixel_buffer(src)
-            max_uv = item['gfx']['uv_size']
-            # Note that get_size(...) sets uv_size to always be at least 1
-            if max_uv[0] > 1 or max_uv[1] > 1:
-                img_buffer = get_uv_image(item, img_buffer, size)
-            if mat.smc_diffuse:
-                # TODO: This diffuse_img was in sRGB, surely this needs to be linear?
-                diffuse_color = get_diffuse(mat, convert_to_255_scale=False, linear=True)
-                # Multiply by the diffuse color
-                # 3d slice of [all x, all y, only the first len(diffuse_color) components]
-                # TODO: Could hardcode 3
-                img_buffer[:, :, :len(diffuse_color)] *= diffuse_color
+        if mat.smc_size:
+            img_buffer = get_resized_pixel_buffer(src, (mat.smc_size_width, mat.smc_size_height))
+        elif tuple(src.size) != size:
+            img_buffer = get_resized_pixel_buffer(src, size)
         else:
-            # TODO: We can optimise this by passing in the colour directly
-            img_buffer = new_pixel_buffer(size, get_diffuse(mat, convert_to_255_scale=False) + (1.0,))
+            img_buffer = get_pixel_buffer(src)
+        max_uv = item['gfx']['uv_size']
+        # Note that get_size(...) sets uv_size to always be at least 1
+        if max_uv[0] > 1 or max_uv[1] > 1:
+            img_buffer = get_uv_image(item, img_buffer, size)
+        if mat.smc_diffuse:
+            # TODO: This diffuse_img was in sRGB, surely this needs to be linear?
+            diffuse_color = get_diffuse(mat, convert_to_255_scale=False, linear=True)
+            # Multiply by the diffuse color
+            # 3d slice of [all x, all y, only the first len(diffuse_color) components]
+            # TODO: Could hardcode 3
+            img_buffer[:, :, :len(diffuse_color)] *= diffuse_color
     else:
         # src must be a color in a tuple/list of components
         # TODO: We can probably safely reject anything that isn't RGB or RGBA

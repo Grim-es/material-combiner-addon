@@ -2,6 +2,7 @@ from bpy.props import *
 from .combiner_ops import *
 from .packer import BinPacker
 from ... import globs
+from time import perf_counter
 
 
 class Combiner(bpy.types.Operator):
@@ -20,6 +21,7 @@ class Combiner(bpy.types.Operator):
     def execute(self, context):
         if not self.data:
             self.invoke(context, None)
+        timing_start = perf_counter()
         scn = context.scene
         scn.smc_save_path = self.directory
         self.structure = BinPacker(get_size(scn, self.structure)).fit()
@@ -28,10 +30,14 @@ class Combiner(bpy.types.Operator):
         if any(size) > 20000:
             self.report({'ERROR'}, 'Output image size is too large')
             return {'FINISHED'}
+        timing_packed = perf_counter()
         atlas = get_atlas(scn, self.structure, size)
         get_aligned_uv(scn, self.structure, atlas.size)
         assign_comb_mats(scn, self.data, self.mats_uv, atlas)
         clear_mats(scn, self.mats_uv)
+        timing_atlased = perf_counter()
+        print("DEBUG: Packed atlas in {}s".format(timing_packed - timing_start))
+        print("DEBUG: Atlased materials in {}s".format(timing_atlased - timing_packed))
         bpy.ops.smc.refresh_ob_data()
         self.report({'INFO'}, 'Materials were combined.')
         return {'FINISHED'}
