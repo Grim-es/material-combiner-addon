@@ -3,6 +3,9 @@ import array
 
 import bpy
 
+# A 'pixel buffer' is a single precision float type numpy array, viewed in the shape
+# (image.height, image.width, image.channels)
+
 # Image.pixels is a bpy_prop_array, to use its foreach_get/foreach_set methods with buffers, the buffer's type has to
 # match the internal C type used by Blender, otherwise Blender will reject the buffer.
 #
@@ -16,10 +19,10 @@ pixel_ctype = 'f'
 
 
 if bpy.app.version >= (2, 83):  # bpy_prop_array.foreach_get was added in Blender 2.83
-    # 1.5988599996489938ms for 1024x1024
-    # 15.224460000172257ms for 2048x2048
-    # 60.937399999966146 for 4096x4096
-    # 306.261860000086ms for 8192x8192
+    # 1.6ms for 1024x1024
+    # 15.2ms for 2048x2048
+    # 60.9ms for 4096x4096
+    # 306.2ms for 8192x8192
     def __get_buffer_internal(image):
         pixels = image.pixels
         buffer = np.empty(len(pixels), dtype=pixel_dtype)
@@ -29,10 +32,10 @@ if bpy.app.version >= (2, 83):  # bpy_prop_array.foreach_get was added in Blende
 elif bpy.app.version >= (2, 80):  # Being able to use the memory of an existing buffer in bgl.Buffer was added in Blender 2.80, not that this behaviour is documented
     import bgl
     pixel_gltype = bgl.GL_FLOAT
-    # 16.717200000130106ms for 1024x1024
-    # 65.88486666684427 for 2048x2048
-    # 293.88186666740995 for 4096x4096
-    # 1121.5862666661753ms for 8192x8192
+    # 16.7ms for 1024x1024
+    # 65.9ms for 2048x2048
+    # 293.9ms for 4096x4096
+    # 1121.6ms for 8192x8192
 
     # see https://blender.stackexchange.com/a/230242 for details
     def __get_buffer_internal(image):
@@ -51,57 +54,94 @@ elif bpy.app.version >= (2, 80):  # Being able to use the memory of an existing 
             # If the open gl bindcode is set, then it's already been cached, so free it from open gl first
             image.gl_free()
         if image.gl_load():
-            raise Exception()
+            print("Could not load {} into Open GL, resorting to a slower method of getting pixels".format(image))
+            return np.fromiter(pixels, dtype=pixel_dtype)
         bgl.glActiveTexture(bgl.GL_TEXTURE0)
         bgl.glBindTexture(bgl.GL_TEXTURE_2D, image.bindcode)
         buffer = np.empty(len(pixels), dtype=pixel_dtype)
         gl_buffer = bgl.Buffer(bgl.GL_FLOAT, buffer.shape, buffer)
         bgl.glGetTexImage(bgl.GL_TEXTURE_2D, 0, bgl.GL_RGBA, bgl.GL_FLOAT, gl_buffer)
         return buffer
-else:
+else:  # Oldest theoretically supported Blender version is 2.50, because that's when the bgl module was added
     # TODO: Look into how feasible it would be to draw the images to one large atlas canvas in Open GL,
     #  avoiding image.pixels entirely (until needing to save the atlas to a file)
     import bgl
     pixel_gltype = bgl.GL_FLOAT
 
+    try:
+        from .ctypes_buffer_utils import gl_get_tex_image_to_numpy
+
+        def __2_79_gl_tex_to_np(num_pixel_components):
+            return gl_get_tex_image_to_numpy(num_pixel_components, pixel_gltype, pixel_dtype)
+    except AssertionError:
+        print("Failed to import ctypes_buffer_utils, resorting to using much slower iteration to get image pixels from Open GL")
+
+        def __2_79_gl_tex_to_np(num_pixel_components):
+            gl_buffer = bgl.Buffer(pixel_gltype, num_pixel_components)
+            bgl.glGetTexImage(bgl.GL_TEXTURE_2D, 0, bgl.GL_RGBA, pixel_gltype, gl_buffer)
+            return np.fromiter(gl_buffer, dtype=pixel_dtype)
+
     # On Blender 2.79:
-    # 159.61713333338898ms for 1024x1024
-    # 636.5121333334779ms for 2048x2048
-    # 2600.715000000188ms for 4096x4096
-    # 10215.13573333353ms for 8192x8192
+    # Getting pixels through Open GL and then into a numpy array via gl_get_tex_image_to_numpy
+    # 9.7ms for 1024x1024
+    # 52.7ms for 2048x2048
+    # 201.8ms for 4096x4096
+    # 818.8ms for 8192x8192
+    #
+    # Getting pixels through Open GL and then into a numpy array via np.fromiter(buffer, dtype=pixel_dtype)
+    # 159.6ms for 1024x1024
+    # 636.5ms for 2048x2048
+    # 2600.7ms for 4096x4096
+    # 10215.1ms for 8192x8192
     #
     # Compared to simply "return np.fromiter(pixels, dtype=pixel_dtype)"
-    # 200.29373333333447ms for 1024x1024
-    # 819.820066666883ms for 2048x2048
-    # 3343.7631999998607 for 4096x4096
-    # 33066.21610000002 for 8192x8192
+    # 200.3ms for 1024x1024
+    # 819.8ms for 2048x2048
+    # 3343.8 for 4096x4096
+    # 33066.2 for 8192x8192
     def __get_buffer_internal(image):
         pixels = image.pixels
         if image.bindcode[0]:
             image.gl_free()
         if image.gl_load(0, bgl.GL_NEAREST, bgl.GL_NEAREST):
-            raise Exception()
+            print("Could not load {} into Open GL, resorting to a slower method of getting pixels".format(image))
+            return np.fromiter(pixels, dtype=pixel_dtype)
         num_pixel_components = len(pixels)
         bgl.glEnable(bgl.GL_TEXTURE_2D)
         bgl.glActiveTexture(bgl.GL_TEXTURE0)
         bgl.glBindTexture(bgl.GL_TEXTURE_2D, image.bindcode[0])
-        gl_buffer = bgl.Buffer(pixel_gltype, num_pixel_components)
-        bgl.glGetTexImage(bgl.GL_TEXTURE_2D, 0, bgl.GL_RGBA, pixel_gltype, gl_buffer)
-        return np.fromiter(gl_buffer, pixel_dtype)
+        return __2_79_gl_tex_to_np(num_pixel_components)
 
 if bpy.app.version >= (2, 83):
     def __write_pixel_buffer_internal(img, buffer):
-        img.pixels.foreach_set(buffer)
+        # buffer must be flattened when writing
+        img.pixels.foreach_set(buffer.ravel())
 else:
-    def __write_pixel_buffer_internal(img, buffer):
+    try:
+        from .ctypes_fast_pixel_write import set_pixels_matrix_hack
+
+        # Performs a direct memory copy, so is almost as fast as foreach_set from Blender 2.83 and newer. It might work
+        # as far back as Blender 2.63, but has only been tested as far back as Blender 2.79
+        # 7.8ms for 1024x1024
+        # 35.7ms for 2048x2048
+        # 135.8ms for 4096x4096
+        # 701.7ms for 8192x8192
+        def __write_pixel_buffer_internal(img, buffer):
+            set_pixels_matrix_hack(img, buffer)
+
+    except AssertionError:
+        print("Failed to import ctypes_fast_pixel_write, resorting to using 10 times slower method to set image pixels")
+
         # Added in Blender 2.83, here for reference
-        # 7.610340000246652ms for 1024x1024
-        # 114.70884000009392ms for 4096x4096
+        # 7.6ms for 1024x1024
+        # 29.6ms for 2048x2048
+        # 114.7ms for 4096x4096
+        # 471.5ms for 8192x8192
         # img.pixels.foreach_set(buffer)
         #
         # From a thread I found discussing the performance of Image.pixels, this was considered the fastest method
-        # 110.55637000099523ms for 1024x1024
-        # 1991.7785500001628ms for 4096x4096
+        # 110.6ms for 1024x1024
+        # 1991.8ms for 4096x4096
         # img.pixels[:] = buffer.tolist()
         #
         # In most cases, it's faster to set the value of each element instead of replacing the entire pixels attribute,
@@ -110,9 +150,14 @@ else:
         # but then img.pixels = buffer.data (a MemoryView object, which also implements the buffer protocol) should also
         # be faster, but it's not.
         # buffer.tobytes() seems to be the fastest way to get an ndarray into a Python array
-        # 85.54007000057026ms for 1024x1024
-        # 1511.0748700011754ms for 4096x4096
-        img.pixels = array.array(pixel_ctype, buffer.tobytes())
+        # 85.5ms for 1024x1024
+        # 388.2 for 2048x2048
+        # 1511.1ms for 4096x4096
+        # 6407.5ms for 8192x8192
+        # TODO: If we can know that large areas of the atlas remain the generated colour of the image, maybe we could
+        #  skip setting the pixels in those areas for a potential speed up
+        def __write_pixel_buffer_internal(img, buffer):
+            img.pixels = array.array(pixel_ctype, buffer.tobytes())
 
 linear_colorspaces = {'Linear', 'Non-Color', 'Raw'}
 supported_colorspaces = linear_colorspaces | {'sRGB'}
@@ -156,17 +201,15 @@ def get_pixel_buffer(img, atlas_colorspace='sRGB'):
     buffer.shape = (height, width, channels)
 
     # Pixels are always read raw, meaning that changing the colorspace of the image has no effect on the pixels,
-    # but if we want to combine a linear image into an sRGB image such that the linear image appears the same when
-    # viewed in sRGB, we need to convert it to sRGB to linear, so that when it's viewed in sRGB, our initial
-    # conversion from sRGB to linear and the conversion from raw (linear) to sRGB when viewed cancel each other out.
-    # FIXME: Conversion isn't working
+    # but if we want to combine an X colorspace image into a Y colorspace atlas such that the X colorspace image appears
+    # the same when viewed in Y colorspace, we need to pre-convert it from X colorspace to Y colorspace.
     img_color_space = img.colorspace_settings.name
     if atlas_colorspace == 'sRGB':
         if img_color_space == 'sRGB':
             return buffer
         elif img_color_space in linear_colorspaces:
-            # Need to convert from sRGB to linear
-            buffer_convert_srgb_to_linear(buffer)
+            # Need to convert from Linear to sRGB
+            buffer_convert_linear_to_srgb(buffer)
             return buffer
         else:
             raise TypeError("Unsupported image colorspace {} for {}. Must be in {}.".format(img_color_space, img, supported_colorspaces))
@@ -174,8 +217,8 @@ def get_pixel_buffer(img, atlas_colorspace='sRGB'):
         if img_color_space in linear_colorspaces:
             return buffer
         elif img_color_space == 'sRGB':
-            # Need to convert from Linear to sRGB
-            buffer_convert_linear_to_srgb(buffer)
+            # Need to convert from sRGB to linear
+            buffer_convert_srgb_to_linear(buffer)
             return buffer
     else:
         raise TypeError("Unsupported atlas colorspace {}. Must be in {}".format(atlas_colorspace, supported_colorspaces))
@@ -204,10 +247,9 @@ def buffer_to_image(buffer, *, name):
 
 def write_pixel_buffer(img, buffer):
     width, height = img.size
-    image_shape = (width, height, img.channels)
+    image_shape = (height, width, img.channels)
     if buffer.shape == image_shape:
-        # buffer must be flattened when writing
-        __write_pixel_buffer_internal(img, buffer.ravel())
+        __write_pixel_buffer_internal(img, buffer)
     else:
         raise RuntimeError("Buffer shape {} does not match image shape {}".format(buffer.shape, image_shape))
 
