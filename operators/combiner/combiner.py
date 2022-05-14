@@ -27,7 +27,7 @@ class Combiner(bpy.types.Operator):
         self.structure = BinPacker(get_size(scn, self.structure)).fit()
         size = (max([i['gfx']['fit']['x'] + i['gfx']['size'][0] for i in self.structure.values()]),
                 max([i['gfx']['fit']['y'] + i['gfx']['size'][1] for i in self.structure.values()]))
-        if any(size) > 20000:
+        if any(dimension > 20000 for dimension in size):
             self.report({'ERROR'}, 'Output image size is too large')
             return {'FINISHED'}
         timing_packed = perf_counter()
