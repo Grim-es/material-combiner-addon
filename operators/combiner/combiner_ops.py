@@ -164,7 +164,6 @@ def get_size(scn, data):
     return OrderedDict(sorted(data.items(), key=lambda x: min(x[1]['gfx']['size']), reverse=True))
 
 
-# FIXME: Broken, the image that should be tiled, is getting stretched out instead
 # TODO: Use np.tile
 # TODO: Even better might be to do the whole uv_image thing when pasting to the atlas instead of creating a new buffer
 #       as an intermediary
@@ -192,8 +191,6 @@ def get_gfx(scn, mat, item, src):
     if isinstance(src, bpy.types.Image):
         if mat.smc_size:
             img_buffer = get_resized_pixel_buffer(src, (mat.smc_size_width, mat.smc_size_height))
-        elif tuple(src.size) != size:
-            img_buffer = get_resized_pixel_buffer(src, size)
         else:
             img_buffer = get_pixel_buffer(src)
         max_uv = item['gfx']['uv_size']
