@@ -66,7 +66,7 @@ def clear_empty_mats(scn, data, mats_uv):
                     ob.data.materials.pop(index=mat_idx, update_data=True)
 
 
-def get_duplicates(mats_uv):
+def set_root_mats(mats_uv):
     mat_list = list(set([mat for mats in mats_uv.values() for mat in mats.keys()]))
     mat_dict = sort_materials(mat_list)
     for mats in mat_dict.values():

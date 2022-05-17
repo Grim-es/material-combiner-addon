@@ -55,7 +55,7 @@ class Combiner(bpy.types.Operator):
         self.data = get_data(scn.smc_ob_data)
         self.mats_uv = get_mats_uv(scn, self.data)
         clear_empty_mats(scn, self.data, self.mats_uv)
-        get_duplicates(self.mats_uv)
+        set_root_mats(self.mats_uv)
         self.structure = get_structure(scn, self.data, self.mats_uv)
         if globs.version == 0:
             context.space_data.viewport_shade = 'MATERIAL'
