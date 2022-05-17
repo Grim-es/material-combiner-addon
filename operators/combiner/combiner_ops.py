@@ -246,10 +246,22 @@ def get_atlas(scn, data, size):
                                           i['gfx']['fit']['y'] + int(scn.smc_gaps / 2)))
     atlas = buffer_to_image(img, name='temp_material_combine_atlas')
     if scn.smc_size == 'CUST':
-        # FIXME Maybe broken?
-        #  Of note, much better results would be achieved from resizing images first to match the desired packed shape
+        # TODO: Much better results would be achieved from resizing images first to match the desired packed shape
         #  as the edges of textures would not blur together
-        atlas.scale(scn.smc_size_width, scn.smc_size_height)
+        atlas_width = atlas.size[0]
+        atlas_height = atlas.size[1]
+        max_atlas_height = scn.smc_size_height
+        max_atlas_width = scn.smc_size_width
+        if atlas_height > max_atlas_height or atlas_width > max_atlas_width:
+            height_ratio = max_atlas_height / atlas_height
+            width_ratio = max_atlas_width / atlas_width
+            if height_ratio < width_ratio:
+                new_height = max_atlas_height
+                new_width = round(atlas_width * height_ratio)
+            else:
+                new_width = max_atlas_width
+                new_height = round(atlas_height * width_ratio)
+            atlas.scale(new_width, new_height)
     return atlas
 
 
