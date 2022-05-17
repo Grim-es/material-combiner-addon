@@ -262,7 +262,7 @@ def get_atlas(scn, data, size):
                 new_width = max_atlas_width
                 new_height = round(atlas_height * width_ratio)
             atlas.scale(new_width, new_height)
-    return atlas
+    return atlas, size
 
 
 def get_aligned_uv(scn, data, size):

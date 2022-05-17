@@ -33,8 +33,10 @@ class Combiner(bpy.types.Operator):
             self.report({'ERROR'}, 'Output image size is too large')
             return {'FINISHED'}
         timing_packed = perf_counter()
-        atlas = get_atlas(scn, self.structure, size)
-        get_aligned_uv(scn, self.structure, atlas.size)
+        atlas, packed_atlas_size = get_atlas(scn, self.structure, size)
+        # The atlas may have been resized if it's set to use a custom maximum size, but the uvs are based on the
+        # original packed size
+        get_aligned_uv(scn, self.structure, packed_atlas_size)
         assign_comb_mats(scn, self.data, self.mats_uv, atlas)
         clear_mats(scn, self.mats_uv)
         timing_atlased = perf_counter()
