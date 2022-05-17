@@ -1,4 +1,5 @@
 import math
+import numpy as np
 import os
 import random
 from collections import OrderedDict
@@ -164,26 +165,22 @@ def get_size(scn, data):
     return OrderedDict(sorted(data.items(), key=lambda x: min(x[1]['gfx']['size']), reverse=True))
 
 
-# TODO: Use np.tile
-# TODO: Even better might be to do the whole uv_image thing when pasting to the atlas instead of creating a new buffer
-#       as an intermediary
-def get_uv_image(item, img_buffer, size):
+# TODO: It might be better to do the whole uv_image thing when pasting to the atlas instead of creating a new buffer
+#       as an intermediary.
+def get_uv_image(img_buffer, size, max_uv_x, max_uv_y):
     """Repeat the input image adjacent to itself enough times to ensure that the all the uvs are within the bounds of
     the image.
 
     :return: A new image created by repeating the input image."""
-    uv_img = new_pixel_buffer(size)
-    img_w = img_buffer.shape[1]
-    img_h = img_buffer.shape[0]
-    for w in range(math.ceil(item['gfx']['uv_size'][0])):
-        for h in range(math.ceil(item['gfx']['uv_size'][1])):
-            pixel_buffer_paste(uv_img, img_buffer, (
-                w * img_w,
-                uv_img.shape[0] - img_h - h * img_h,
-                w * img_w + img_w,
-                uv_img.shape[0] - img_h - h * img_h + img_h
-            ))
-    return uv_img
+    print("DEBUG: Tiling image to fit max_uv_x '{}' and max_uv_y '{}'".format(max_uv_x, max_uv_y))
+    x_tiles = math.ceil(max_uv_x)
+    y_tiles = math.ceil(max_uv_y)
+    buffer_x = img_buffer.shape[1]
+    buffer_y = img_buffer.shape[0]
+    tiled_size = (x_tiles * buffer_x, y_tiles * buffer_y)
+    if size != tiled_size:
+        raise TypeError("Tiled image size {} doesn't match required image size {}".format(tiled_size, size))
+    return np.tile(img_buffer, (y_tiles, x_tiles, 1))
 
 
 def get_gfx(scn, mat, item, src):
@@ -195,8 +192,11 @@ def get_gfx(scn, mat, item, src):
             img_buffer = get_pixel_buffer(src)
         max_uv = item['gfx']['uv_size']
         # Note that get_size(...) sets uv_size to always be at least 1
-        if max_uv[0] > 1 or max_uv[1] > 1:
-            img_buffer = get_uv_image(item, img_buffer, size)
+        max_uv_x = max_uv[0]
+        max_uv_y = max_uv[1]
+        if max_uv_x > 1 or max_uv_y > 1:
+            # Tile the image adjacent to itself enough times to ensure all the uvs are within the bounds of the image
+            img_buffer = get_uv_image(img_buffer, size, max_uv_x, max_uv_y)
         if mat.smc_diffuse:
             # TODO: This diffuse_img was in sRGB, surely this needs to be linear?
             diffuse_color = get_diffuse(mat, convert_to_255_scale=False, linear=True)
