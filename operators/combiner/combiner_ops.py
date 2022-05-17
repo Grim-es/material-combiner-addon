@@ -128,24 +128,41 @@ def get_material_index(mesh, mat_name):
 def add_images(data):
     for mat, mat_data in data.items():
         if globs.version > 0:
-            shader = shader_type(mat) if mat else None
-            if shader == 'mmd':
-                mat_data['gfx']['img'] = mat.node_tree.nodes['mmd_base_tex'].image
-            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
-                mat_data['gfx']['img'] = mat.node_tree.nodes['Image Texture'].image
-            else:
-                if mat:
-                    # Pixels are normalized and read in linear, so the diffuse colors must be read as linear too
-                    mat_data['gfx']['img'] = get_diffuse(mat, convert_to_255_scale=False, linear=True)
-                    print("DEBUG: Unrecognised shader for {}. Got diffuse colour instead".format(mat))
+            if mat:
+                shader = shader_type(mat) if mat else None
+                if shader == 'mmd':
+                    node = mat.node_tree.nodes['mmd_base_tex']
+                elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
+                    node = mat.node_tree.nodes['Image Texture']
                 else:
-                    mat_data['gfx']['img'] = [0.0, 0.0, 0.0, 1.0]
-                    print("DEBUG: No material, so used Black color")
+                    node = None
+
+                if node:
+                    image = node.image
+                    if image:
+                        src = image
+                    else:
+                        # If the image from the shader is None, the Image Texture has no assigned image. If such an Image
+                        # Texture node is used, it will give a black color. Technically it will give an alpha of 0.0 too, but
+                        # it's possible that the alpha output isn't being used, so 1.0 alpha is probably the better choice.
+                        src = [0.0, 0.0, 0.0, 1.0]
+                        print("DEBUG: No image found in texture node for shader '{}' for material {}, so used Black color".format(shader, mat))
+                else:
+                    # No node found from shader, so get the diffuse color instead
+                    # Pixels are normalized and read in linear, so the diffuse colors must be read as linear too
+                    src = get_diffuse(mat, convert_to_255_scale=False, linear=True)
+                    if shader:
+                        print("DEBUG: Found shader '{}' for {}. But couldn't find the correct node to use. Got diffuse colour instead".format(shader, mat))
+                    else:
+                        print("DEBUG: Unrecognised shader for {}. Got diffuse colour instead".format(mat))
+            else:
+                src = [0.0, 0.0, 0.0, 1.0]
+                print("DEBUG: No material, so used Black color")
         else:
             src = get_image(get_texture(mat))
             if src is None:
                 src = get_diffuse(mat, convert_to_255_scale=False, linear=True)
-            mat_data['gfx']['img'] = src
+        mat_data['gfx']['img'] = src
 
 
 def size_sorting(item):
@@ -160,10 +177,7 @@ def size_sorting(item):
     else:
         # Should be a colour
         img_sort = ''
-        if img is None:
-            color_sort = 0
-        else:
-            color_sort = sum(img)
+        color_sort = sum(img)
     # Sorting order:
     # 1) maximum of x and y
     # 2) area
