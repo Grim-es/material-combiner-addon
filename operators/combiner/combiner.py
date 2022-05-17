@@ -24,6 +24,8 @@ class Combiner(bpy.types.Operator):
         timing_start = perf_counter()
         scn = context.scene
         scn.smc_save_path = self.directory
+        add_images(self.structure)
+        found_images = perf_counter()
         self.structure = BinPacker(get_size(scn, self.structure)).fit()
         size = (max([i['gfx']['fit']['x'] + i['gfx']['size'][0] for i in self.structure.values()]),
                 max([i['gfx']['fit']['y'] + i['gfx']['size'][1] for i in self.structure.values()]))
@@ -36,7 +38,8 @@ class Combiner(bpy.types.Operator):
         assign_comb_mats(scn, self.data, self.mats_uv, atlas)
         clear_mats(scn, self.mats_uv)
         timing_atlased = perf_counter()
-        print("DEBUG: Packed atlas in {}s".format(timing_packed - timing_start))
+        print("DEBUG: Found images in {}s".format(found_images - timing_start))
+        print("DEBUG: Packed atlas in {}s".format(timing_packed - found_images))
         print("DEBUG: Atlased materials in {}s".format(timing_atlased - timing_packed))
         bpy.ops.smc.refresh_ob_data()
         self.report({'INFO'}, 'Materials were combined.')

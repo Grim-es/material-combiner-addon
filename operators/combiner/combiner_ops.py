@@ -125,17 +125,61 @@ def get_material_index(mesh, mat_name):
             return i
 
 
-def get_size(scn, data):
+def add_images(data):
     for mat, mat_data in data.items():
         if globs.version > 0:
-            img = None
             shader = shader_type(mat) if mat else None
             if shader == 'mmd':
-                img = mat.node_tree.nodes['mmd_base_tex'].image
+                mat_data['gfx']['img'] = mat.node_tree.nodes['mmd_base_tex'].image
             elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
-                img = mat.node_tree.nodes['Image Texture'].image
+                mat_data['gfx']['img'] = mat.node_tree.nodes['Image Texture'].image
+            else:
+                if mat:
+                    # Pixels are normalized and read in linear, so the diffuse colors must be read as linear too
+                    mat_data['gfx']['img'] = get_diffuse(mat, convert_to_255_scale=False, linear=True)
+                    print("DEBUG: Unrecognised shader for {}. Got diffuse colour instead".format(mat))
+                else:
+                    mat_data['gfx']['img'] = [0.0, 0.0, 0.0, 1.0]
+                    print("DEBUG: No material, so used Black color")
         else:
-            img = get_image(get_texture(mat))
+            src = get_image(get_texture(mat))
+            if src is None:
+                src = get_diffuse(mat, convert_to_255_scale=False, linear=True)
+            mat_data['gfx']['img'] = src
+
+
+def size_sorting(item):
+    _key, value = item
+    gfx = value['gfx']
+    size_x, size_y = gfx['size']
+    img = gfx['img']
+    print("DEBUG: Sorting gfx {}".format(gfx))
+    if isinstance(img, bpy.types.Image):
+        img_sort = img.name
+        color_sort = 0
+    else:
+        # Should be a colour
+        img_sort = ''
+        if img is None:
+            color_sort = 0
+        else:
+            color_sort = sum(img)
+    # Sorting order:
+    # 1) maximum of x and y
+    # 2) area
+    # 3) x
+    # 4) image name (colors treated as '')
+    # 5) sum of colour components (images treated as 0, though images should always have unique names unless included
+    #    multiple times)
+    # First sort by maximum of x and y, then, if equal, next sort by area, if still equal, arbitrarily pick size_x and
+    # if still equal, go by the name of the image, if there is no image, then go by the sum of the color's components
+    return max(size_x, size_y), size_x * size_y, size_x, img_sort, color_sort
+
+
+def get_size(scn, data):
+    for mat, mat_data in data.items():
+        gfx = mat_data['gfx']
+        img = gfx['img']
         # Get max x and max y of the uvs for this material. The uvs should already be aligned such that the minimum x
         # and y are both within the bounds [0,1]
         # TODO: If all values less than 1, then 1 gets chosen as the max because of the outer max(), couldn't we crop
@@ -145,24 +189,24 @@ def get_size(scn, data):
         max_y = max(max([uv.y for uv in mat_data['uv'] if not math.isnan(uv.y)], default=1), 1)
         # TODO: Up to 25 copies of the same image sounds like it could be a bit high for most images, maybe it should be
         #  made lower (or even higher) based on the dimensions of the image
-        mat_data['gfx']['uv_size'] = (max_x if max_x < 25 else 1, max_y if max_y < 25 else 1)
+        gfx['uv_size'] = (max_x if max_x < 25 else 1, max_y if max_y < 25 else 1)
         if not scn.smc_crop:
             # FIXME: UVs are off by half a pixel. To reproduce, atlas a quad with uvs (0,0), (0,1), (1,0), (1,1).
             #        The corners of the quad's UVs will all be half a pixel towards the middle of the quad
             # FIXME: UVs do not get scaled properly when images in the atlas have to be made much smaller?
             #        Maybe something to do with resizing the atlas at the end?
-            mat_data['gfx']['uv_size'] = tuple(map(math.ceil, mat_data['gfx']['uv_size']))
-        if is_image_valid(img):
+            gfx['uv_size'] = tuple(map(math.ceil, gfx['uv_size']))
+        if isinstance(img, bpy.types.Image) and is_image_valid(img):
             if mat.smc_size:
                 img_size = (min(mat.smc_size_width, img.size[0]),
                             min(mat.smc_size_height, img.size[1]))
             else:
                 img_size = (img.size[0], img.size[1])
-            mat_data['gfx']['size'] = tuple(
-                int(s * uv_s + int(scn.smc_gaps)) for s, uv_s in zip(img_size, mat_data['gfx']['uv_size']))
+            gfx['size'] = tuple(
+                int(s * uv_s + int(scn.smc_gaps)) for s, uv_s in zip(img_size, gfx['uv_size']))
         else:
-            mat_data['gfx']['size'] = (scn.smc_diffuse_size + int(scn.smc_gaps),) * 2
-    return OrderedDict(sorted(data.items(), key=lambda x: min(x[1]['gfx']['size']), reverse=True))
+            gfx['size'] = (scn.smc_diffuse_size + int(scn.smc_gaps),) * 2
+    return OrderedDict(sorted(data.items(), key=size_sorting, reverse=True))
 
 
 # TODO: It might be better to do the whole uv_image thing when pasting to the atlas instead of creating a new buffer
@@ -228,27 +272,6 @@ def get_atlas(scn, data, size):
         size = tuple(1 << (x - 1).bit_length() for x in size)
     elif scn.smc_size == 'QUAD':
         size = (max(size),) * 2
-    for mat, item in data.items():
-        if globs.version > 0:
-            item['gfx']['img'] = ''
-            shader = shader_type(mat) if mat else None
-            if shader == 'mmd':
-                item['gfx']['img'] = mat.node_tree.nodes['mmd_base_tex'].image
-            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
-                item['gfx']['img'] = mat.node_tree.nodes['Image Texture'].image
-            else:
-                if mat:
-                    # Pixels are normalized and read in linear, so the diffuse colors must be read as linear too
-                    item['gfx']['img'] = get_diffuse(mat, convert_to_255_scale=False, linear=True)
-                    print("DEBUG: Unrecognised shader for {}. Got diffuse colour instead".format(mat))
-                else:
-                    item['gfx']['img'] = [0.0, 0.0, 0.0, 1.0]
-                    print("DEBUG: No material, so used Black color")
-        else:
-            src = get_image(get_texture(mat))
-            if src is None:
-                src = get_diffuse(mat, convert_to_255_scale=False, linear=True)
-            item['gfx']['img'] = src
     img = new_pixel_buffer(size)
     for mat, i in data.items():
         if i['gfx']['fit']:
