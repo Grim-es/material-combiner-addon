@@ -12,14 +12,12 @@ from ...utils.objects import get_obs
 from ...utils.objects import get_polys
 from ...utils.objects import get_uv
 from ...utils.objects import align_uv
-from ...utils.materials import shader_type
+from ...utils.materials import get_material_image_or_color
 from ...utils.materials import get_diffuse
 from ...utils.materials import sort_materials
-from ...utils.textures import get_texture
 from ...utils.images import save_generated_image_to_file, is_image_valid
 from ...utils.pixel_buffer import get_pixel_buffer, get_resized_pixel_buffer, buffer_to_image, new_pixel_buffer,\
     pixel_buffer_paste
-from ...utils.textures import get_image
 
 
 def set_ob_mode(scn):
@@ -127,42 +125,7 @@ def get_material_index(mesh, mat_name):
 
 def add_images(data):
     for mat, mat_data in data.items():
-        if globs.version > 0:
-            if mat:
-                shader = shader_type(mat) if mat else None
-                if shader == 'mmd':
-                    node = mat.node_tree.nodes['mmd_base_tex']
-                elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
-                    node = mat.node_tree.nodes['Image Texture']
-                else:
-                    node = None
-
-                if node:
-                    image = node.image
-                    if image:
-                        src = image
-                    else:
-                        # If the image from the shader is None, the Image Texture has no assigned image. If such an Image
-                        # Texture node is used, it will give a black color. Technically it will give an alpha of 0.0 too, but
-                        # it's possible that the alpha output isn't being used, so 1.0 alpha is probably the better choice.
-                        src = [0.0, 0.0, 0.0, 1.0]
-                        print("DEBUG: No image found in texture node for shader '{}' for material {}, so used Black color".format(shader, mat))
-                else:
-                    # No node found from shader, so get the diffuse color instead
-                    # Pixels are normalized and read in linear, so the diffuse colors must be read as linear too
-                    src = get_diffuse(mat, convert_to_255_scale=False, linear=True)
-                    if shader:
-                        print("DEBUG: Found shader '{}' for {}. But couldn't find the correct node to use. Got diffuse colour instead".format(shader, mat))
-                    else:
-                        print("DEBUG: Unrecognised shader for {}. Got diffuse colour instead".format(mat))
-            else:
-                src = [0.0, 0.0, 0.0, 1.0]
-                print("DEBUG: No material, so used Black color")
-        else:
-            src = get_image(get_texture(mat))
-            if src is None:
-                src = get_diffuse(mat, convert_to_255_scale=False, linear=True)
-        mat_data['gfx']['img'] = src
+        mat_data['gfx']['img'] = get_material_image_or_color(mat)
 
 
 def size_sorting(item):
@@ -264,19 +227,8 @@ def get_gfx(scn, mat, item, src):
             img_buffer[:, :, :len(diffuse_color)] *= diffuse_color
     else:
         # src must be a color in a tuple/list of components
-        # TODO: We can probably safely reject anything that isn't RGB or RGBA
-        num_components = len(src)
-        if num_components == 3:
-            # Typical RGB only, we will assume alpha should be 1.0
-            src = src + (1.0,)
-        elif num_components == 2:
-            # RG only, attach 0 for blue and 1 for alpha, similar to Open GL's glTexImage2D
-            src = src + (0.0, 1.0)
-        elif num_components == 1:
-            # R only, Alpha will be treated as 1.0, similar to Open GL's glTexImage2D
-            src = src + (0.0, 0.0, 1.0)
-        elif num_components != 4:
-            raise TypeError("Invalid colour '{}', must be tuple-like with at most 4 (RGBA) elements.".format(src))
+        if len(src) != 4:
+            raise TypeError("Invalid colour '{}', must be tuple-like with 4 elements (RGBA).".format(src))
         img_buffer = new_pixel_buffer(size, src)
     return img_buffer
 
@@ -289,10 +241,9 @@ def get_atlas(scn, data, size):
     img = new_pixel_buffer(size)
     for mat, i in data.items():
         if i['gfx']['fit']:
-            if i['gfx']['img'] is not None:
-                gfx = get_gfx(scn, mat, i, i['gfx']['img'])
-                pixel_buffer_paste(img, gfx, (i['gfx']['fit']['x'] + int(scn.smc_gaps / 2),
-                                              i['gfx']['fit']['y'] + int(scn.smc_gaps / 2)))
+            gfx = get_gfx(scn, mat, i, i['gfx']['img'])
+            pixel_buffer_paste(img, gfx, (i['gfx']['fit']['x'] + int(scn.smc_gaps / 2),
+                                          i['gfx']['fit']['y'] + int(scn.smc_gaps / 2)))
     atlas = buffer_to_image(img, name='temp_material_combine_atlas')
     if scn.smc_size == 'CUST':
         # FIXME Maybe broken?
