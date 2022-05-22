@@ -170,8 +170,6 @@ def get_size(scn, data):
         if not scn.smc_crop:
             # FIXME: UVs are off by half a pixel. To reproduce, atlas a quad with uvs (0,0), (0,1), (1,0), (1,1).
             #        The corners of the quad's UVs will all be half a pixel towards the middle of the quad
-            # FIXME: UVs do not get scaled properly when images in the atlas have to be made much smaller?
-            #        Maybe something to do with resizing the atlas at the end?
             gfx['uv_size'] = tuple(map(math.ceil, gfx['uv_size']))
         if isinstance(img, bpy.types.Image) and is_image_valid(img):
             if mat.smc_size:
@@ -219,11 +217,10 @@ def get_gfx(scn, mat, item, src):
             # Tile the image adjacent to itself enough times to ensure all the uvs are within the bounds of the image
             img_buffer = get_uv_image(img_buffer, size, max_uv_x, max_uv_y)
         if mat.smc_diffuse:
-            # TODO: This diffuse_img was in sRGB, surely this needs to be linear?
             diffuse_color = get_diffuse(mat, convert_to_255_scale=False, linear=True)
             # Multiply by the diffuse color
             # 3d slice of [all x, all y, only the first len(diffuse_color) components]
-            # TODO: Could hardcode 3
+            # TODO: Could hardcode 4
             img_buffer[:, :, :len(diffuse_color)] *= diffuse_color
     else:
         # src must be a color in a tuple/list of components

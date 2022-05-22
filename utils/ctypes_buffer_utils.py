@@ -10,6 +10,7 @@ from .ctypes_utils import PyVarObject
 # a numpy array
 # When importing this module, make sure to surround it in a try block and have some sort of backup plan if it fails
 
+
 # Declare class to mirror bgl.Buffer's _Buffer type
 # The fields for bgl.Buffer haven't been changed since its introduction, but if they are changed in the future, then
 # this class would need to be modified to match. Fortunately, we only need to use this when in Blender 2.79 and earlier,
@@ -41,7 +42,6 @@ class BglBuffer(PyVarObject):
       } buf;
     } Buffer;"""
     _fields_ = [
-        # TODO: What's the difference between ctypes.py_object and ctypes.POINTER(PyObject)?
         ('parent', ctypes.py_object),
         ('type', ctypes.c_int),
         ('ndimensions', ctypes.c_int),

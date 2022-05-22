@@ -63,8 +63,6 @@ elif bpy.app.version >= (2, 80):  # Being able to use the memory of an existing 
         bgl.glGetTexImage(bgl.GL_TEXTURE_2D, 0, bgl.GL_RGBA, bgl.GL_FLOAT, gl_buffer)
         return buffer
 else:  # Oldest theoretically supported Blender version is 2.50, because that's when the bgl module was added
-    # TODO: Look into how feasible it would be to draw the images to one large atlas canvas in Open GL,
-    #  avoiding image.pixels entirely (until needing to save the atlas to a file)
     import bgl
     pixel_gltype = bgl.GL_FLOAT
 
@@ -154,8 +152,6 @@ else:
         # 388.2 for 2048x2048
         # 1511.1ms for 4096x4096
         # 6407.5ms for 8192x8192
-        # TODO: If we can know that large areas of the atlas remain the generated colour of the image, maybe we could
-        #  skip setting the pixels in those areas for a potential speed up
         def __write_pixel_buffer_internal(img, buffer):
             img.pixels = array.array(pixel_ctype, buffer.tobytes())
 
@@ -267,9 +263,6 @@ def new_pixel_buffer(size, color=(0.0, 0.0, 0.0, 0.0)):
     channels = len(color)
     if channels > 4 or channels == 0:
         raise TypeError("A color can have between 1 and 4 (inclusive) components, but found {} in {}".format(channels, color))
-    # TODO: It might be simpler to start with a flat array and then reshape it?
-    # buffer = np.empty(height * width * channels, dtype=np.single)
-    # buffer[:, :] = color
     buffer = np.full((height, width, channels), fill_value=color, dtype=pixel_dtype)
     return buffer
 
@@ -335,7 +328,6 @@ def pixel_buffer_paste(target_buffer, source_buffer_or_pixel, corner_or_box):
 
         if target_buffer.shape[-1] >= source_buffer.shape[-1]:
             fit_left, fit_upper, fit_right, fit_lower = fit_box((left, upper, right, lower))
-            # TODO: Remove debug print
             if fit_left != left or fit_upper != upper or fit_right != right or fit_lower != lower:
                 print('DEBUG: Image to be pasted did not fit into target image, {} -> {}'.format((left, upper, right, lower), (fit_left, fit_upper, fit_right, fit_lower)))
             # If the pasted buffer can extend outside the source image, we need to figure out the area which fits within
