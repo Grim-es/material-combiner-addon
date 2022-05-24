@@ -1,10 +1,10 @@
 import ctypes
 
-# To help with understanding this code, see:
+# To help with understanding ctypes usage in this way, see:
 # https://mcla.ug/blog/cpython-hackage.html
 # https://github.com/CGCookie/addon_common/blob/b280/ext/bgl_ext.py
 
-# Start with standard classes to mirror the basic CPython types
+# This module sets up the basic Python types with ctypes, for use by other modules.
 
 
 # Declare class to mirror PyObject type

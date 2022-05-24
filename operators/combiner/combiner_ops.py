@@ -16,7 +16,7 @@ from ...utils.materials import get_material_image_or_color
 from ...utils.materials import get_diffuse
 from ...utils.materials import sort_materials
 from ...utils.images import save_generated_image_to_file, is_image_valid
-from ...utils.pixel_buffer import get_pixel_buffer, get_resized_pixel_buffer, buffer_to_image, new_pixel_buffer,\
+from ...utils.pixels.pixel_buffer import get_pixel_buffer, get_resized_pixel_buffer, buffer_to_image, new_pixel_buffer,\
     pixel_buffer_paste
 
 
@@ -226,7 +226,7 @@ def get_gfx(scn, mat, item, src):
         # src must be a color in a tuple/list of components
         if len(src) != 4:
             raise TypeError("Invalid colour '{}', must be tuple-like with 4 elements (RGBA).".format(src))
-        img_buffer = new_pixel_buffer(size, src)
+        img_buffer = new_pixel_buffer(size, src, read_only_rectangle=True)
     return img_buffer
 
 

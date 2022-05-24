@@ -2,13 +2,17 @@ import bpy
 if bpy.app.version >= (2, 80):
     raise RuntimeError("ctypes buffer utils was attempted to be loaded on Blender version >=2.80")
 
+# The oldest technically supported version is probably 2.50 since that's when the bgl module was added, but Blender
+# didn't even support addons until 2.53, so there isn't really a need to check for this.
+
 import bgl
 import numpy as np
 import ctypes
-from .ctypes_utils import PyVarObject
+from .ctypes_base import PyVarObject
+from .pixel_types import pixel_gltype, pixel_dtype
+from .fallback_pixel_access import get_pixels_no_gl
 # This module is only used for Blender 2.79 and older where there is no fast method to get all of an Image's pixels into
 # a numpy array
-# When importing this module, make sure to surround it in a try block and have some sort of backup plan if it fails
 
 
 # Declare class to mirror bgl.Buffer's _Buffer type
@@ -54,7 +58,21 @@ class BglBuffer(PyVarObject):
 assert bgl.Buffer.__basicsize__ == ctypes.sizeof(BglBuffer)
 
 
-def gl_get_tex_image_to_numpy(num_pixel_components, pixel_gltype, pixel_dtype):
+# Get pixels through Open GL and then into a numpy array via by temporarily changing the data pointer of a bgl.Buffer to
+# point to the data in the numpy array so that when Open GL copies the pixels into the bgl.Buffer, it's actually copying
+# the pixels into the numpy array.
+def get_pixels_ctypes_gl_buffer_swap(image):
+    pixels = image.pixels
+    if image.bindcode[0]:
+        image.gl_free()
+    if image.gl_load(0, bgl.GL_NEAREST, bgl.GL_NEAREST):
+        print("Could not load {} into Open GL, resorting to a slower method of getting pixels".format(image))
+        return get_pixels_no_gl(image)
+    num_pixel_components = len(pixels)
+    bgl.glEnable(bgl.GL_TEXTURE_2D)
+    bgl.glActiveTexture(bgl.GL_TEXTURE0)
+    bgl.glBindTexture(bgl.GL_TEXTURE_2D, image.bindcode[0])
+
     # Create as minimal a bgl.Buffer as possible
     gl_buffer = bgl.Buffer(pixel_gltype, 1)  # Minimum accepted dimension is 1
     # Get the corresponding ctypes object

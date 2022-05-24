@@ -6,7 +6,7 @@
 # dimensions to match the hacked Matrix.
 # Then, setting image.pixels = hacked_matrix performs a direct memcpy of all the Matrix's data to the image.pixels'
 # data.
-# Once done, all the hacked values are restored to avoid memory leaks/corruption and the hacked Matrix is deleted.
+# Once done, all the hacked values are restored to avoid memory leaks/corruption and the Matrix is deleted.
 
 import bpy
 from bpy.app import version as blender_version
@@ -32,10 +32,11 @@ if blender_version < (2, 79):
               " but might work on as old as 2.63")
 
 import ctypes
+import numpy as np
 
 from mathutils import Matrix
 
-from .ctypes_utils import PyVarObject, PyObject
+from .ctypes_base import PyVarObject, PyObject
 
 # This magic value is an internal Blender hack used to determine if a PropertyRNA is not an IDProperty
 # Defined in source/blender/makesrna/intern/rna_internal.h
@@ -363,6 +364,7 @@ ushort_max = 65535
 def set_pixels_matrix_hack(image, pixel_buffer):
     height, width, channels = pixel_buffer.shape
     if channels != 4:
+        # Limitation is in place because we're assuming 4 in the matrix_rows and matrix_columns calculation
         raise TypeError("Only pixel_buffers with 4 channels supported")
     if channels != image.channels:
         raise TypeError("Image channels {} doesn't match pixel_buffer channels {}".format(image.channels, channels))
@@ -383,12 +385,17 @@ def set_pixels_matrix_hack(image, pixel_buffer):
 
     # Matrix columns and rows are limited to a maximum of 65535 due to being unsigned short type, this limits the
     # maximum image height and width to 32767 when the 4 channels are split 2 and 2 between the height and width.
-    # 32767 pixels in one dimension is a huge image, would is unlikely to ever be needed, however, if support for larger
+    # 32767 pixels in one dimension is a huge image, which is unlikely to ever be needed, however, if support for larger
     # images is needed, we could set up the matrix to copy as much of the data as possible and then offset the matrix's
     # data pointer ('matrix') to one element after the copied data and copy another chunk of the data, repeatedly
     # copying more chunks until all the data has been copied.
     if matrix_rows > ushort_max or matrix_columns > ushort_max:
         raise TypeError("Image/Pixel buffer is too large, maximum width or height is {}".format(ushort_max // 2))
+
+    # The pixel buffer must be C contiguous, otherwise when the memory is copied, the pixels will end up in the wrong
+    # order.
+    # If pixel_buffer was already C contiguous, this does nothing and simply returns pixel_buffer.
+    pixel_buffer = np.ascontiguousarray(pixel_buffer)
 
     # Get ctypes representation of pixels
     pixels_prop_array = PropertyArrayRNA.from_address(id(image.pixels))

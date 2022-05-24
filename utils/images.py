@@ -1,6 +1,5 @@
-# TODO: We could do some optimisations in the case of generated images as we can get the generated_color and use that
-#       instead of getting a pixel buffer
 def is_single_colour_generated(img):
+    """:return:True if the img argument is a generated image of a single color that doesn't have any pending changes"""
     return not img.is_dirty and img.generated_type == 'BLANK'
 
 
