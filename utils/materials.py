@@ -63,7 +63,7 @@ def get_material_image_or_color(mat):
                     if is_image_valid(image):
                         src = image
                     else:
-                        src = get_diffuse(mat, convert_to_255_scale=False, linear=True)
+                        src = get_diffuse(mat)
                         print("DEBUG: Found image {} in {}, but it's considered invalid, so using diffuse color instead".format(image, mat))
                 else:
                     # If the image from the shader is None, the Image Texture has no assigned image. If such an Image
@@ -74,7 +74,7 @@ def get_material_image_or_color(mat):
             else:
                 # No node found from shader, so get the diffuse color instead
                 # Pixels are normalized and read in linear, so the diffuse colors must be read as linear too
-                src = get_diffuse(mat, convert_to_255_scale=False, linear=True)
+                src = get_diffuse(mat)
                 if shader:
                     print("DEBUG: Found shader '{}' for {}. But couldn't find the correct node to use. Got diffuse colour instead".format(shader, mat))
                 else:
@@ -82,7 +82,7 @@ def get_material_image_or_color(mat):
         else:
             src = get_image(get_texture(mat))
             if src is None:
-                src = get_diffuse(mat, convert_to_255_scale=False, linear=True)
+                src = get_diffuse(mat)
     else:
         src = (0.0, 0.0, 0.0, 1.0)
         print("DEBUG: No material, so used Black color")
@@ -103,7 +103,7 @@ def sort_materials(mat_list):
             else:
                 # TODO: It would be useful to differentiate between no image and an invalid image, that way, the user
                 #       could be told that an image is invalid, why, and how to fix it if there is a clear fix.
-                mat_dict[(material_image.name, get_diffuse(mat, convert_to_255_scale=False, linear=True) if mat.smc_diffuse else None)].append(mat)
+                mat_dict[(material_image.name, get_diffuse(mat) if mat.smc_diffuse else None)].append(mat)
         elif isinstance(material_source, tuple):
             # Material either has no image or the image is not considered valid
             mat_dict[material_source].append(mat)
@@ -125,7 +125,7 @@ def to_255_scale(c):
 
 
 # TODO: If we were to want to create an atlas for a data texture such as roughness, the colors should be left as linear
-def get_diffuse(mat, convert_to_255_scale=True, linear=False):
+def get_diffuse(mat, convert_to_255_scale=False, linear=True):
     """Returns the diffuse RGB from a material,"""
     if globs.version:
         shader = shader_type(mat) if mat else False

@@ -217,7 +217,7 @@ def get_gfx(scn, mat, item, src):
             # Tile the image adjacent to itself enough times to ensure all the uvs are within the bounds of the image
             img_buffer = get_uv_image(img_buffer, size, max_uv_x, max_uv_y)
         if mat.smc_diffuse:
-            diffuse_color = get_diffuse(mat, convert_to_255_scale=False, linear=True)
+            diffuse_color = get_diffuse(mat)
             # Multiply by the diffuse color
             # 3d slice of [all x, all y, only the first len(diffuse_color) components]
             # TODO: Could hardcode 4
