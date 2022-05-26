@@ -2,7 +2,7 @@ import bpy
 from bpy.props import *
 from .. import globs
 from ..utils.materials import get_diffuse, get_material_image
-from ..utils.textures import get_texture, get_image
+from ..utils.previews import get_preview
 
 
 class PropertiesMenu(bpy.types.Operator):
@@ -33,13 +33,10 @@ class PropertiesMenu(bpy.types.Operator):
         layout = self.layout
         col = layout.column()
         col.scale_y = 1.2
-        col.prop(item.mat, 'name', text='', icon_value=item.mat.preview.icon_id)
+        col.prop(item.mat, 'name', text='', icon_value=get_preview(item.mat).icon_id)
         if img:
             img_label_text = '{} size: {}x{}px'.format(img.name, img.size[0], img.size[1])
-            if img.preview:
-                col.label(text=img_label_text, icon_value=img.preview.icon_id)
-            else:
-                col.label(text=img_label_text, icon='QUESTION')
+            col.label(text=img_label_text, icon_value=get_preview(img).icon_id)
             col.separator()
             col.prop(item.mat, 'smc_diffuse')
             if item.mat.smc_diffuse:

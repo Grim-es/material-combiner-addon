@@ -1,5 +1,6 @@
 import bpy
 from . import globs
+from .utils.previews import get_preview
 
 
 class SMC_UL_Combine_List(bpy.types.UIList):
@@ -15,11 +16,7 @@ class SMC_UL_Combine_List(bpy.types.UIList):
                          emboss=False).list_id = index
         elif item.type == globs.C_L_MATERIAL:
             row.separator()
-            mat_preview = item.mat.preview
-            if mat_preview:
-                row.label(text='', icon_value=mat_preview.icon_id)
-            else:
-                row.label(text='', icon='QUESTION')
+            row.label(text='', icon_value=get_preview(item.mat).icon_id)
             row.prop(item.mat, 'name', text='')
             col = row.column(align=True)
             col.alignment = 'RIGHT'
