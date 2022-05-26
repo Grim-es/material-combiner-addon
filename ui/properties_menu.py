@@ -46,6 +46,8 @@ class PropertiesMenu(bpy.types.Operator):
                 data, prop = get_diffuse(item.mat, ui=True)
                 if data and prop:
                     col.prop(data, prop, text='')
+                else:
+                    col.label(text="No diffuse color found")
                 col.separator()
             col.prop(item.mat, 'smc_size')
             if item.mat.smc_size:
@@ -54,3 +56,9 @@ class PropertiesMenu(bpy.types.Operator):
                 col.separator()
         else:
             col.label(text='Color size: {0}x{0}px (no image found)'.format(scn.smc_diffuse_size))
+            col.separator()
+            data, prop = get_diffuse(item.mat, ui=True)
+            if data and prop:
+                col.prop(data, prop, text="Color")
+            else:
+                col.label(text="No diffuse color found, white will be used")
