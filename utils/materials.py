@@ -46,7 +46,8 @@ def shader_type(mat):
         return 'emissionCol'
 
 
-def get_material_image_or_color(mat):
+def get_material_image(mat):
+    img = None
     if mat:
         if globs.version > 0:
             shader = shader_type(mat) if mat else None
@@ -61,32 +62,21 @@ def get_material_image_or_color(mat):
                 image = node.image
                 if image:
                     if is_image_valid(image):
-                        src = image
+                        img = image
                     else:
-                        src = get_diffuse(mat)
-                        print("DEBUG: Found image {} in {}, but it's considered invalid, so using diffuse color instead".format(image, mat))
+                        print("DEBUG: Found image {} in {}, but it's considered invalid.".format(image, mat))
                 else:
-                    # If the image from the shader is None, the Image Texture has no assigned image. If such an Image
-                    # Texture node is used, it will give a black color. Technically it will give an alpha of 0.0 too, but
-                    # it's possible that the alpha output isn't being used, so 1.0 alpha is probably the better choice.
-                    src = (0.0, 0.0, 0.0, 1.0)
-                    print("DEBUG: No image found in texture node for shader '{}' for material {}, so used Black color".format(shader, mat))
+                    print("DEBUG: No image found in texture node for shader '{}' for material {}.".format(shader, mat))
             else:
                 # No node found from shader, so get the diffuse color instead
                 # Pixels are normalized and read in linear, so the diffuse colors must be read as linear too
-                src = get_diffuse(mat)
                 if shader:
-                    print("DEBUG: Found shader '{}' for {}. But couldn't find the correct node to use. Got diffuse colour instead".format(shader, mat))
+                    print("DEBUG: Found shader '{}' for {}. But couldn't find the correct node to use.".format(shader, mat))
                 else:
-                    print("DEBUG: Unrecognised shader for {}. Got diffuse colour instead".format(mat))
+                    print("DEBUG: Unrecognised shader for {}.".format(mat))
         else:
-            src = get_image(get_texture(mat))
-            if src is None:
-                src = get_diffuse(mat)
-    else:
-        src = (0.0, 0.0, 0.0, 1.0)
-        print("DEBUG: No material, so used Black color")
-    return src
+            img = get_image(get_texture(mat))
+    return img
 
 
 def sort_materials(mat_list):
@@ -124,32 +114,59 @@ def to_255_scale(c):
     return max(min(int(c * 255 + 0.5), 255), 0)
 
 
-# TODO: If we were to want to create an atlas for a data texture such as roughness, the colors should be left as linear
-def get_diffuse(mat, convert_to_255_scale=False, linear=True):
+def get_diffuse(mat, convert_to_255_scale=False, linear=True, ui=False):
     """Returns the diffuse RGB from a material,"""
     if globs.version:
-        shader = shader_type(mat) if mat else False
-        # Colors in shader nodes are full RGBA, but only the RGB is actually used, so we only get the first 3 components
-        if shader == 'mmdCol':
-            color = mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'].default_value[:3]
-        elif shader == 'vrm':
-            color = mat.node_tree.nodes['RGB'].outputs[0].default_value[:3]
-        elif shader == 'vrmCol':
-            color = mat.node_tree.nodes['Group'].inputs[10].default_value[:3]
-        elif shader == 'diffuseCol':
-            color = mat.node_tree.nodes['Diffuse BSDF'].inputs['Color'].default_value[:3]
-        elif shader == 'xnalaraNewCol':
-            color = mat.node_tree.nodes['Group'].inputs['Diffuse'].default_value[:3]
-        elif shader == 'xnalaraCol':
-            color = mat.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value[:3]
-        else:
-            # White is the same in both linear and srgb, so no conversion is needed
-            if convert_to_255_scale:
-                return 255, 255, 255, 255
+        shader = shader_type(mat) if mat else None
+        node_color = None
+        if shader:
+            nodes = mat.node_tree.nodes
+            if shader == 'mmdCol':
+                node = nodes.get('mmd_shader')
+                if node:
+                    node_color = node.inputs.get('Diffuse Color')
+            elif shader == 'vrm':
+                node = nodes.get('RGB')
+                if node:
+                    node_color = node.outputs[0]
+            elif shader == 'vrmCol':
+                node = mat.node_tree.nodes.get('Group')
+                if node:
+                    node_color = node.inputs[10]
+            elif shader == 'diffuseCol':
+                node = nodes.get('Diffuse BSDF')
+                if node:
+                    node_color = node.inputs.get('Color')
+            elif shader == 'xnalaraNewCol':
+                node = mat.node_tree.nodes.get('Group')
+                if node:
+                    node_color = node.inputs.get('Diffuse')
+            elif shader == 'xnalaraCol':
+                node = mat.node_tree.nodes.get('Principled BSDF')
+                if node:
+                    node_color = node.inputs.get('Base Color')
+
+        if isinstance(node_color, bpy.types.NodeSocketColor):
+            if ui:
+                return node_color, 'default_value'
             else:
-                return 1.0, 1.0, 1.0, 1.0
+                # Colors in shader nodes are full RGBA, but only the RGB is actually used, so we only get the first 3
+                # components
+                color = node_color.default_value[:3]
+        else:
+            if ui:
+                return None, None
+            else:
+                # White is the same in both linear and srgb, so no conversion is needed
+                if convert_to_255_scale:
+                    return 255, 255, 255, 255
+                else:
+                    return 1.0, 1.0, 1.0, 1.0
     else:
-        color = tuple(mat.diffuse_color)
+        if ui:
+            return mat, 'diffuse_color'
+        else:
+            color = tuple(mat.diffuse_color)
 
     # Shader node colors are linear
     convert_to_srgb = not linear
@@ -171,3 +188,16 @@ def get_diffuse(mat, convert_to_255_scale=False, linear=True):
             color += (1.0,)
 
     return color
+
+
+def get_material_image_or_color(mat):
+    if mat:
+        img = get_material_image(mat)
+        if img:
+            return img
+        else:
+            return get_diffuse(mat)
+    else:
+        src = (0.0, 0.0, 0.0, 1.0)
+        print("DEBUG: No material, so used Black color")
+    return src

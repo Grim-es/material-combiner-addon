@@ -1,7 +1,7 @@
 import bpy
 from bpy.props import *
 from .. import globs
-from ..utils.materials import shader_type
+from ..utils.materials import get_diffuse, get_material_image
 from ..utils.textures import get_texture, get_image
 
 
@@ -29,33 +29,23 @@ class PropertiesMenu(bpy.types.Operator):
     def draw(self, context):
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
-        if globs.version > 0:
-            img = None
-            shader = shader_type(item.mat) if item.mat else None
-            if shader == 'mmd':
-                img = item.mat.node_tree.nodes['mmd_base_tex'].image
-            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
-                img = item.mat.node_tree.nodes['Image Texture'].image
-        else:
-            img = get_image(get_texture(item.mat))
+        img = get_material_image(item.mat)
         layout = self.layout
         col = layout.column()
         col.scale_y = 1.2
         col.prop(item.mat, 'name', text='', icon_value=item.mat.preview.icon_id)
         if img:
-            col.label(text='Image size: {}x{}px'.format(img.size[0], img.size[1]))
+            img_label_text = '{} size: {}x{}px'.format(img.name, img.size[0], img.size[1])
+            if img.preview:
+                col.label(text=img_label_text, icon_value=img.preview.icon_id)
+            else:
+                col.label(text=img_label_text, icon='QUESTION')
             col.separator()
             col.prop(item.mat, 'smc_diffuse')
             if item.mat.smc_diffuse:
-                if globs.version:
-                    shader = shader_type(item.mat)
-                    if shader == 'mmd':
-                        col.prop(item.mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'], 'default_value',
-                                 text='')
-                    elif shader == 'vrm':
-                        col.prop(item.mat.node_tree.nodes['RGB'].outputs[0], 'default_value', text='')
-                else:
-                    col.prop(item.mat, 'diffuse_color', text='')
+                data, prop = get_diffuse(item.mat, ui=True)
+                if data and prop:
+                    col.prop(data, prop, text='')
                 col.separator()
             col.prop(item.mat, 'smc_size')
             if item.mat.smc_size:
@@ -63,4 +53,4 @@ class PropertiesMenu(bpy.types.Operator):
                 col.prop(item.mat, 'smc_size_height')
                 col.separator()
         else:
-            col.label(text='Image size: {0}x{0}px'.format(scn.smc_diffuse_size))
+            col.label(text='Color size: {0}x{0}px (no image found)'.format(scn.smc_diffuse_size))
