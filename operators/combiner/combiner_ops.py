@@ -186,20 +186,76 @@ def get_size(scn, data):
 
 # TODO: It might be better to do the whole uv_image thing when pasting to the atlas instead of creating a new buffer
 #       as an intermediary.
-def get_uv_image(img_buffer, size, max_uv_x, max_uv_y):
-    """Repeat the input image adjacent to itself enough times to ensure that the all the uvs are within the bounds of
-    the image.
+# TODO: Cropping images by UV (scene.smc_crop) only crops when uvs extend out of bounds upwards or to the right, it
+#  would be beneficial to also crop to the left and downwards.
+#  As a separate option, it might even be good to crop within the standard [0,1] uv bounds
+def get_uv_image(img_buffer, size):
+    """Repeat the input image adjacent to itself until a copy with the desired size is made.
 
-    :return: A new image created by repeating the input image."""
-    print("DEBUG: Tiling image to fit max_uv_x '{}' and max_uv_y '{}'".format(max_uv_x, max_uv_y))
-    x_tiles = math.ceil(max_uv_x)
-    y_tiles = math.ceil(max_uv_y)
+    :return: A new image created by repeating the input image or the input image if no repeats are required."""
+    required_x = size[0]
+    required_y = size[1]
     buffer_x = img_buffer.shape[1]
     buffer_y = img_buffer.shape[0]
-    tiled_size = (x_tiles * buffer_x, y_tiles * buffer_y)
-    if size != tiled_size:
-        raise TypeError("Tiled image size {} doesn't match required image size {}".format(tiled_size, size))
-    return np.tile(img_buffer, (y_tiles, x_tiles, 1))
+    if required_x != buffer_x or required_y != buffer_y:
+        # Shrinking is not currently in use, but is here for implementation reference
+        # # If the required dimension is smaller than the buffer's current dimension, take a view of the buffer with size
+        # # shrunk towards the bottom left corner
+        # shrink = False
+        # if required_y < buffer_y:
+        #     shrink = True
+        #     y_slice = slice(None, required_y)
+        # else:
+        #     y_slice = slice(None)
+        # if required_x < buffer_x:
+        #     shrink = True
+        #     x_slice = slice(None, required_x)
+        # else:
+        #     x_slice = slice(None)
+        #
+        # if shrink:
+        #     img_buffer = img_buffer[y_slice, x_slice]
+
+        if required_x > buffer_x or required_y > buffer_y:
+            # The performance difference between tile and pad is odd, pad seems to scale poorly with an X pad amount
+            # greater than the width of the image, but otherwise seems to be faster on average
+            # Note that padded images will use less memory since their data fits the required shape exactly, whereas
+            # tiled images contain an excess of pixels in their data and then a view of the data is made of only the
+            # part up to the required shape.
+            use_tile = required_x > 2 * buffer_x
+            if use_tile:
+                print("DEBUG: Tiling image with size {} to fit size {}".format((buffer_x, buffer_y), size))
+                # Tile the image the minimum number of times until the required size fits
+                x_tiles = math.ceil(required_x / buffer_x)
+                y_tiles = math.ceil(required_y / buffer_y)
+                tiled = np.tile(img_buffer, (y_tiles, x_tiles, 1))
+                # The tiled image is likely to be wider or taller than needed, so view only the part that is wanted
+                tiled_shrunk_view = tiled[:required_y, :required_x]
+                tiled_shrunk_view_x = tiled_shrunk_view.shape[1]
+                tiled_shrunk_view_y = tiled_shrunk_view.shape[0]
+                if required_x != tiled_shrunk_view_x or required_y != tiled_shrunk_view_y:
+                    raise RuntimeError("Tiled size {} does not match required size {}".format((tiled_shrunk_view_x, tiled_shrunk_view_y), size))
+                else:
+                    return tiled_shrunk_view
+            else:
+                print("DEBUG: Padding image with size {} to fit size {}".format((buffer_x, buffer_y), size))
+                # Pad the exact amount needed onto the image to make it the required size
+                pad_above = required_y - buffer_y if required_y > buffer_y else 0
+                pad_below = 0
+                pad_right = required_x - buffer_x if required_x > buffer_x else 0
+                pad_left = 0
+                padded = np.pad(img_buffer, ((pad_below, pad_above), (pad_left, pad_right), (0, 0)), mode='wrap')
+                padded_x = padded.shape[1]
+                padded_y = padded.shape[0]
+                if required_x != padded_x or required_y != padded_y:
+                    raise RuntimeError("Padded size {} does not match required size {}".format((padded_x, padded_y), size))
+                else:
+                    return padded
+        else:
+            return img_buffer
+    else:
+        print("DEBUG: Image requested to be tiled is already the correct shape ({}, {})".format(required_y, required_x))
+        return img_buffer
 
 
 def get_gfx(scn, mat, item, src):
@@ -215,7 +271,7 @@ def get_gfx(scn, mat, item, src):
         max_uv_y = max_uv[1]
         if max_uv_x > 1 or max_uv_y > 1:
             # Tile the image adjacent to itself enough times to ensure all the uvs are within the bounds of the image
-            img_buffer = get_uv_image(img_buffer, size, max_uv_x, max_uv_y)
+            img_buffer = get_uv_image(img_buffer, size)
         if mat.smc_diffuse:
             diffuse_color = get_diffuse(mat)
             # Multiply by the diffuse color
