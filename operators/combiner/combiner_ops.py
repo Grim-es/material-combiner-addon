@@ -80,9 +80,10 @@ def get_structure(scn, data, mats_uv):
         ob = scn.objects[ob_n]
         for mat in i.keys():
             if mat.name in ob.data.materials:
-                root_mat = mat.root_mat if mat.root_mat else mat
+                is_duplicate = mat.root_mat is not None
+                root_mat = mat.root_mat if is_duplicate else mat
                 if root_mat not in structure:
-                    structure[root_mat] = {
+                    root_mat_data = {
                         'gfx': {
                             'img': None,
                             'size': (),
@@ -92,11 +93,17 @@ def get_structure(scn, data, mats_uv):
                         'ob': [],
                         'uv': []
                     }
-                if mat.root_mat and mat not in structure[root_mat]['dup']:
-                    structure[root_mat]['dup'].append(mat.name)
-                if ob not in structure[root_mat]['ob']:
-                    structure[root_mat]['ob'].append(ob.name)
-                structure[root_mat]['uv'].extend(mats_uv[ob_n][mat])
+                    structure[root_mat] = root_mat_data
+                else:
+                    root_mat_data = structure[root_mat]
+                if is_duplicate:
+                    duplicate_mats = root_mat_data['dup']
+                    if mat.name not in duplicate_mats:
+                        duplicate_mats.append(mat.name)
+                root_mat_objects = root_mat_data['ob']
+                if ob.name not in root_mat_objects:
+                    root_mat_objects.append(ob.name)
+                root_mat_data['uv'].extend(mats_uv[ob_n][mat])
     return structure
 
 
