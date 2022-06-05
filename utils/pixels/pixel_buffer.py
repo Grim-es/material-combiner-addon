@@ -1,8 +1,10 @@
 import bpy
+from bpy.types import Image
 
 import numpy as np
 from . import pixel_access
 from .pixel_types import pixel_dtype
+from ..type_hints import PixelBufferOrPixel, PixelBuffer, Size, Pixel, CornerOrBox
 
 # A 'pixel buffer' is a single precision float type numpy array, viewed in the 3D shape
 # (height, width, channels), used to store data representing image pixels.
@@ -11,7 +13,7 @@ linear_colorspaces = {'Linear', 'Non-Color', 'Raw'}
 supported_colorspaces = linear_colorspaces | {'sRGB'}
 
 
-def new_pixel_buffer(size, color=(0.0, 0.0, 0.0, 0.0), read_only_rectangle=False):
+def new_pixel_buffer(size: Size, color: Pixel = (0.0, 0.0, 0.0, 0.0), read_only_rectangle=False) -> PixelBuffer:
     """Create a new blank pixel buffer, filled with a single color.
 
     A 'pixel buffer' is a single precision float type numpy array, viewed in the 3D shape
@@ -41,7 +43,7 @@ def new_pixel_buffer(size, color=(0.0, 0.0, 0.0, 0.0), read_only_rectangle=False
     return buffer
 
 
-def is_read_only_rectangle(buffer):
+def is_read_only_rectangle(buffer: PixelBuffer) -> bool:
     base = buffer.base
     return (not buffer.flags.writeable  # read-only means it's not writeable
             and base is not None  # it must have a base array
@@ -51,14 +53,14 @@ def is_read_only_rectangle(buffer):
             and 1 <= base.shape[2] <= 4)  # the number of channels must be 1 to 4 inclusive
 
 
-def get_base_if_read_only_rectangle(buffer):
+def get_base_if_read_only_rectangle(buffer: PixelBuffer) -> PixelBuffer:
     if is_read_only_rectangle(buffer):
         return buffer.base
     else:
         return buffer
 
 
-def get_pixel_buffer(image, target_colorspace='sRGB'):
+def get_pixel_buffer(image: Image, target_colorspace='sRGB') -> PixelBuffer:
     """Create a new pixel buffer filled with the pixels of the specified image.
 
     A 'pixel buffer' is a single precision float type numpy array, viewed in the 3D shape
@@ -101,7 +103,7 @@ def get_pixel_buffer(image, target_colorspace='sRGB'):
 # Copy the image, resize the copy and then get the pixel buffer, the copied image is then destroyed
 # The alternative would be to resize the passed in image and then reload it afterwards, but if the passed in image was
 # dirty, then those dirty changes would be lost.
-def get_resized_pixel_buffer(image, size):
+def get_resized_pixel_buffer(image: Image, size: Size) -> PixelBuffer:
     """Create a new pixel buffer filled with the pixels of the specified image after resizing it (does not change the
      original image).
 
@@ -119,7 +121,7 @@ def get_resized_pixel_buffer(image, size):
     return buffer
 
 
-def write_pixel_buffer(image, buffer):
+def write_pixel_buffer(image: Image, buffer: PixelBuffer):
     """Write a pixel buffer's pixels to an existing image.
 
     The image must have the same width, height and number of channels as the buffer."""
@@ -131,7 +133,7 @@ def write_pixel_buffer(image, buffer):
         raise RuntimeError("Buffer shape {} does not match image shape {}".format(buffer.shape, image_shape))
 
 
-def buffer_to_image(buffer, *, name):
+def buffer_to_image(buffer: PixelBuffer, *, name: str) -> Image:
     """Write a pixel buffer's pixels to a new image.
 
     :return: the newly created image with pixels set to the pixel buffer."""
@@ -140,7 +142,7 @@ def buffer_to_image(buffer, *, name):
     return image
 
 
-def buffer_convert_linear_to_srgb(buffer):
+def buffer_convert_linear_to_srgb(buffer: PixelBuffer):
     """Convert a pixel buffer's pixels from linear colorspace to sRGB colorspace"""
     # If the buffer is a read-only rectangle, get the base array so that it can be modified
     buffer = get_base_if_read_only_rectangle(buffer)
@@ -167,7 +169,7 @@ def buffer_convert_linear_to_srgb(buffer):
     rgb_only_view[is_not_small] = large_rgb
 
 
-def buffer_convert_srgb_to_linear(buffer):
+def buffer_convert_srgb_to_linear(buffer: PixelBuffer):
     """Convert a pixel buffer's pixels from sRGB colorspace to linear colorspace"""
     # If the buffer is a read-only rectangle, get the base array so that it can be modified
     buffer = get_base_if_read_only_rectangle(buffer)
@@ -194,7 +196,7 @@ def buffer_convert_srgb_to_linear(buffer):
     rgb_only_view[is_not_small] = large_rgb
 
 
-def pixel_buffer_paste(target_buffer, source_buffer_or_pixel, corner_or_box):
+def pixel_buffer_paste(target_buffer: PixelBuffer, source_buffer_or_pixel: PixelBufferOrPixel, corner_or_box: CornerOrBox):
     """Paste pixels from a source pixel buffer or individual pixel into the target pixel buffer.
 
     Where the source is to be pasted is specified via a tuple-like set of pixel coordinates specifying either a top left

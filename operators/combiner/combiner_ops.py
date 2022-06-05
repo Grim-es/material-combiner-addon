@@ -4,8 +4,11 @@ import os
 import random
 from collections import OrderedDict
 from collections import defaultdict
+from itertools import chain
+from typing import Tuple
 
 import bpy
+from bpy.types import Image
 
 from ... import globs
 from ...utils.objects import get_obs
@@ -18,6 +21,8 @@ from ...utils.materials import sort_materials
 from ...utils.images import save_generated_image_to_file, is_image_valid
 from ...utils.pixels.pixel_buffer import get_pixel_buffer, get_resized_pixel_buffer, buffer_to_image, new_pixel_buffer,\
     pixel_buffer_paste
+from .combiner_types import RootMatData, Data, MatsUV, Structure, StructureItem
+from ...utils.type_hints import Size, PixelBuffer, PixelSource
 
 
 def set_ob_mode(scn):
@@ -27,20 +32,19 @@ def set_ob_mode(scn):
         bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def get_data(data):
-    mats = defaultdict(dict)
+def get_data(data) -> Data:
+    object_mats_layers = defaultdict(dict)
     for i in data:
         if i.type == globs.C_L_MATERIAL and i.used:
-            mats[i.ob.name][i.mat] = i.layer
-    return mats
+            object_mats_layers[i.ob.name][i.mat] = i.layer
+    return object_mats_layers
 
 
-def get_mats_uv(scn, ob_mats):
-    mats_uv = {}
-    for ob_n, i in ob_mats.items():
+def get_mats_uv(scn, data: Data) -> MatsUV:
+    object_mats_uvs = {}
+    for ob_n, i in data.items():
         ob = scn.objects[ob_n]
-        mats_uv[ob_n] = defaultdict(list)
-        # TODO: Optimise performance with numpy
+        object_mats_uvs[ob_n] = defaultdict(list)
         for material_idx, polys in get_polys(ob).items():
             mat = ob.data.materials[material_idx]
             if mat in i.keys():
@@ -50,15 +54,15 @@ def get_mats_uv(scn, ob_mats):
                     # Offset all the uvs such that the minimum uv.x and uv.y lie within the range [0,1]
                     align_uv(uvs_for_poly)
                     # Add the uvs to the list of uvs for this material
-                    mats_uv[ob_n][mat].extend(uvs_for_poly)
-    return mats_uv
+                    object_mats_uvs[ob_n][mat].extend(uvs_for_poly)
+    return object_mats_uvs
 
 
-def clear_empty_mats(scn, data, mats_uv):
-    for ob_n, i in data.items():
-        ob = scn.objects[ob_n]
-        for mat in i.keys():
-            if mat not in mats_uv[ob_n].keys():
+def clear_empty_mats(scn, data: Data, mats_uv: MatsUV):
+    for object_name, mat_layers in data.items():
+        ob = scn.objects[object_name]
+        for mat in mat_layers.keys():
+            if mat not in mats_uv[object_name].keys():
                 mat_idx = ob.data.materials.find(mat.name)
                 if globs.version > 1:
                     ob.data.materials.pop(index=mat_idx)
@@ -66,88 +70,70 @@ def clear_empty_mats(scn, data, mats_uv):
                     ob.data.materials.pop(index=mat_idx, update_data=True)
 
 
-def set_root_mats(mats_uv):
-    mat_list = list(set([mat for mats in mats_uv.values() for mat in mats.keys()]))
+def set_root_mats(mats_uv: MatsUV):
+    mat_list = list(set(chain.from_iterable(mats_uv.values())))
     mat_dict = sort_materials(mat_list)
     for mats in mat_dict.values():
         for mat in mats[1:]:
             mat.root_mat = mats[0]
 
 
-def get_structure(scn, data, mats_uv):
+def get_structure(scn, data: Data, mats_uv: MatsUV) -> Structure:
     structure = {}
-    for ob_n, i in data.items():
-        ob = scn.objects[ob_n]
-        for mat in i.keys():
+    for object_name, mats_layers in data.items():
+        ob = scn.objects[object_name]
+        for mat in mats_layers.keys():
             if mat.name in ob.data.materials:
                 is_duplicate = mat.root_mat is not None
                 root_mat = mat.root_mat if is_duplicate else mat
                 if root_mat not in structure:
-                    root_mat_data = {
-                        'gfx': {
-                            'img': None,
-                            'size': (),
-                            'uv_size': ()
-                        },
-                        'dup': [],
-                        'ob': [],
-                        'uv': []
-                    }
+                    root_mat_data = RootMatData()
                     structure[root_mat] = root_mat_data
                 else:
                     root_mat_data = structure[root_mat]
                 if is_duplicate:
-                    duplicate_mats = root_mat_data['dup']
-                    if mat.name not in duplicate_mats:
-                        duplicate_mats.append(mat.name)
-                root_mat_objects = root_mat_data['ob']
-                if ob.name not in root_mat_objects:
-                    root_mat_objects.append(ob.name)
-                root_mat_data['uv'].extend(mats_uv[ob_n][mat])
+                    root_mat_data.duplicate_materials.add(mat.name)
+                root_mat_data.objects_used_in.add(ob.name)
+                root_mat_data.uv_vectors.extend(mats_uv[object_name][mat])
     return structure
 
 
-def clear_duplicates(scn, data):
-    for i in data.values():
-        for ob_n in i['ob']:
+def clear_duplicates(scn, structure: Structure):
+    for root_mat_data in structure.values():
+        for ob_n in root_mat_data.objects_used_in:
             ob = scn.objects[ob_n]
-            for dup_n in i['dup']:
+            for dup_n in root_mat_data.duplicate_materials:
                 delete_material(ob, dup_n)
 
 
-def delete_material(mesh, mat_name):
-    mat_idx = get_material_index(mesh, mat_name)
-    if mat_idx:
+def delete_material(mesh_obj, mat_name: str):
+    materials = mesh_obj.data.materials
+    mat_idx = materials.find(mat_name)
+    if mat_idx != -1:
         if globs.version > 1:
-            mesh.data.materials.pop(index=mat_idx)
+            mesh_obj.data.materials.pop(index=mat_idx)
         else:
-            mesh.data.materials.pop(index=mat_idx, update_data=True)
+            mesh_obj.data.materials.pop(index=mat_idx, update_data=True)
 
 
-def get_material_index(mesh, mat_name):
-    for i, mat in enumerate(mesh.data.materials):
-        if mat and mat.name == mat_name:
-            return i
+def add_images(structure: Structure):
+    for mat, mat_data in structure.items():
+        mat_data.gfx.pixel_source = get_material_image_or_color(mat)
 
 
-def add_images(data):
-    for mat, mat_data in data.items():
-        mat_data['gfx']['img'] = get_material_image_or_color(mat)
-
-
-def size_sorting(item):
-    _key, value = item
-    gfx = value['gfx']
-    size_x, size_y = gfx['size']
-    img = gfx['img']
+def _size_sorting(item: StructureItem):
+    _key, mat_data = item
+    gfx = mat_data.gfx
+    size_x, size_y = gfx.size
+    src = gfx.pixel_source
     print("DEBUG: Sorting gfx {}".format(gfx))
-    if isinstance(img, bpy.types.Image):
-        img_sort = img.name
+    if isinstance(src, bpy.types.Image):
+        img_sort = src.name
         color_sort = 0
     else:
         # Should be a colour
         img_sort = ''
-        color_sort = sum(img)
+        color_sort = sum(src)
     # Sorting order:
     # 1) maximum of x and y
     # 2) area
@@ -160,35 +146,35 @@ def size_sorting(item):
     return max(size_x, size_y), size_x * size_y, size_x, img_sort, color_sort
 
 
-def get_size(scn, data):
-    for mat, mat_data in data.items():
-        gfx = mat_data['gfx']
-        img = gfx['img']
+def get_size(scn, structure: Structure) -> Structure:
+    for mat, mat_data in structure.items():
+        gfx = mat_data.gfx
+        img = gfx.pixel_source
         # Get max x and max y of the uvs for this material. The uvs should already be aligned such that the minimum x
         # and y are both within the bounds [0,1]
         # TODO: If all values less than 1, then 1 gets chosen as the max because of the outer max(), couldn't we crop
         #       the image to only the area that is needed? If we were to pick a margin value, we would want to make sure
         #       it doesn't add more margin than would fit in the image
-        max_x = max(max([uv.x for uv in mat_data['uv'] if not math.isnan(uv.x)], default=1), 1)
-        max_y = max(max([uv.y for uv in mat_data['uv'] if not math.isnan(uv.y)], default=1), 1)
+        max_x = max(max([uv.x for uv in mat_data.uv_vectors if not math.isnan(uv.x)], default=1), 1)
+        max_y = max(max([uv.y for uv in mat_data.uv_vectors if not math.isnan(uv.y)], default=1), 1)
         # TODO: Up to 25 copies of the same image sounds like it could be a bit high for most images, maybe it should be
         #  made lower (or even higher) based on the dimensions of the image
-        gfx['uv_size'] = (max_x if max_x < 25 else 1, max_y if max_y < 25 else 1)
+        gfx.uv_size = (max_x if max_x < 25 else 1, max_y if max_y < 25 else 1)
         if not scn.smc_crop:
             # FIXME: UVs are off by half a pixel. To reproduce, atlas a quad with uvs (0,0), (0,1), (1,0), (1,1).
             #        The corners of the quad's UVs will all be half a pixel towards the middle of the quad
-            gfx['uv_size'] = tuple(map(math.ceil, gfx['uv_size']))
+            gfx.uv_size = tuple(map(math.ceil, gfx.uv_size))
         if isinstance(img, bpy.types.Image) and is_image_valid(img):
             if mat.smc_size:
                 img_size = (min(mat.smc_size_width, img.size[0]),
                             min(mat.smc_size_height, img.size[1]))
             else:
                 img_size = (img.size[0], img.size[1])
-            gfx['size'] = tuple(
-                int(s * uv_s + int(scn.smc_gaps)) for s, uv_s in zip(img_size, gfx['uv_size']))
+            gfx.size = tuple(
+                int(s * uv_s + int(scn.smc_gaps)) for s, uv_s in zip(img_size, gfx.uv_size))
         else:
-            gfx['size'] = (scn.smc_diffuse_size + int(scn.smc_gaps),) * 2
-    return OrderedDict(sorted(data.items(), key=size_sorting, reverse=True))
+            gfx.size = (scn.smc_diffuse_size + int(scn.smc_gaps),) * 2
+    return OrderedDict(sorted(structure.items(), key=_size_sorting, reverse=True))
 
 
 # TODO: It might be better to do the whole uv_image thing when pasting to the atlas instead of creating a new buffer
@@ -196,14 +182,14 @@ def get_size(scn, data):
 # TODO: Cropping images by UV (scene.smc_crop) only crops when uvs extend out of bounds upwards or to the right, it
 #  would be beneficial to also crop to the left and downwards.
 #  As a separate option, it might even be good to crop within the standard [0,1] uv bounds
-def get_uv_image(img_buffer, size):
+def get_uv_image(pixel_buffer: PixelBuffer, size: Size) -> PixelBuffer:
     """Repeat the input image adjacent to itself until a copy with the desired size is made.
 
     :return: A new image created by repeating the input image or the input image if no repeats are required."""
     required_x = size[0]
     required_y = size[1]
-    buffer_x = img_buffer.shape[1]
-    buffer_y = img_buffer.shape[0]
+    buffer_x = pixel_buffer.shape[1]
+    buffer_y = pixel_buffer.shape[0]
     if required_x != buffer_x or required_y != buffer_y:
         # Shrinking is not currently in use, but is here for implementation reference
         # # If the required dimension is smaller than the buffer's current dimension, take a view of the buffer with size
@@ -235,7 +221,7 @@ def get_uv_image(img_buffer, size):
                 # Tile the image the minimum number of times until the required size fits
                 x_tiles = math.ceil(required_x / buffer_x)
                 y_tiles = math.ceil(required_y / buffer_y)
-                tiled = np.tile(img_buffer, (y_tiles, x_tiles, 1))
+                tiled = np.tile(pixel_buffer, (y_tiles, x_tiles, 1))
                 # The tiled image is likely to be wider or taller than needed, so view only the part that is wanted
                 tiled_shrunk_view = tiled[:required_y, :required_x]
                 tiled_shrunk_view_x = tiled_shrunk_view.shape[1]
@@ -251,7 +237,7 @@ def get_uv_image(img_buffer, size):
                 pad_below = 0
                 pad_right = required_x - buffer_x if required_x > buffer_x else 0
                 pad_left = 0
-                padded = np.pad(img_buffer, ((pad_below, pad_above), (pad_left, pad_right), (0, 0)), mode='wrap')
+                padded = np.pad(pixel_buffer, ((pad_below, pad_above), (pad_left, pad_right), (0, 0)), mode='wrap')
                 padded_x = padded.shape[1]
                 padded_y = padded.shape[0]
                 if required_x != padded_x or required_y != padded_y:
@@ -259,20 +245,23 @@ def get_uv_image(img_buffer, size):
                 else:
                     return padded
         else:
-            return img_buffer
+            return pixel_buffer
     else:
         print("DEBUG: Image requested to be tiled is already the correct shape ({}, {})".format(required_y, required_x))
-        return img_buffer
+        return pixel_buffer
 
 
-def get_gfx(scn, mat, item, src):
-    size = tuple(size - int(scn.smc_gaps) for size in item['gfx']['size'])
+def get_gfx(scn, mat, mat_data: RootMatData, src: PixelSource) -> PixelBuffer:
+    gfx = mat_data.gfx
+    gfx_size_x, gfx_size_y = gfx.size
+    gap = int(scn.smc_gaps)
+    size = (gfx_size_x - gap, gfx_size_y - gap)
     if isinstance(src, bpy.types.Image):
         if mat.smc_size:
             img_buffer = get_resized_pixel_buffer(src, (mat.smc_size_width, mat.smc_size_height))
         else:
             img_buffer = get_pixel_buffer(src)
-        max_uv = item['gfx']['uv_size']
+        max_uv = gfx.uv_size
         # Note that get_size(...) sets uv_size to always be at least 1
         max_uv_x = max_uv[0]
         max_uv_y = max_uv[1]
@@ -293,18 +282,18 @@ def get_gfx(scn, mat, item, src):
     return img_buffer
 
 
-def get_atlas(scn, data, size):
+def get_atlas(scn, structure: Structure, size: Size) -> Tuple[Image, Size]:
     if scn.smc_size == 'PO2':
         size = tuple(1 << (x - 1).bit_length() for x in size)
     elif scn.smc_size == 'QUAD':
         size = (max(size),) * 2
-    img = new_pixel_buffer(size)
-    for mat, i in data.items():
-        if i['gfx']['fit']:
-            gfx = get_gfx(scn, mat, i, i['gfx']['img'])
-            pixel_buffer_paste(img, gfx, (i['gfx']['fit']['x'] + int(scn.smc_gaps / 2),
-                                          i['gfx']['fit']['y'] + int(scn.smc_gaps / 2)))
-    atlas = buffer_to_image(img, name='temp_material_combine_atlas')
+    atlas_pixel_buffer = new_pixel_buffer(size)
+    for mat, mat_data in structure.items():
+        top_left_corner = mat_data.get_top_left_corner(scn)
+        if top_left_corner:
+            material_pixel_buffer = get_gfx(scn, mat, mat_data, mat_data.gfx.pixel_source)
+            pixel_buffer_paste(atlas_pixel_buffer, material_pixel_buffer, top_left_corner)
+    atlas = buffer_to_image(atlas_pixel_buffer, name='temp_material_combine_atlas')
     if scn.smc_size == 'CUST':
         # TODO: Much better results would be achieved from resizing images first to match the desired packed shape
         #  as the edges of textures would not blur together
@@ -325,18 +314,20 @@ def get_atlas(scn, data, size):
     return atlas, size
 
 
-def get_aligned_uv(scn, data, size):
-    for mat, i in data.items():
-        w, h = i['gfx']['size']
-        uv_w, uv_h = i['gfx']['uv_size']
-        for uv in i['uv']:
+def get_aligned_uv(scn, structure: Structure, size: Size):
+    for mat, mat_data in structure.items():
+        gfx = mat_data.gfx
+        w, h = gfx.size
+        uv_w, uv_h = gfx.uv_size
+        fit = gfx.fit
+        for uv in mat_data.uv_vectors:
             reset_x = uv.x / uv_w * (w - 2 - int(scn.smc_gaps)) / size[0]
             reset_y = 1 + uv.y / uv_h * (h - 2 - int(scn.smc_gaps)) / size[1] - h / size[1]
-            uv.x = reset_x + (i['gfx']['fit']['x'] + 1 + int(scn.smc_gaps / 2)) / size[0]
-            uv.y = reset_y - (i['gfx']['fit']['y'] - 1 - int(scn.smc_gaps / 2)) / size[1]
+            uv.x = reset_x + (fit.x + 1 + int(scn.smc_gaps / 2)) / size[0]
+            uv.y = reset_y - (fit.y - 1 - int(scn.smc_gaps / 2)) / size[1]
 
 
-def get_comb_mats(scn, atlas, mats_uv):
+def get_comb_mats(scn, atlas: Image, mats_uv: MatsUV):
     layers = set()
     existed_ids = set()
     for combine_list_item in scn.smc_ob_data:
@@ -382,21 +373,21 @@ def get_comb_mats(scn, atlas, mats_uv):
     return mats
 
 
-def assign_comb_mats(scn, ob_mats, mats_uv, atlas):
+def assign_comb_mats(scn, data: Data, mats_uv: MatsUV, atlas: Image):
     comb_mats = get_comb_mats(scn, atlas, mats_uv)
-    for ob_n, i in ob_mats.items():
+    for ob_n, mat_layers in data.items():
         ob = scn.objects[ob_n]
-        for idx in set(i.values()):
+        for idx in set(mat_layers.values()):
             if idx in comb_mats.keys():
                 ob.data.materials.append(comb_mats[idx])
         for idx, polys in get_polys(ob).items():
-            if ob.data.materials[idx] in i.keys():
-                mat_idx = ob.data.materials.find(comb_mats[i[ob.data.materials[idx]]].name)
+            if ob.data.materials[idx] in mat_layers.keys():
+                mat_idx = ob.data.materials.find(comb_mats[mat_layers[ob.data.materials[idx]]].name)
                 for poly in polys:
                     poly.material_index = mat_idx
 
 
-def clear_mats(scn, mats_uv):
+def clear_mats(scn, mats_uv: MatsUV):
     for ob_n, i in mats_uv.items():
         ob = scn.objects[ob_n]
         for mat in i.keys():

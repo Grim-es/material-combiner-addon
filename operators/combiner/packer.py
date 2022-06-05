@@ -17,49 +17,60 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from .combiner_types import Structure, Fit
+
+
+class Node(Fit):
+    def __init__(self, x, y, w, h, used=False, down=None, right=None):
+        super().__init__(x, y)
+        self.w = w
+        self.h = h
+        self.used = used
+        self.down = down
+        self.right = right
+
+    def split(self, w, h):
+        self.used = True
+        self.down = Node(x=self.x, y=self.y + h, w=self.w, h=self.h - h)
+        self.right = Node(x=self.x + w, y=self.y, w=self.w - w, h=h)
+        return self
+
+    def find(self, w, h):
+        if self.used:
+            return self.right.find(w, h) or self.down.find(w, h)
+        elif (w <= self.w) and (h <= self.h):
+            return self
+        return None
 
 
 class BinPacker(object):
-    def __init__(self, images):
-        self.root = {}
-        self.bin = images
+    def __init__(self, structure: Structure):
+        self.root = None
+        self.bin = structure
 
     def fit(self):
-        images = self.bin
-        img_len = len(self.bin)
+        structure = self.bin
+        structure_len = len(self.bin)
         w = 0
         h = 0
-        if img_len > 0:
-            w, h = images[next(iter(images))]['gfx']['size']
-        self.root = {'x': 0, 'y': 0, 'w': w, 'h': h}
-        for img in images.values():
-            w, h = img['gfx']['size']
-            if self.find_node(self.root, w, h):
-                node = self.find_node(self.root, w, h)
-                img['gfx']['fit'] = self.split_node(node, w, h)
+        if structure_len > 0:
+            w, h = structure[next(iter(structure))].gfx.size
+        self.root = Node(x=0, y=0, w=w, h=h)
+        for img in structure.values():
+            w, h = img.gfx.size
+            node = self.root.find(w, h)
+            if node:
+                img.gfx.fit = node.split(w, h)
             else:
-                img['gfx']['fit'] = self.grow_node(w, h)
-        return images
-
-    def find_node(self, root, w, h):
-        if 'used' in root and root['used']:
-            return self.find_node(root['right'], w, h) or self.find_node(root['down'], w, h)
-        elif (w <= root['w']) and (h <= root['h']):
-            return root
-        return None
-
-    def split_node(self, node, w, h):
-        node['used'] = True
-        node['down'] = {'x': node['x'], 'y': node['y'] + h, 'w': node['w'], 'h': node['h'] - h}
-        node['right'] = {'x': node['x'] + w, 'y': node['y'], 'w': node['w'] - w, 'h': h}
-        return node
+                img.gfx.fit = self.grow_node(w, h)
+        return structure
 
     def grow_node(self, w, h):
-        can_grow_right = (h <= self.root['h'])
-        can_grow_down = (w <= self.root['w'])
+        can_grow_right = (h <= self.root.h)
+        can_grow_down = (w <= self.root.w)
 
-        should_grow_right = can_grow_right and (self.root['h'] >= (self.root['w'] + w))
-        should_grow_down = can_grow_down and (self.root['w'] >= (self.root['h'] + h))
+        should_grow_right = can_grow_right and (self.root.h >= (self.root.w + w))
+        should_grow_down = can_grow_down and (self.root.w >= (self.root.h + h))
 
         if should_grow_right:
             return self.grow_right(w, h)
@@ -72,30 +83,30 @@ class BinPacker(object):
         return None
 
     def grow_right(self, w, h):
-        self.root = {
-            'used': True,
-            'x': 0,
-            'y': 0,
-            'w': self.root['w'] + w,
-            'h': self.root['h'],
-            'down': self.root,
-            'right': {'x': self.root['w'], 'y': 0, 'w': w, 'h': self.root['h']}}
-        if self.find_node(self.root, w, h):
-            node = self.find_node(self.root, w, h)
-            return self.split_node(node, w, h)
+        self.root = Node(
+            used=True,
+            x=0,
+            y=0,
+            w=self.root.w + w,
+            h=self.root.h,
+            down=self.root,
+            right=Node(x=self.root.w, y=0, w=w, h=self.root.h))
+        node = self.root.find(w, h)
+        if node:
+            return node.split(w, h)
         return None
 
     def grow_down(self, w, h):
-        self.root = {
-            'used': True,
-            'x': 0,
-            'y': 0,
-            'w': self.root['w'],
-            'h': self.root['h'] + h,
-            'down': {'x': 0, 'y': self.root['h'], 'w': self.root['w'], 'h': h},
-            'right': self.root
-        }
-        if self.find_node(self.root, w, h):
-            node = self.find_node(self.root, w, h)
-            return self.split_node(node, w, h)
+        self.root = Node(
+            used=True,
+            x=0,
+            y=0,
+            w=self.root.w,
+            h=self.root.h + h,
+            down=Node(x=0, y=self.root.h, w=self.root.w, h=h),
+            right=self.root
+        )
+        node = self.root.find(w, h)
+        if node:
+            return node.split(w, h)
         return None

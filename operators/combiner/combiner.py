@@ -27,8 +27,8 @@ class Combiner(bpy.types.Operator):
         add_images(self.structure)
         found_images = perf_counter()
         self.structure = BinPacker(get_size(scn, self.structure)).fit()
-        size = (max([i['gfx']['fit']['x'] + i['gfx']['size'][0] for i in self.structure.values()]),
-                max([i['gfx']['fit']['y'] + i['gfx']['size'][1] for i in self.structure.values()]))
+        size = (max([i.gfx.fit.x + i.gfx.size[0] for i in self.structure.values()]),
+                max([i.gfx.fit.y + i.gfx.size[1] for i in self.structure.values()]))
         if any(dimension > 20000 for dimension in size):
             self.report({'ERROR'}, 'Output image size is too large')
             return {'FINISHED'}
@@ -61,7 +61,7 @@ class Combiner(bpy.types.Operator):
         self.structure = get_structure(scn, self.data, self.mats_uv)
         if globs.version == 0:
             context.space_data.viewport_shade = 'MATERIAL'
-        if (len(self.structure) == 1) and next(iter(self.structure.values()))['dup']:
+        if (len(self.structure) == 1) and next(iter(self.structure.values())).duplicate_materials:
             clear_duplicates(scn, self.structure)
             bpy.ops.smc.refresh_ob_data()
             self.report({'INFO'}, 'Duplicates were combined')
