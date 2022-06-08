@@ -3,7 +3,8 @@ from mathutils import Vector
 
 from typing import Dict, List, Set, Tuple, Optional
 
-from ...utils.type_hints import PixelSource, Size
+from ...utils.type_hints import Size
+from ...utils.material_source import MaterialSource
 
 
 # It would be nice to use a data class, but those don't exist in Blender 2.79's Python version and namedtuple can't be
@@ -29,7 +30,7 @@ class Fit(_Base):
 
 class GFX(_Base):
     def __init__(self,
-                 img: PixelSource = None,
+                 img: MaterialSource = None,
                  size: Size = (),
                  uv_size: Tuple[float, float] = (),
                  fit: Optional[Fit] = None):

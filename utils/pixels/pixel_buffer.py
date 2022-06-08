@@ -2,9 +2,10 @@ import bpy
 from bpy.types import Image
 
 import numpy as np
+
 from . import pixel_access
 from .pixel_types import pixel_dtype
-from ..type_hints import PixelBufferOrPixel, PixelBuffer, Size, Pixel, CornerOrBox
+from ..type_hints import PixelBuffer, Size, Pixel, CornerOrBox
 
 # A 'pixel buffer' is a single precision float type numpy array, viewed in the 3D shape
 # (height, width, channels), used to store data representing image pixels.
@@ -13,8 +14,8 @@ linear_colorspaces = {'Linear', 'Non-Color', 'Raw'}
 supported_colorspaces = linear_colorspaces | {'sRGB'}
 
 
-def new_pixel_buffer(size: Size, color: Pixel = (0.0, 0.0, 0.0, 0.0), read_only_rectangle=False) -> PixelBuffer:
-    """Create a new blank pixel buffer, filled with a single color.
+def new_pixel_buffer(size: Size, color: Pixel = (0.0, 0.0, 0.0, 0.0), read_only_rectangle=False, convert_linear_to_srgb=True) -> PixelBuffer:
+    """Create a new blank pixel buffer, filled with a single linear color.
 
     A 'pixel buffer' is a single precision float type numpy array, viewed in the 3D shape
     (height, width, channels), used to store data representing image pixels.
@@ -33,6 +34,12 @@ def new_pixel_buffer(size: Size, color: Pixel = (0.0, 0.0, 0.0, 0.0), read_only_
         raise TypeError("color must be one dimensional, but has shape {}".format(color.shape))
     if channels > 4 or channels == 0:
         raise TypeError("A color can have between 1 and 4 (inclusive) components, but found {} in {}".format(channels, color))
+    color = np.array(color)
+    # Colors are in scene linear colorspace, if we want them to look the same in an sRGB image, we must convert them.
+    if convert_linear_to_srgb:
+        print("Converting color {} for sRGB".format(color))
+        color = color_convert_linear_to_srgb(color)
+        print("Converted color to {}".format(color))
     if read_only_rectangle:
         # Create a 1x1 pixel_buffer, and then broadcast it to the specified shape, this creates a read-only
         # pixel buffer that acts like it is the full size, but every pixel shares the same memory
@@ -142,8 +149,38 @@ def buffer_to_image(buffer: PixelBuffer, *, name: str) -> Image:
     return image
 
 
+def color_convert_linear_to_srgb(color_array):
+    """Convert a linear colorspace color such that it will look the same in an sRGB colorspace.
+
+    Converts in-place if the input color_array is already an ndarray of the correct type.
+
+    :return:Input linear color array converted to look the same in sRGB"""
+    color_as_array = np.asarray(color_array, dtype=pixel_dtype)
+    # View the array in the shape of a pixel buffer
+    color_as_array.shape = (1, 1, -1)
+    buffer_convert_linear_to_srgb(color_as_array)
+    # Reshape the array back to flat
+    color_as_array.shape = -1
+    return color_as_array
+
+
+def color_convert_srgb_to_linear(color_array):
+    """Convert an sRGB colorspace color such that it will look the same in a linear colorspace
+
+    Converts in-place if the input color_array is already an ndarray of the correct type.
+
+    :return:Input sRGB color array converted to look the same in linear"""
+    color_as_array = np.asarray(color_array, dtype=pixel_dtype)
+    # View the array in the shape of a pixel buffer
+    color_as_array.shape = (1, 1, -1)
+    buffer_convert_srgb_to_linear(color_as_array)
+    # Reshape the array back to flat
+    color_as_array.shape = -1
+    return color_as_array
+
+
 def buffer_convert_linear_to_srgb(buffer: PixelBuffer):
-    """Convert a pixel buffer's pixels from linear colorspace to sRGB colorspace"""
+    """In-place convert a linear colorspace pixel buffer such that it will look the same in an sRGB colorspace"""
     # If the buffer is a read-only rectangle, get the base array so that it can be modified
     buffer = get_base_if_read_only_rectangle(buffer)
 
@@ -170,7 +207,7 @@ def buffer_convert_linear_to_srgb(buffer: PixelBuffer):
 
 
 def buffer_convert_srgb_to_linear(buffer: PixelBuffer):
-    """Convert a pixel buffer's pixels from sRGB colorspace to linear colorspace"""
+    """In-place convert an sRGB colorspace pixel buffer such that it will look the same in a linear colorspace"""
     # If the buffer is a read-only rectangle, get the base array so that it can be modified
     buffer = get_base_if_read_only_rectangle(buffer)
 
@@ -196,8 +233,8 @@ def buffer_convert_srgb_to_linear(buffer: PixelBuffer):
     rgb_only_view[is_not_small] = large_rgb
 
 
-def pixel_buffer_paste(target_buffer: PixelBuffer, source_buffer_or_pixel: PixelBufferOrPixel, corner_or_box: CornerOrBox):
-    """Paste pixels from a source pixel buffer or individual pixel into the target pixel buffer.
+def pixel_buffer_paste(target_buffer: PixelBuffer, source_buffer: PixelBuffer, corner_or_box: CornerOrBox):
+    """Paste pixels from a source pixel buffer into the target pixel buffer.
 
     Where the source is to be pasted is specified via a tuple-like set of pixel coordinates specifying either a top left
      corner or a box. Note that these coordinates use the coordinate system of Pillow, whereby (0,0) is the top left of
@@ -206,26 +243,16 @@ def pixel_buffer_paste(target_buffer: PixelBuffer, source_buffer_or_pixel: Pixel
     A corner is specified as (left, upper) and a box is specified as (left, upper, right, lower). Both must be
      tuple-like or list-like.
 
-    If a box is specified and the source is a pixel buffer, the width and height of the box must match the pixel_buffer.
+    If a box is specified, the width and height of the box must match the source_buffer.
     """
     # box coordinates treat (0,0) as top left, but bottom left is (0,0) in blender, so view the buffer with flipped
     # y-axis
     target_buffer = np.flipud(target_buffer)
-    if isinstance(source_buffer_or_pixel, np.ndarray):
-        source_dimensions = len(source_buffer_or_pixel.shape)
-        if source_dimensions == 3:
-            # Source is a buffer representing a 2D image, with the 3rd axis being the pixel data
-            source_is_pixel = False
-        elif source_dimensions == 1 and target_buffer.shape[-1] >= source_dimensions:
-            # Source is the data for a single pixel, to be pasted into all the pixels in the box region
-            source_is_pixel = True
-        else:
-            raise TypeError("source buffer or pixel could not be parsed for pasting")
-    elif isinstance(source_buffer_or_pixel, (tuple, list)) and target_buffer.shape[-1] >= len(source_buffer_or_pixel):
-        # Source is the data for a single pixel, to be pasted into all the pixels in the box region
-        source_is_pixel = True
+    if isinstance(source_buffer, np.ndarray):
+        if len(source_buffer.shape) != 3:
+            raise TypeError("source buffer could not be parsed for pasting")
     else:
-        raise TypeError("source pixel could not be parsed for pasting")
+        raise TypeError("source buffer could not be parsed for pasting")
 
     def fit_box(box):
         # Fit the box to the image. This could be changed to raise an Error if the box doesn't fit.
@@ -239,46 +266,33 @@ def pixel_buffer_paste(target_buffer: PixelBuffer, source_buffer_or_pixel: Pixel
         box_lower = min(box_lower, buffer_height)
         return box_left, box_upper, box_right, box_lower
 
-    if source_is_pixel:
-        # When the source is a single pixel color, there must be a box to paste to
-        if len(corner_or_box) != 4:
-            raise TypeError("When pasting a pixel color, a box region to paste to must be supplied, but got: {}".format(corner_or_box))
-        left, upper, right, lower = fit_box(corner_or_box)
-        # Fill the box with corners (left, upper) and (right, lower) with the pixel color, filling in as many components
-        # of the pixels as in the source pixel.
-        # Remember that these corners are cartesian coordinates with (0,0) as the top left corner of the image.
-        # A box with corners (0,0) and (1,1) only contains the pixels between (0,0) inclusive and (1,1) exclusive
-        num_source_channels = len(source_buffer_or_pixel)
-        print("DEBUG: Pasting into box {} colour {}".format((left, upper, right, lower), source_buffer_or_pixel))
-        target_buffer[upper:lower, left:right, :num_source_channels] = source_buffer_or_pixel
+    # box coordinates treat (0,0) as top left, but bottom left is (0,0) in blender, so view the buffer with flipped
+    # y-axis
+    source_buffer = np.flipud(source_buffer)
+    # Parse a corner into a box
+    if len(corner_or_box) == 2:
+        # Only the top left corner to place the source buffer has been set, we will figure out the bottom right
+        # corner
+        left, upper = corner_or_box
+        right = left + source_buffer.shape[1]
+        lower = upper + source_buffer.shape[0]
+    elif len(corner_or_box) == 4:
+        left, upper, right, lower = corner_or_box
     else:
-        # box coordinates treat (0,0) as top left, but bottom left is (0,0) in blender, so view the buffer with flipped
-        # y-axis
-        source_buffer = np.flipud(source_buffer_or_pixel)
-        # Parse a corner into a box
-        if len(corner_or_box) == 2:
-            # Only the top left corner to place the source buffer has been set, we will figure out the bottom right
-            # corner
-            left, upper = corner_or_box
-            right = left + source_buffer.shape[1]
-            lower = upper + source_buffer.shape[0]
-        elif len(corner_or_box) == 4:
-            left, upper, right, lower = corner_or_box
-        else:
-            raise TypeError("corner or box must be either a 2-tuple or 4-tuple, but was: {}".format(corner_or_box))
+        raise TypeError("corner or box must be either a 2-tuple or 4-tuple, but was: {}".format(corner_or_box))
 
-        if target_buffer.shape[-1] >= source_buffer.shape[-1]:
-            fit_left, fit_upper, fit_right, fit_lower = fit_box((left, upper, right, lower))
-            if fit_left != left or fit_upper != upper or fit_right != right or fit_lower != lower:
-                print('DEBUG: Image to be pasted did not fit into target image, {} -> {}'.format((left, upper, right, lower), (fit_left, fit_upper, fit_right, fit_lower)))
-            # If the pasted buffer can extend outside the source image, we need to figure out the area which fits within
-            # the source image
-            source_left = fit_left - left
-            source_upper = fit_upper - upper
-            source_right = source_buffer.shape[1] - right + fit_right
-            source_lower = source_buffer.shape[0] - lower + fit_lower
-            num_source_channels = source_buffer.shape[2]
-            print("DEBUG: Pasting into box {} of target from box {} of source".format((fit_left, fit_upper, fit_right, fit_lower), (source_left, source_upper, source_right, source_lower)))
-            target_buffer[fit_upper:fit_lower, fit_left:fit_right, :num_source_channels] = source_buffer[source_upper:source_lower, source_left:source_right]
-        else:
-            raise TypeError("Pixels in source have more channels than pixels in target, they cannot be pasted")
+    if target_buffer.shape[-1] >= source_buffer.shape[-1]:
+        fit_left, fit_upper, fit_right, fit_lower = fit_box((left, upper, right, lower))
+        if fit_left != left or fit_upper != upper or fit_right != right or fit_lower != lower:
+            print('DEBUG: Image to be pasted did not fit into target image, {} -> {}'.format((left, upper, right, lower), (fit_left, fit_upper, fit_right, fit_lower)))
+        # If the pasted buffer can extend outside the source image, we need to figure out the area which fits within
+        # the source image
+        source_left = fit_left - left
+        source_upper = fit_upper - upper
+        source_right = source_buffer.shape[1] - right + fit_right
+        source_lower = source_buffer.shape[0] - lower + fit_lower
+        num_source_channels = source_buffer.shape[2]
+        print("DEBUG: Pasting into box {} of target from box {} of source".format((fit_left, fit_upper, fit_right, fit_lower), (source_left, source_upper, source_right, source_lower)))
+        target_buffer[fit_upper:fit_lower, fit_left:fit_right, :num_source_channels] = source_buffer[source_upper:source_lower, source_left:source_right]
+    else:
+        raise TypeError("Pixels in source have more channels than pixels in target, they cannot be pasted")

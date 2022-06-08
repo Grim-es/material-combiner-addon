@@ -11,18 +11,14 @@ import bpy
 from bpy.types import Image
 
 from ... import globs
-from ...utils.objects import get_obs
-from ...utils.objects import get_polys
-from ...utils.objects import get_uv
-from ...utils.objects import align_uv
-from ...utils.materials import get_material_image_or_color
-from ...utils.materials import get_diffuse
+from ...utils.objects import get_obs, get_polys, get_uv, align_uv
 from ...utils.materials import sort_materials
-from ...utils.images import save_generated_image_to_file, is_image_valid
-from ...utils.pixels.pixel_buffer import get_pixel_buffer, get_resized_pixel_buffer, buffer_to_image, new_pixel_buffer,\
-    pixel_buffer_paste
+from ...utils.material_source import MaterialSource
+from ...utils.images import save_generated_image_to_file, is_single_colour_generated, single_color_generated_to_color
+from ...utils.pixels.pixel_buffer import (get_pixel_buffer, get_resized_pixel_buffer, buffer_to_image, new_pixel_buffer,
+                                          pixel_buffer_paste, color_convert_linear_to_srgb)
 from .combiner_types import RootMatData, Data, MatsUV, Structure, StructureItem
-from ...utils.type_hints import Size, PixelBuffer, PixelSource
+from ...utils.type_hints import Size, PixelBuffer
 
 
 def set_ob_mode(scn):
@@ -118,38 +114,28 @@ def delete_material(mesh_obj, mat_name: str):
 
 def add_images(structure: Structure):
     for mat, mat_data in structure.items():
-        mat_data.gfx.pixel_source = get_material_image_or_color(mat)
+        mat_data.gfx.pixel_source = MaterialSource.from_material(mat)
 
 
 def _size_sorting(item: StructureItem):
-    _key, mat_data = item
+    mat, mat_data = item
     gfx = mat_data.gfx
     size_x, size_y = gfx.size
-    src = gfx.pixel_source
+    src_sort = gfx.pixel_source.to_sort_key(mat.smc_diffuse)
     print("DEBUG: Sorting gfx {}".format(gfx))
-    if isinstance(src, bpy.types.Image):
-        img_sort = src.name
-        color_sort = 0
-    else:
-        # Should be a colour
-        img_sort = ''
-        color_sort = sum(src)
     # Sorting order:
     # 1) maximum of x and y
     # 2) area
     # 3) x
-    # 4) image name (colors treated as '')
-    # 5) sum of colour components (images treated as 0, though images should always have unique names unless included
-    #    multiple times)
+    # 4) sort_key (image name or '' if no image, color tuple or (1,1,1,1) if no color)
     # First sort by maximum of x and y, then, if equal, next sort by area, if still equal, arbitrarily pick size_x and
-    # if still equal, go by the name of the image, if there is no image, then go by the sum of the color's components
-    return max(size_x, size_y), size_x * size_y, size_x, img_sort, color_sort
+    # if still equal, go by the name of the image, if there is no image, then go by color's components
+    return max(size_x, size_y), size_x * size_y, size_x, src_sort
 
 
 def get_size(scn, structure: Structure) -> Structure:
     for mat, mat_data in structure.items():
         gfx = mat_data.gfx
-        img = gfx.pixel_source
         # Get max x and max y of the uvs for this material. The uvs should already be aligned such that the minimum x
         # and y are both within the bounds [0,1]
         # TODO: If all values less than 1, then 1 gets chosen as the max because of the outer max(), couldn't we crop
@@ -164,7 +150,9 @@ def get_size(scn, structure: Structure) -> Structure:
             # FIXME: UVs are off by half a pixel. To reproduce, atlas a quad with uvs (0,0), (0,1), (1,0), (1,1).
             #        The corners of the quad's UVs will all be half a pixel towards the middle of the quad
             gfx.uv_size = tuple(map(math.ceil, gfx.uv_size))
-        if isinstance(img, bpy.types.Image) and is_image_valid(img):
+        pixel_source = gfx.pixel_source
+        img = pixel_source.image
+        if img and not is_single_colour_generated(img):
             if mat.smc_size:
                 img_size = (min(mat.smc_size_width, img.size[0]),
                             min(mat.smc_size_height, img.size[1]))
@@ -251,43 +239,63 @@ def get_uv_image(pixel_buffer: PixelBuffer, size: Size) -> PixelBuffer:
         return pixel_buffer
 
 
-def get_gfx(scn, mat, mat_data: RootMatData, src: PixelSource) -> PixelBuffer:
+def get_gfx(scn, mat, mat_data: RootMatData, src: MaterialSource, atlas_is_srgb=True) -> PixelBuffer:
     gfx = mat_data.gfx
     gfx_size_x, gfx_size_y = gfx.size
     gap = int(scn.smc_gaps)
     size = (gfx_size_x - gap, gfx_size_y - gap)
-    if isinstance(src, bpy.types.Image):
-        if mat.smc_size:
-            img_buffer = get_resized_pixel_buffer(src, (mat.smc_size_width, mat.smc_size_height))
+    if src.image:
+        if is_single_colour_generated(src.image):
+            target_colorspace = 'sRGB' if atlas_is_srgb else 'Linear'
+            if mat.smc_diffuse and src.color:
+                converted_color = single_color_generated_to_color(src.image, src.to_color_value(),
+                                                                  target_colorspace=target_colorspace)
+            else:
+                converted_color = single_color_generated_to_color(src.image, target_colorspace=target_colorspace)
+            # single_color_generated_to_color does the sRGB/linear conversion(s) for us so don't convert to sRGB when
+            # creating the pixel buffer
+            img_buffer = new_pixel_buffer(size, converted_color, read_only_rectangle=True, convert_linear_to_srgb=False)
         else:
-            img_buffer = get_pixel_buffer(src)
-        max_uv = gfx.uv_size
-        # Note that get_size(...) sets uv_size to always be at least 1
-        max_uv_x = max_uv[0]
-        max_uv_y = max_uv[1]
-        if max_uv_x > 1 or max_uv_y > 1:
-            # Tile the image adjacent to itself enough times to ensure all the uvs are within the bounds of the image
-            img_buffer = get_uv_image(img_buffer, size)
-        if mat.smc_diffuse:
-            diffuse_color = get_diffuse(mat)
-            # Multiply by the diffuse color
-            # 3d slice of [all x, all y, only the first len(diffuse_color) components]
-            # TODO: Could hardcode 4
-            img_buffer[:, :, :len(diffuse_color)] *= diffuse_color
+            if mat.smc_size:
+                img_buffer = get_resized_pixel_buffer(src.image, (mat.smc_size_width, mat.smc_size_height))
+            else:
+                img_buffer = get_pixel_buffer(src.image)
+            max_uv = gfx.uv_size
+            # Note that get_size(...) sets uv_size to always be at least 1
+            max_uv_x = max_uv[0]
+            max_uv_y = max_uv[1]
+            if max_uv_x > 1 or max_uv_y > 1:
+                # Tile the image adjacent to itself enough times to ensure all the uvs are within the bounds of the image
+                img_buffer = get_uv_image(img_buffer, size)
+            if mat.smc_diffuse and src.color:
+                diffuse_color = src.to_color_value()
+                diffuse_color_as_array = np.asarray(diffuse_color)
+                # Colors are scene linear and need to be converted such that they will look the same when in sRGB if the
+                # atlas is in sRGB
+                if atlas_is_srgb:
+                    print("DEBUG: Converting diffuse color {} for sRGB".format(diffuse_color_as_array))
+                    diffuse_color_as_array = color_convert_linear_to_srgb(diffuse_color_as_array)
+                    print("DEBUG: Converted diffuse color to {}".format(diffuse_color_as_array))
+                is_not_one = diffuse_color_as_array != 1
+                if is_not_one.any():
+                    # Multiply by the diffuse color
+                    # 3d slice of [all x, all y, only the components that aren't 1]
+                    img_buffer[:, :, is_not_one] *= diffuse_color_as_array[is_not_one]
     else:
-        # src must be a color in a tuple/list of components
-        if len(src) != 4:
-            raise TypeError("Invalid colour '{}', must be tuple-like with 4 elements (RGBA).".format(src))
-        img_buffer = new_pixel_buffer(size, src, read_only_rectangle=True)
+        img_buffer = new_pixel_buffer(size, src.to_color_value(), read_only_rectangle=True,
+                                      convert_linear_to_srgb=atlas_is_srgb)
     return img_buffer
 
 
 def get_atlas(scn, structure: Structure, size: Size) -> Tuple[Image, Size]:
+    print("DEBUG: Atlas input size: {}".format(size))
     if scn.smc_size == 'PO2':
         size = tuple(1 << (x - 1).bit_length() for x in size)
     elif scn.smc_size == 'QUAD':
         size = (max(size),) * 2
-    atlas_pixel_buffer = new_pixel_buffer(size)
+    # The default color is black, which is the same in both linear and sRGB, so no need to convert
+    atlas_pixel_buffer = new_pixel_buffer(size, convert_linear_to_srgb=False)
+    print("DEBUG: Atlas size: {}".format(size))
     for mat, mat_data in structure.items():
         top_left_corner = mat_data.get_top_left_corner(scn)
         if top_left_corner:
