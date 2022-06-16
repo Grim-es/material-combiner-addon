@@ -24,7 +24,6 @@ def get_pixels_gl_shared_buffer(image):
     if image.gl_load():
         print("Could not load {} into Open GL, resorting to a slower method of getting pixels".format(image))
         return get_pixels_no_gl(image)
-    bgl.glEnable(bgl.GL_TEXTURE_2D)
     bgl.glActiveTexture(bgl.GL_TEXTURE0)
     bgl.glBindTexture(bgl.GL_TEXTURE_2D, image.bindcode)
     buffer = np.empty(len(pixels), dtype=pixel_dtype)

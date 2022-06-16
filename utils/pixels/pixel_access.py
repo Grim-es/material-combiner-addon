@@ -32,10 +32,10 @@ else:  # Oldest theoretically supported Blender version is 2.50, because that's 
         from .fast_pixel_read_2_79 import get_pixels_ctypes_gl_buffer_swap as get_pixels
     except AssertionError:
         print("Failed to import fast_pixel_read_2_79, resorting to using much slower iteration to get image pixels from Open GL")
-        # 159.6ms for 1024x1024
-        # 636.5ms for 2048x2048
-        # 2600.7ms for 4096x4096
-        # 10215.1ms for 8192x8192
+        # 161.0ms for 1024x1024
+        # 630.3ms for 2048x2048
+        # 2544.3ms for 4096x4096
+        # 10110.2ms for 8192x8192
         from .fallback_pixel_access import get_pixels_gl_buffer_iter_2_79 as get_pixels
 
 # set_pixels function
@@ -53,11 +53,11 @@ else:
         # 701.7ms for 8192x8192
         from .fast_pixel_write_2_79_to_2_82 import set_pixels_matrix_hack as set_pixels
     except AssertionError:
-        print("Failed to import ctypes_fast_pixel_write, resorting to much slower fallback method to set image pixels")
-        # 85.5ms for 1024x1024
-        # 388.2 for 2048x2048
-        # 1511.1ms for 4096x4096
-        # 6407.5ms for 8192x8192
+        print("Failed to import set_pixels_matrix_hack, resorting to much slower fallback method to set image pixels")
+        # 92.0ms for 1024x1024
+        # 373.5 for 2048x2048
+        # 1498.8ms for 4096x4096
+        # 6168.8ms for 8192x8192
         from .fallback_pixel_access import set_pixels_array_assign as set_pixels
 
 assert get_pixels is not None

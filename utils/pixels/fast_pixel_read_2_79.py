@@ -62,6 +62,10 @@ assert bgl.Buffer.__basicsize__ == ctypes.sizeof(BglBuffer)
 # point to the data in the numpy array so that when Open GL copies the pixels into the bgl.Buffer, it's actually copying
 # the pixels into the numpy array.
 def get_pixels_ctypes_gl_buffer_swap(image):
+    if image.is_float:
+        # gl_load fails with an error on 2.79 when the image uses a float buffer internally, this seems to be a bug in
+        # Blender
+        return get_pixels_no_gl(image)
     pixels = image.pixels
     if image.bindcode[0]:
         image.gl_free()
