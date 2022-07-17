@@ -24,7 +24,7 @@ bl_info = {
     'name': "Shotariya's Material Combiner",
     'description': 'Public Release Material Combiner 2',
     'author': 'shotariya',
-    'version': (2, 1, 2, 2),
+    'version': (2, 1, 2, 3),
     'blender': (2, 80, 0),
     'location': 'View3D',
     # 'warning': '',
