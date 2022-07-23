@@ -180,6 +180,7 @@ def color_convert_srgb_to_linear(color_array):
     return color_as_array
 
 
+# Uses the same conversion as Blender's node_color.h
 def buffer_convert_linear_to_srgb(buffer: PixelBuffer):
     """In-place convert a linear colorspace pixel buffer such that it will look the same in an sRGB colorspace"""
     # If the buffer is a read-only rectangle, get the base array so that it can be modified
@@ -188,17 +189,22 @@ def buffer_convert_linear_to_srgb(buffer: PixelBuffer):
     # Alpha is always linear, so get a view of only RGB.
     rgb_only_view = buffer[:, :, :3]
 
+    # Mask of all small values
     is_small = rgb_only_view < 0.0031308
 
+    # Array of only the small values
     small_rgb = rgb_only_view[is_small]
 
+    # Slightly faster than:
     # rgb_only_view[is_small] = np.where(small_rgb < 0.0, 0, small_rgb * 12.92)
     np.maximum(small_rgb, 0, out=small_rgb)
     small_rgb *= 12.92
     rgb_only_view[is_small] = small_rgb
 
+    # New variable name for clarity
     is_not_small = np.invert(is_small, out=is_small)
 
+    # In-place equivalent of:
     # rgb_only_view[is_not_small] = 1.055 * (rgb_only_view[is_not_small] ** (1.0 / 2.4)) - 0.055
     large_rgb = rgb_only_view[is_not_small]
     large_rgb **= 1.0/2.4
@@ -207,6 +213,7 @@ def buffer_convert_linear_to_srgb(buffer: PixelBuffer):
     rgb_only_view[is_not_small] = large_rgb
 
 
+# Uses the same conversion as Blender's node_color.h
 def buffer_convert_srgb_to_linear(buffer: PixelBuffer):
     """In-place convert an sRGB colorspace pixel buffer such that it will look the same in a linear colorspace"""
     # If the buffer is a read-only rectangle, get the base array so that it can be modified
@@ -215,17 +222,22 @@ def buffer_convert_srgb_to_linear(buffer: PixelBuffer):
     # Alpha is always linear, so get a view of only RGB.
     rgb_only_view = buffer[:, :, :3]
 
+    # Mask of all small values
     is_small = rgb_only_view < 0.04045
 
+    # Array of only the small values
     small_rgb = rgb_only_view[is_small]
 
+    # Slightly faster than:
     # rgb_only_view[is_small] = np.where(small_rgb < 0.0, 0, small_rgb / 12.92)
     np.maximum(small_rgb, 0, out=small_rgb)
     small_rgb /= 12.92
     rgb_only_view[is_small] = small_rgb
 
+    # New variable name for clarity
     is_not_small = np.invert(is_small, out=is_small)
 
+    # In-place equivalent of:
     # rgb_only_view[is_not_small] = ((rgb_only_view[is_not_small] + 0.055) / 1.055) ** 2.4
     large_rgb = rgb_only_view[is_not_small]
     large_rgb += 0.055
@@ -255,18 +267,6 @@ def pixel_buffer_paste(target_buffer: PixelBuffer, source_buffer: PixelBuffer, c
     else:
         raise TypeError("source buffer could not be parsed for pasting")
 
-    def fit_box(box):
-        # Fit the box to the image. This could be changed to raise an Error if the box doesn't fit.
-        # Remember that box corners are cartesian coordinates where (0,0) is the top left corner of the top left pixel
-        # and (1,1) is the bottom right corner of the top left pixel
-        box_left, box_upper, box_right, box_lower = box
-        buffer_height, buffer_width, _buffer_channels = target_buffer.shape
-        box_left = max(box_left, 0)
-        box_upper = max(box_upper, 0)
-        box_right = min(box_right, buffer_width)
-        box_lower = min(box_lower, buffer_height)
-        return box_left, box_upper, box_right, box_lower
-
     # box coordinates treat (0,0) as top left, but bottom left is (0,0) in blender, so view the buffer with flipped
     # y-axis
     source_buffer = np.flipud(source_buffer)
@@ -283,9 +283,18 @@ def pixel_buffer_paste(target_buffer: PixelBuffer, source_buffer: PixelBuffer, c
         raise TypeError("corner or box must be either a 2-tuple or 4-tuple, but was: {}".format(corner_or_box))
 
     if target_buffer.shape[-1] >= source_buffer.shape[-1]:
-        fit_left, fit_upper, fit_right, fit_lower = fit_box((left, upper, right, lower))
+        # Fit the box to the image
+        # Remember that box corners are cartesian coordinates where (0,0) is the top left corner of the top left pixel
+        # and (1,1) is the bottom right corner of the top left pixel
+        buffer_height, buffer_width, _buffer_channels = target_buffer.shape
+        fit_left = max(left, 0)
+        fit_upper = max(upper, 0)
+        fit_right = min(right, buffer_width)
+        fit_lower = min(lower, buffer_height)
         if fit_left != left or fit_upper != upper or fit_right != right or fit_lower != lower:
-            debug_print('DEBUG: Image to be pasted did not fit into target image, {} -> {}'.format((left, upper, right, lower), (fit_left, fit_upper, fit_right, fit_lower)))
+            debug_print('DEBUG: Image to be pasted did not fit into target image, {} -> {}'
+                        .format((left, upper, right, lower), (fit_left, fit_upper, fit_right, fit_lower)))
+
         # If the pasted buffer can extend outside the source image, we need to figure out the area which fits within
         # the source image
         source_left = fit_left - left

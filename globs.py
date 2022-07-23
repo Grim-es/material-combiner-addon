@@ -5,7 +5,7 @@ is_blender_2_80_or_newer = not is_blender_2_79_or_older
 is_blender_2_81_or_newer = bpy.app.version >= (2, 81)
 
 # Change to True to enable debug print statements
-debug = True
+debug = False
 if not debug:
     def debug_print(*_args, **_kwargs):
         pass

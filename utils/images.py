@@ -9,7 +9,8 @@ def is_single_colour_generated(img):
     return img.source == 'GENERATED' and not img.is_dirty and img.generated_type == 'BLANK'
 
 
-# The generated color is in linear, if the image is in sRGB, the color must be converted
+# Convert a single color generated image to a color
+# The image's generated color is in linear, if the image is in sRGB, the color must be converted
 def single_color_generated_to_color(img, diffuse_to_multiply=None, target_colorspace='sRGB'):
     generated_color = np.array(img.generated_color, dtype=pixel_dtype)
     diffuse_to_multiply_arr = np.array(diffuse_to_multiply, dtype=pixel_dtype) if diffuse_to_multiply else None

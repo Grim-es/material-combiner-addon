@@ -14,8 +14,8 @@ from bpy.app import version as blender_version
 if blender_version >= (2, 83):
     # 2.83 and newer have Image.pixels.foreach_set so this module isn't needed (and no code has been specifically tested
     # on 2.83 or higher, though it does appear to work on 2.93 where it was benchmarked against foreach_set)
-    raise RuntimeError("ctypes fast pixel write was attempted to be loaded on Blender version 2.83 or newer where it is"
-                       " not needed")
+    raise RuntimeError("fast_pixel_write_2_79_to_2_82 was attempted to be loaded on Blender version 2.83 or newer where"
+                       " it is not needed")
 
 # The oldest version that can possibly be supported is 2.63, when the direct memory copy feature when using a Matrix
 # was added
@@ -26,10 +26,10 @@ if blender_version >= (2, 83):
 # These combined give the oldest supported version as 2.63, though testing has only been done on as old as 2.79
 if blender_version < (2, 79):
     if blender_version < (2, 63):
-        raise RuntimeError("ctypes fast pixel write does not support Blender versions older than 2.63")
+        raise RuntimeError("fast_pixel_write_2_79_to_2_82 does not support Blender versions older than 2.63")
     else:
-        print("WARNING: Material Combiner's ctypes fast pixel write is untested on Blender versions older than 2.79,"
-              " but might work on as old as 2.63")
+        print("WARNING: Material Combiner's fast_pixel_write_2_79_to_2_82 is untested on Blender versions older than"
+              " 2.79, but might work on as old as 2.63")
 
 import ctypes
 import numpy as np

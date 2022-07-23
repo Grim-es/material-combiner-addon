@@ -17,7 +17,6 @@ if blender_version >= (2, 83):  # bpy_prop_array.foreach_get was added in Blende
     # 306.2ms for 8192x8192
     from .fast_pixel_access_2_83_plus import get_pixels
 elif blender_version >= (2, 80):  # Being able to use the memory of an existing buffer in bgl.Buffer was added in Blender 2.80, not that this behaviour is documented
-    # TODO: Re-time to see if this really is slightly slower than get_pixels_ctypes_gl_buffer_swap
     # 16.7ms for 1024x1024
     # 65.9ms for 2048x2048
     # 293.9ms for 4096x4096

@@ -1,6 +1,6 @@
 import bpy
 if bpy.app.version >= (2, 80):
-    raise RuntimeError("ctypes buffer utils was attempted to be loaded on Blender version >=2.80")
+    raise RuntimeError("fast_pixel_read_2_79 was attempted to be loaded on Blender version >=2.80")
 
 # The oldest technically supported version is probably 2.50 since that's when the bgl module was added, but Blender
 # didn't even support addons until 2.53, so there isn't really a need to check for this.

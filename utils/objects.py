@@ -9,7 +9,6 @@ def get_obs(obs):
             ob.data.uv_layers.active and not (ob.hide_get() if globs.is_blender_2_80_or_newer else ob.hide)]
 
 
-# TODO: Optimise performance with numpy
 def get_polys(ob):
     polys = defaultdict(list)
     for poly in ob.data.polygons:
@@ -17,7 +16,6 @@ def get_polys(ob):
     return polys
 
 
-# TODO: Optimise performance with numpy
 def get_uv(ob, poly):
     """:return: all uvs in the object's active uv layer for the specified polygon"""
     if poly.loop_indices:
@@ -26,7 +24,6 @@ def get_uv(ob, poly):
         return []
 
 
-# TODO: Optimise performance with numpy
 def align_uv(face_uv):
     """Offsets face uvs so that their minimum x and y components lie within the standard (0,0) to (1,1) unit square.
 

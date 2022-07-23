@@ -5,8 +5,6 @@ from ...icons import get_icon_id
 def draw_ui(context, m_col):
     scn = context.scene
     patreon = 'https://www.patreon.com/shotariya'
-    # TODO: Now unsused
-    discord = 'https://discordapp.com/users/275608234595713024'
     if scn.smc_ob_data:
         m_col.template_list('SMC_UL_Combine_List', 'combine_list', scn, 'smc_ob_data',
                             scn, 'smc_ob_data_id', rows=12, type='DEFAULT')
