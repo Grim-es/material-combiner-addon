@@ -6,6 +6,7 @@ from bpy.types import bpy_prop_collection, Image, ShaderNode, ShaderNodeTree, Sh
 
 from .images import is_single_colour_generated, single_color_generated_to_color
 from .textures import get_image, get_texture
+from ..globs import debug_print
 
 
 # Could create the PropTuple class using namedtuple(...) separately and then add the resolve method to it
@@ -280,7 +281,7 @@ class MaterialSource:
 
     @staticmethod
     def from_material(mat: Material):
-        print("DEBUG: Getting material source data for {}".format(mat))
+        debug_print("DEBUG: Getting material source data for {}".format(mat))
         if mat:
             if bpy.app.version >= (2, 80):
                 if mat.use_nodes:

@@ -11,6 +11,15 @@ import bpy
 # is_blender_2_81_or_newer = bpy.app.version >= (2, 81)
 
 version = 0 if bpy.app.version < (2, 80, 0) else 2 if bpy.app.version > (2, 80, 99) else 1
+
+# Change to True to enable debug print statements
+debug = True
+if not debug:
+    def debug_print(*_args, **_kwargs):
+        pass
+else:
+    debug_print = print
+
 smc_pi = False
 
 # TODO: Replace the 'type' IntProperty in extend_types.CombineList with an EnumProperty with options: ['OBJECT', 'MATERIAL', 'END']

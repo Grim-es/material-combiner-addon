@@ -122,7 +122,7 @@ def _size_sorting(item: StructureItem):
     gfx = mat_data.gfx
     size_x, size_y = gfx.size
     src_sort = gfx.pixel_source.to_sort_key(mat.smc_diffuse)
-    print("DEBUG: Sorting gfx {}".format(gfx))
+    globs.debug_print("DEBUG: Sorting gfx {}".format(gfx))
     # Sorting order:
     # 1) maximum of x and y
     # 2) area
@@ -205,7 +205,7 @@ def get_uv_image(pixel_buffer: PixelBuffer, size: Size) -> PixelBuffer:
             # part up to the required shape.
             use_tile = required_x > 2 * buffer_x
             if use_tile:
-                print("DEBUG: Tiling image with size {} to fit size {}".format((buffer_x, buffer_y), size))
+                globs.debug_print("DEBUG: Tiling image with size {} to fit size {}".format((buffer_x, buffer_y), size))
                 # Tile the image the minimum number of times until the required size fits
                 x_tiles = math.ceil(required_x / buffer_x)
                 y_tiles = math.ceil(required_y / buffer_y)
@@ -219,7 +219,7 @@ def get_uv_image(pixel_buffer: PixelBuffer, size: Size) -> PixelBuffer:
                 else:
                     return tiled_shrunk_view
             else:
-                print("DEBUG: Padding image with size {} to fit size {}".format((buffer_x, buffer_y), size))
+                globs.debug_print("DEBUG: Padding image with size {} to fit size {}".format((buffer_x, buffer_y), size))
                 # Pad the exact amount needed onto the image to make it the required size
                 pad_above = required_y - buffer_y if required_y > buffer_y else 0
                 pad_below = 0
@@ -235,7 +235,7 @@ def get_uv_image(pixel_buffer: PixelBuffer, size: Size) -> PixelBuffer:
         else:
             return pixel_buffer
     else:
-        print("DEBUG: Image requested to be tiled is already the correct shape ({}, {})".format(required_y, required_x))
+        globs.debug_print("DEBUG: Image requested to be tiled is already the correct shape ({}, {})".format(required_y, required_x))
         return pixel_buffer
 
 
@@ -273,9 +273,9 @@ def get_gfx(scn, mat, mat_data: RootMatData, src: MaterialSource, atlas_is_srgb=
                 # Colors are scene linear and need to be converted such that they will look the same when in sRGB if the
                 # atlas is in sRGB
                 if atlas_is_srgb:
-                    print("DEBUG: Converting diffuse color {} for sRGB".format(diffuse_color_as_array))
+                    globs.debug_print("DEBUG: Converting diffuse color {} for sRGB".format(diffuse_color_as_array))
                     diffuse_color_as_array = color_convert_linear_to_srgb(diffuse_color_as_array)
-                    print("DEBUG: Converted diffuse color to {}".format(diffuse_color_as_array))
+                    globs.debug_print("DEBUG: Converted diffuse color to {}".format(diffuse_color_as_array))
                 is_not_one = diffuse_color_as_array != 1
                 if is_not_one.any():
                     # Multiply by the diffuse color
@@ -288,14 +288,14 @@ def get_gfx(scn, mat, mat_data: RootMatData, src: MaterialSource, atlas_is_srgb=
 
 
 def get_atlas(scn, structure: Structure, size: Size) -> Tuple[Image, Size]:
-    print("DEBUG: Atlas input size: {}".format(size))
+    globs.debug_print("DEBUG: Atlas input size: {}".format(size))
     if scn.smc_size == 'PO2':
         size = tuple(1 << (x - 1).bit_length() for x in size)
     elif scn.smc_size == 'QUAD':
         size = (max(size),) * 2
     # The default color is black, which is the same in both linear and sRGB, so no need to convert
     atlas_pixel_buffer = new_pixel_buffer(size, convert_linear_to_srgb=False)
-    print("DEBUG: Atlas size: {}".format(size))
+    globs.debug_print("DEBUG: Atlas size: {}".format(size))
     for mat, mat_data in structure.items():
         top_left_corner = mat_data.get_top_left_corner(scn)
         if top_left_corner:

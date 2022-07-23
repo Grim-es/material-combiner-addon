@@ -45,9 +45,9 @@ class Combiner(bpy.types.Operator):
         assign_comb_mats(scn, self.data, self.mats_uv, atlas)
         clear_mats(scn, self.mats_uv)
         timing_atlased = perf_counter()
-        print("DEBUG: Found images in {}s".format(found_images - timing_start))
-        print("DEBUG: Packed atlas in {}s".format(timing_packed - found_images))
-        print("DEBUG: Atlased materials in {}s".format(timing_atlased - timing_packed))
+        print("Found images in {}s".format(found_images - timing_start))
+        print("Packed atlas in {}s".format(timing_packed - found_images))
+        print("Atlased materials in {}s".format(timing_atlased - timing_packed))
         bpy.ops.smc.refresh_ob_data()
         self.report({'INFO'}, 'Materials were combined.')
         return {'FINISHED'}
