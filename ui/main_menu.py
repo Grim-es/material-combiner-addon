@@ -7,7 +7,7 @@ class MaterialMenu(bpy.types.Panel):
     bl_label = 'Main Menu'
     bl_idname = 'SMC_PT_Main_Menu'
     bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI' if globs.version else 'TOOLS'
+    bl_region_type = 'UI' if globs.is_blender_2_80_or_newer else 'TOOLS'
     bl_category = 'MatCombiner'
 
     def draw(self, context):

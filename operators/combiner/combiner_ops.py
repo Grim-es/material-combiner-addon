@@ -60,7 +60,7 @@ def clear_empty_mats(scn, data: Data, mats_uv: MatsUV):
         for mat in mat_layers.keys():
             if mat not in mats_uv[object_name].keys():
                 mat_idx = ob.data.materials.find(mat.name)
-                if globs.version > 1:
+                if globs.is_blender_2_81_or_newer:
                     ob.data.materials.pop(index=mat_idx)
                 else:
                     ob.data.materials.pop(index=mat_idx, update_data=True)
@@ -106,7 +106,7 @@ def delete_material(mesh_obj, mat_name: str):
     materials = mesh_obj.data.materials
     mat_idx = materials.find(mat_name)
     if mat_idx != -1:
-        if globs.version > 1:
+        if globs.is_blender_2_81_or_newer:
             mesh_obj.data.materials.pop(index=mat_idx)
         else:
             mesh_obj.data.materials.pop(index=mat_idx, update_data=True)
@@ -357,7 +357,7 @@ def get_comb_mats(scn, atlas: Image, mats_uv: MatsUV):
     mats = {}
     for layer in layers:
         mat = bpy.data.materials.new(name='material_atlas_{0}_{1}'.format(unique_id, layer))
-        if globs.version > 0:
+        if globs.is_blender_2_80_or_newer:
             mat.blend_method = 'CLIP'
             mat.use_backface_culling = True
             mat.use_nodes = True
@@ -400,7 +400,7 @@ def clear_mats(scn, mats_uv: MatsUV):
         ob = scn.objects[ob_n]
         for mat in i.keys():
             mat_idx = ob.data.materials.find(mat.name)
-            if globs.version > 1:
+            if globs.is_blender_2_81_or_newer:
                 ob.data.materials.pop(index=mat_idx)
             else:
                 ob.data.materials.pop(index=mat_idx, update_data=True)

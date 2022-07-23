@@ -1,16 +1,8 @@
 import bpy
 
-# TODO: Replace 'version' with human readable constant values
-# # Old value: 0/Falsey
-# is_blender_2_79_or_older = bpy.app.version < (2, 80, 0)
-# # Old value: 1
-# is_blender_2_80 = not is_blender_2_79_or_older and bpy.app.version < (2, 81)
-# # Old value: >0/Truthy
-# is_blender_2_80_or_newer = not is_blender_2_79_or_older
-# # Old value: 2
-# is_blender_2_81_or_newer = bpy.app.version >= (2, 81)
-
-version = 0 if bpy.app.version < (2, 80, 0) else 2 if bpy.app.version > (2, 80, 99) else 1
+is_blender_2_79_or_older = bpy.app.version < (2, 80, 0)
+is_blender_2_80_or_newer = not is_blender_2_79_or_older
+is_blender_2_81_or_newer = bpy.app.version >= (2, 81)
 
 # Change to True to enable debug print statements
 debug = True

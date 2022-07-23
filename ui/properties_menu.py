@@ -16,7 +16,7 @@ class PropertiesMenu(bpy.types.Operator):
 
     def invoke(self, context, event):
         scn = context.scene
-        dpi = bpy.context.preferences.system.dpi if globs.version else bpy.context.user_preferences.system.dpi
+        dpi = bpy.context.preferences.system.dpi if globs.is_blender_2_80_or_newer else bpy.context.user_preferences.system.dpi
         wm = context.window_manager
         scn.smc_list_id = self.list_id
         return wm.invoke_props_dialog(self, width=dpi * 4)

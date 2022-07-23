@@ -6,7 +6,7 @@ from .. import globs
 
 def get_obs(obs):
     return [ob for ob in obs if ob.type == 'MESH' and
-            ob.data.uv_layers.active and not (ob.hide_get() if globs.version else ob.hide)]
+            ob.data.uv_layers.active and not (ob.hide_get() if globs.is_blender_2_80_or_newer else ob.hide)]
 
 
 # TODO: Optimise performance with numpy

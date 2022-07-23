@@ -8,7 +8,7 @@ class SMC_UL_Combine_List(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         row = layout.row(align=True)
         if item.type == globs.C_L_OBJECT:
-            row.prop(item.ob, 'name', text='', icon='META_CUBE' if globs.version else 'VIEW3D', emboss=False)
+            row.prop(item.ob, 'name', text='', icon='META_CUBE' if globs.is_blender_2_80_or_newer else 'VIEW3D', emboss=False)
             row = row.row()
             row.alignment = 'RIGHT'
             row.operator('smc.combine_switch',
@@ -23,12 +23,12 @@ class SMC_UL_Combine_List(bpy.types.UIList):
             col.scale_x = .6
             col.prop(item, 'layer', text='')
             if item.used:
-                icon = 'CHECKBOX_HLT' if globs.version else 'FILE_TICK'
+                icon = 'CHECKBOX_HLT' if globs.is_blender_2_80_or_newer else 'FILE_TICK'
             else:
-                icon = 'CHECKBOX_DEHLT' if globs.version else 'LAYER_USED'
+                icon = 'CHECKBOX_DEHLT' if globs.is_blender_2_80_or_newer else 'LAYER_USED'
             row.operator('smc.combine_switch', text='', icon=icon).list_id = index
             row.operator('smc.properties_menu', text='',
-                         icon='PREFERENCES' if globs.version else 'SCRIPT').list_id = index
+                         icon='PREFERENCES' if globs.is_blender_2_80_or_newer else 'SCRIPT').list_id = index
 
     def invoke(self, context, event):
         pass

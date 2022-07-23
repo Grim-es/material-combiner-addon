@@ -7,7 +7,7 @@ class UpdateMenu(bpy.types.Panel):
     bl_label = 'Updates'
     bl_idname = 'SMC_PT_Update_Menu'
     bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI' if globs.version else 'TOOLS'
+    bl_region_type = 'UI' if globs.is_blender_2_80_or_newer else 'TOOLS'
     bl_category = 'MatCombiner'
     bl_options = {'DEFAULT_CLOSED'}
 

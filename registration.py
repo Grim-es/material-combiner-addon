@@ -78,7 +78,7 @@ def unregister_classes():
 
 
 def make_annotations(cls):
-    if globs.version:
+    if globs.is_blender_2_80_or_newer:
         if bpy.app.version < (2, 93, 0):
             bl_props = {k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
         else:

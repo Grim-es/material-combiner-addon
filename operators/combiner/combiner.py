@@ -58,13 +58,13 @@ class Combiner(bpy.types.Operator):
         if self.cats:
             scn.smc_size = 'PO2'
             scn.smc_gaps = 0.0
-        set_ob_mode(context.view_layer if globs.version > 0 else scn)
+        set_ob_mode(context.view_layer if globs.is_blender_2_80_or_newer else scn)
         self.data = get_data(scn.smc_ob_data)
         self.mats_uv = get_mats_uv(scn, self.data)
         clear_empty_mats(scn, self.data, self.mats_uv)
         set_root_mats(self.mats_uv)
         self.structure = get_structure(scn, self.data, self.mats_uv)
-        if globs.version == 0:
+        if globs.is_blender_2_79_or_older:
             context.space_data.viewport_shade = 'MATERIAL'
         if (len(self.structure) == 1) and next(iter(self.structure.values())).duplicate_materials:
             clear_duplicates(scn, self.structure)
