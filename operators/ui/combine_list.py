@@ -51,9 +51,6 @@ class RefreshObData(bpy.types.Operator):
                         item.mat = mat
                         if mat in old_mats_layers:
                             item.layer = old_mats_layers[mat]
-            # TODO: Does this need to exist?
-            item = scn.smc_ob_data.add()
-            item.type = globs.C_L_END
         return {'FINISHED'}
 
 
@@ -68,8 +65,7 @@ class CombineSwitch(bpy.types.Operator):
         scn = context.scene
         items = scn.smc_ob_data
         item = items[self.list_id]
-        # TODO: Probably can ignore C_L_END types?
-        if item.type == globs.C_L_MATERIAL or item.type == globs.C_L_END:
+        if item.type == globs.C_L_MATERIAL:
             # Get the OBJECT type item with the same ob_id as this item
             ob_item = next((ob for ob in items if (ob.ob_id == item.ob_id) and ob.type == globs.C_L_OBJECT), None)
             if ob_item:

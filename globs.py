@@ -14,8 +14,6 @@ else:
 
 smc_pi = False
 
-# TODO: Replace the 'type' IntProperty in extend_types.CombineList with an EnumProperty with options: ['OBJECT', 'MATERIAL', 'END']
 # CombineList type constants
 C_L_OBJECT = 0
 C_L_MATERIAL = 1
-C_L_END = 2
