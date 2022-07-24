@@ -9,7 +9,12 @@ class Combiner(bpy.types.Operator):
     bl_idname = 'smc.combiner'
     bl_label = 'Create Atlas'
     bl_description = 'Combine materials'
-    bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
+    # We don't include 'REGISTER' because we don't want the operator to support the redo toolbar panel because it does
+    # not work with the redo toolbar panel (it fails with a ReferenceError when trying to use the Materials in
+    # self.structure, presumably because the redo toolbar panel performs an undo first, which breaks the references to
+    # the Materials)
+    # This also means the operator won't show up in the info window, but that's not important.
+    bl_options = {'UNDO', 'INTERNAL'}
 
     directory = StringProperty(maxlen=1024, default='', subtype='FILE_PATH', options={'HIDDEN'})
     filter_glob = StringProperty(default='', options={'HIDDEN'})
