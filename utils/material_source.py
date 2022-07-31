@@ -5,8 +5,30 @@ import bpy
 from bpy.types import bpy_prop_collection, Image, ShaderNode, ShaderNodeTree, ShaderNodeGroup, NodeSocketColor, Material
 
 from .images import is_single_colour_generated, single_color_generated_to_color
-from .textures import get_image, get_texture
+from .textures import has_image, get_texture
 from ..globs import debug_print
+
+# Node types where the main color input is 'Color'
+color_input_node_types = {
+    'BSDF_ANISOTROPIC',
+    'BSDF_DIFFUSE',
+    'BSDF_GLASS',
+    'BSDF_GLOSSY',
+    'BSDF_HAIR_PRINCIPLED',
+    'BSDF_REFRACTION',
+    'BSDF_TRANSLUCENT',
+    'BSDF_TRANSPARENT',
+    'BSDF_TOON',
+    'BSDF_VELVET',
+    'Emission',
+    'SUBSURFACE_SCATTERING',
+}
+
+# Node types where the main color input is 'Base Color'
+base_color_input_node_types = {
+    'BSDF_PRINCIPLED',
+    'EEVEE_SPECULAR',
+}
 
 
 # Could create the PropTuple class using namedtuple(...) separately and then add the resolve method to it
@@ -30,9 +52,6 @@ def to_255_scale_tuple(rgba):
 
 
 class MaterialSource:
-    # Name of the Image Texture node to use as an override when getting a Material's Image
-    image_override_name = "MaterialCombinerOverride"
-
     # Used when trying to get a color value from a material that has no color
     # This is the multiplicative identity, i.e., multiplying a pixel by it does nothing
     opaque_white = (1, 1, 1, 1)
@@ -87,26 +106,27 @@ class MaterialSource:
     # already in scene linear colorspace it's less work to convert only the single_color_generated images that are in
     # sRGB to Linear.
     def to_sort_key(self, multiply_by_diffuse: bool):
-        if self.image:
-            if is_single_colour_generated(self.image):
+        img = self.to_image_value()
+        if img:
+            if is_single_colour_generated(img):
                 target_colorspace = 'Linear'
                 if multiply_by_diffuse:
                     if self.color:
-                        combined_converted_color = single_color_generated_to_color(self.image, self.to_color_value(),
+                        combined_converted_color = single_color_generated_to_color(img, self.to_color_value(),
                                                                                    target_colorspace=target_colorspace)
                         return '', to_255_scale_tuple(combined_converted_color)
                     else:
-                        converted_color = single_color_generated_to_color(self.image,
+                        converted_color = single_color_generated_to_color(img,
                                                                           target_colorspace=target_colorspace)
                         return '', to_255_scale_tuple(converted_color)
                 else:
-                    converted_color = single_color_generated_to_color(self.image, target_colorspace=target_colorspace)
+                    converted_color = single_color_generated_to_color(img, target_colorspace=target_colorspace)
                     return '', to_255_scale_tuple(converted_color)
             else:
                 if multiply_by_diffuse:
-                    return self.image.name, to_255_scale_tuple(self.to_color_value())
+                    return img.name, to_255_scale_tuple(self.to_color_value())
                 else:
-                    return self.image.name, MaterialSource.opaque_white
+                    return img.name, MaterialSource.opaque_white
         else:
             # Images can't be named '', so '' works to indicate that there is no image
             return '', to_255_scale_tuple(self.to_color_value())
@@ -123,6 +143,9 @@ class MaterialSource:
             return color_value
         else:
             return MaterialSource.opaque_white
+
+    def to_image_value(self):
+        return self.image.resolve() if self.image else None
 
     @staticmethod
     def merge_color_and_tex(color_source: 'MaterialSource', tex_source: 'MaterialSource'):
@@ -141,8 +164,8 @@ class MaterialSource:
             return color_source
 
     @staticmethod
-    def from_node_tree(node_tree: ShaderNodeTree):
-        source_data = MaterialSource.from_override(node_tree.nodes)
+    def from_node_tree(node_tree: ShaderNodeTree, override_name: str = ''):
+        source_data = MaterialSource.from_override(node_tree.nodes, override_name)
         if source_data:
             return source_data
         # Get the output nodes for all renderer targets.
@@ -164,8 +187,8 @@ class MaterialSource:
         return MaterialSource.from_singular_image_texture_node(node_tree.nodes)
 
     @staticmethod
-    def from_override(nodes: bpy_prop_collection):
-        override_node = nodes.get(MaterialSource.image_override_name)
+    def from_override(nodes: bpy_prop_collection, override_name: str):
+        override_node = nodes.get(override_name)
         if override_node:
             return MaterialSource.from_node(override_node)
         else:
@@ -196,15 +219,14 @@ class MaterialSource:
                     return MaterialSource.from_node(link.from_node)
         elif node.type == 'TEX_IMAGE':
             if node.image:
-                return MaterialSource(image=node.image)
+                return MaterialSource(image=PropTuple(node, 'image'))
         elif node.type == 'RGB':
             return MaterialSource(color=PropTuple(node.outputs[0], 'default_value'))
-        elif node.type in {'BSDF_PRINCIPLED', 'EEVEE_SPECULAR'}:
+        elif node.type in base_color_input_node_types:
             return MaterialSource.from_color_input_socket(node.inputs['Base Color'])
-        elif node.type in {'Emission', 'BSDF_DIFFUSE', 'BSDF_GLASS', 'BSDF_GLOSSY', 'BSDF_REFRACTION',
-                           'SUBSURFACE_SCATTERING', 'BSDF_TRANSLUCENT', 'BSDF_TRANSPARENT'}:
-            # BSDF_GLASS, BSDF_REFRACTION and BSDF_TRANSPARENT may produce unexpected results
-            # The strength value in Emission is ignored
+        elif node.type in color_input_node_types:
+            # Since the inputs other than Color are ignored, it can result in unexpected results when the other
+            # properties can drastically change the appearance, such as with BSDF_REFRACTION or BSDF_TRANSPARENT
             return MaterialSource.from_color_input_socket(node.inputs['Color'])
         elif node.type == 'GROUP':
             return MaterialSource.from_group_node(node)
@@ -243,9 +265,9 @@ class MaterialSource:
         if isinstance(socket, NodeSocketColor):
             return MaterialSource.from_color_input_socket(socket)
         else:
-            print("Unable to find {} input of {} group node {}. Perhaps the addon the group node is from has been"
+            print("Unable to find '{}' input of '{}' group node '{}'. Perhaps the addon the group node is from has been"
                   " updated or the group node has been modified by the user"
-                  .format(socket_name, group_node.node_tree.name, group_node))
+                  .format(socket_name, group_node.node_tree.name, repr(group_node)))
             return MaterialSource()
 
     @staticmethod
@@ -264,22 +286,23 @@ class MaterialSource:
             return MaterialSource.from_image_and_color_group_inputs(
                 group_node, MaterialSource.vrm_color_input_name, MaterialSource.vrm_image_input_name)
         else:
-            print("Unsupported group node for getting MaterialSource {}".format(node_tree_name))
+            debug_print("DEBUG: Unsupported group node '{}' for getting MaterialSource".format(node_tree_name))
             return MaterialSource()
 
     @staticmethod
     def from_material(mat: Material):
-        debug_print("DEBUG: Getting material source data for {}".format(mat))
+        debug_print("DEBUG: Getting material source data for '{}'".format(mat))
         if mat:
             if bpy.app.version >= (2, 80):
                 if mat.use_nodes:
-                    return MaterialSource.from_node_tree(mat.node_tree)
+                    return MaterialSource.from_node_tree(mat.node_tree, override_name=mat.smc_override_node_name)
                 else:
                     return MaterialSource(color=PropTuple(mat, 'diffuse_color'))
             else:
-                image = get_image(get_texture(mat))
+                tex = get_texture(mat)
+                image_prop = PropTuple(tex, 'image') if has_image(tex) else None
                 prop_holder = mat
                 prop_name = 'diffuse_color'
-                return MaterialSource(image=image, color=PropTuple(prop_holder, prop_name))
+                return MaterialSource(image=image_prop, color=PropTuple(prop_holder, prop_name))
         else:
             return MaterialSource()

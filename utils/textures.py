@@ -5,5 +5,5 @@ def get_texture(mat):
                  if (mat.texture_slots[slot_idx] is not None) and mat.use_textures[slot_idx]), None)
 
 
-def get_image(tex):
-    return tex.image if tex and hasattr(tex, 'image') and tex.image else None
+def has_image(tex):
+    return tex and hasattr(tex, 'image') and tex.image

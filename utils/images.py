@@ -4,6 +4,7 @@ from .pixels.pixel_buffer import (color_convert_linear_to_srgb, pixel_dtype, col
                                   linear_colorspaces, supported_colorspaces)
 
 
+# Note that in Blender 2.79, .is_dirty is always True for BLANK GENERATED images, so this will always return False there
 def is_single_colour_generated(img):
     """:return:True if the img argument is a generated image of a single color that doesn't have any pending changes"""
     return img.source == 'GENERATED' and not img.is_dirty and img.generated_type == 'BLANK'

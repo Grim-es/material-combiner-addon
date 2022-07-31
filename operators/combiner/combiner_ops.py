@@ -144,7 +144,7 @@ def get_size(scn, structure: Structure) -> Structure:
         if not scn.smc_crop:
             gfx.uv_size = tuple(map(math.ceil, gfx.uv_size))
         pixel_source = gfx.pixel_source
-        img = pixel_source.image
+        img = pixel_source.to_image_value()
         if img and not is_single_colour_generated(img):
             if mat.smc_size:
                 img_size = (min(mat.smc_size_width, img.size[0]),
@@ -211,22 +211,23 @@ def get_gfx(scn, mat, mat_data: RootMatData, src: MaterialSource, atlas_is_srgb=
     gfx_size_x, gfx_size_y = gfx.size
     gap = int(scn.smc_gaps)
     size = (gfx_size_x - gap, gfx_size_y - gap)
-    if src.image:
-        if is_single_colour_generated(src.image):
+    img = src.to_image_value()
+    if img:
+        if is_single_colour_generated(img):
             target_colorspace = 'sRGB' if atlas_is_srgb else 'Linear'
             if mat.smc_diffuse and src.color:
-                converted_color = single_color_generated_to_color(src.image, src.to_color_value(),
+                converted_color = single_color_generated_to_color(img, src.to_color_value(),
                                                                   target_colorspace=target_colorspace)
             else:
-                converted_color = single_color_generated_to_color(src.image, target_colorspace=target_colorspace)
+                converted_color = single_color_generated_to_color(img, target_colorspace=target_colorspace)
             # single_color_generated_to_color does the sRGB/linear conversion(s) for us so don't convert to sRGB when
             # creating the pixel buffer
             img_buffer = new_pixel_buffer(size, converted_color, read_only_rectangle=True, convert_linear_to_srgb=False)
         else:
             if mat.smc_size:
-                img_buffer = get_resized_pixel_buffer(src.image, (mat.smc_size_width, mat.smc_size_height))
+                img_buffer = get_resized_pixel_buffer(img, (mat.smc_size_width, mat.smc_size_height))
             else:
-                img_buffer = get_pixel_buffer(src.image)
+                img_buffer = get_pixel_buffer(img)
             max_uv = gfx.uv_size
             # Note that get_size(...) sets uv_size to always be at least 1
             max_uv_x = max_uv[0]

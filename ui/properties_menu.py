@@ -31,7 +31,7 @@ class PropertiesMenu(bpy.types.Operator):
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
         material_source = MaterialSource.from_material(item.mat)
-        img = material_source.image
+        img = material_source.to_image_value()
         layout = self.layout
         col = layout.column()
         col.scale_y = 1.2

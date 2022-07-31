@@ -138,6 +138,13 @@ def register():
         max=8192,
         step=1,
         default=2048)
+    # Can't use a PointerProperty to refer to a bpy.types.Node because it's not a subclass of bpy.types.ID, so must use
+    # a StringProperty
+    bpy.types.Material.smc_override_node_name = StringProperty(
+        name="Override node name",
+        description="Name of the node in the material's node tree that is used as a material source search override")
+    # UI toggle for showing/hiding the full view of the override node
+    bpy.types.WindowManager.smc_override_node_toggle_full_view = BoolProperty(default=False)
 
 
 def unregister():
@@ -153,3 +160,5 @@ def unregister():
     del bpy.types.Material.smc_size
     del bpy.types.Material.smc_size_width
     del bpy.types.Material.smc_size_height
+    del bpy.types.Material.smc_override_node_name
+    del bpy.types.WindowManager.smc_override_node_toggle_full_view
