@@ -16,7 +16,8 @@ def sort_materials(mat_list):
     mat_dict = defaultdict(list)
     for mat in mat_list:
         material_source = MaterialSource.from_material(mat)
-        sort_key = material_source.to_sort_key(mat.smc_diffuse)
+        multiply_by_diffuse = mat.smc_diffuse if mat else False
+        sort_key = material_source.to_sort_key(multiply_by_diffuse)
         debug_print("DEBUG: Sort key for {} is {}".format(mat, sort_key))
         mat_dict[sort_key].append(mat)
     return mat_dict
