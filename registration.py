@@ -24,13 +24,24 @@ __bl_classes = [
     operators.multicombine_list.MultiCombineImageReset,
     operators.multicombine_list.MultiCombineImageRemove,
     operators.browser.OpenBrowser,
-    operators.get_pillow.InstallPIL,
 
     extend_types.CombineList,
     extend_types.UpdatePreferences,
 
     extend_lists.SMC_UL_Combine_List,
 ]
+
+if globs.is_blender_2_80_or_newer:
+    __bl_classes += [
+        # The shader nodes operators and panel are only used in Blender 2.80+
+        ui.shader_nodes_panels.ShaderNodesOverridePanel,
+        ui.shader_nodes_panels.ShaderNodesSourcePreviewPanel,
+        operators.shader_nodes.SetOverrideAsActive,
+        operators.shader_nodes.SetActiveNodeAsOverride,
+        operators.shader_nodes.ClearOverride,
+        operators.shader_nodes.FrameOverride,
+        operators.shader_nodes.FrameNode,
+    ]
 
 
 def register_all(bl_info):
@@ -79,7 +90,7 @@ def unregister_classes():
 
 
 def make_annotations(cls):
-    if globs.version:
+    if globs.is_blender_2_80_or_newer:
         if bpy.app.version < (2, 93, 0):
             bl_props = {k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
         else:

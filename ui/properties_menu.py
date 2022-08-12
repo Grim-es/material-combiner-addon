@@ -1,9 +1,9 @@
 import bpy
 from bpy.props import *
 from .. import globs
-from ..utils.images import get_image
-from ..utils.materials import shader_type
-from ..utils.textures import get_texture
+from ..utils.material_source import MaterialSource
+from ..utils.previews import get_preview
+from ..utils.images import is_single_colour_generated
 
 
 class PropertiesMenu(bpy.types.Operator):
@@ -16,7 +16,7 @@ class PropertiesMenu(bpy.types.Operator):
 
     def invoke(self, context, event):
         scn = context.scene
-        dpi = bpy.context.preferences.system.dpi if globs.version else bpy.context.user_preferences.system.dpi
+        dpi = bpy.context.preferences.system.dpi if globs.is_blender_2_80_or_newer else bpy.context.user_preferences.system.dpi
         wm = context.window_manager
         scn.smc_list_id = self.list_id
         return wm.invoke_props_dialog(self, width=dpi * 4)
@@ -30,38 +30,47 @@ class PropertiesMenu(bpy.types.Operator):
     def draw(self, context):
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
-        if globs.version > 0:
-            img = None
-            shader = shader_type(item.mat) if item.mat else None
-            if shader == 'mmd':
-                img = item.mat.node_tree.nodes['mmd_base_tex'].image
-            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
-                img = item.mat.node_tree.nodes['Image Texture'].image
-        else:
-            img = get_image(get_texture(item.mat))
+        material_source = MaterialSource.from_material(item.mat)
+        img = material_source.to_image_value()
         layout = self.layout
         col = layout.column()
         col.scale_y = 1.2
-        col.prop(item.mat, 'name', text='', icon_value=item.mat.preview.icon_id)
+        col.prop(item.mat, 'name', text='', icon_value=get_preview(item.mat).icon_id)
         if img:
-            col.label(text='Image size: {}x{}px'.format(img.size[0], img.size[1]))
-            col.separator()
-            col.prop(item.mat, 'smc_diffuse')
-            if item.mat.smc_diffuse:
-                if globs.version:
-                    shader = shader_type(item.mat)
-                    if shader == 'mmd':
-                        col.prop(item.mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'], 'default_value',
-                                 text='')
-                    elif shader == 'vrm':
-                        col.prop(item.mat.node_tree.nodes['RGB'].outputs[0], 'default_value', text='')
-                else:
-                    col.prop(item.mat, 'diffuse_color', text='')
+            if is_single_colour_generated(img):
+                col.label(text='Color size: {0}x{0}px (blank generated image)'.format(scn.smc_diffuse_size),
+                          icon_value=get_preview(img).icon_id)
+                col.prop(img, 'generated_color', text='')
                 col.separator()
-            col.prop(item.mat, 'smc_size')
-            if item.mat.smc_size:
-                col.prop(item.mat, 'smc_size_width')
-                col.prop(item.mat, 'smc_size_height')
+                col.prop(item.mat, 'smc_diffuse')
+                if item.mat.smc_diffuse:
+                    color_prop = material_source.color
+                    if color_prop:
+                        col.prop(color_prop.prop_holder, color_prop.path, text='')
+                    else:
+                        col.label(text="No diffuse color found")
+            else:
+                img_label_text = '{} size: {}x{}px'.format(img.name, img.size[0], img.size[1])
+                col.label(text=img_label_text, icon_value=get_preview(img).icon_id)
                 col.separator()
+                col.prop(item.mat, 'smc_diffuse')
+                if item.mat.smc_diffuse:
+                    color_prop = material_source.color
+                    if color_prop:
+                        col.prop(color_prop.prop_holder, color_prop.path, text='')
+                    else:
+                        col.label(text="No diffuse color found")
+                    col.separator()
+                col.prop(item.mat, 'smc_size')
+                if item.mat.smc_size:
+                    col.prop(item.mat, 'smc_size_width')
+                    col.prop(item.mat, 'smc_size_height')
+                    col.separator()
         else:
-            col.label(text='Image size: {0}x{0}px'.format(scn.smc_diffuse_size))
+            col.label(text='Color size: {0}x{0}px (no image found)'.format(scn.smc_diffuse_size))
+            col.separator()
+            color_prop = material_source.color
+            if color_prop:
+                col.prop(color_prop.prop_holder, color_prop.path, text="Color (alpha ignored)")
+            else:
+                col.label(text="No diffuse color found, white will be used")

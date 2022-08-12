@@ -2,13 +2,19 @@ from bpy.props import *
 from .combiner_ops import *
 from .packer import BinPacker
 from ... import globs
+from time import perf_counter
 
 
 class Combiner(bpy.types.Operator):
     bl_idname = 'smc.combiner'
     bl_label = 'Create Atlas'
     bl_description = 'Combine materials'
-    bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
+    # We don't include 'REGISTER' because we don't want the operator to support the redo toolbar panel because it does
+    # not work with the redo toolbar panel (it fails with a ReferenceError when trying to use the Materials in
+    # self.structure, presumably because the redo toolbar panel performs an undo first, which breaks the references to
+    # the Materials)
+    # This also means the operator won't show up in the info window, but that's not important.
+    bl_options = {'UNDO', 'INTERNAL'}
 
     directory = StringProperty(maxlen=1024, default='', subtype='FILE_PATH', options={'HIDDEN'})
     filter_glob = StringProperty(default='', options={'HIDDEN'})
@@ -20,18 +26,28 @@ class Combiner(bpy.types.Operator):
     def execute(self, context):
         if not self.data:
             self.invoke(context, None)
+        timing_start = perf_counter()
         scn = context.scene
         scn.smc_save_path = self.directory
+        add_images(self.structure)
+        found_images = perf_counter()
         self.structure = BinPacker(get_size(scn, self.structure)).fit()
-        size = (max([i['gfx']['fit']['x'] + i['gfx']['size'][0] for i in self.structure.values()]),
-                max([i['gfx']['fit']['y'] + i['gfx']['size'][1] for i in self.structure.values()]))
-        if any(size) > 20000:
+        size = (max([i.gfx.fit.x + i.gfx.size[0] for i in self.structure.values()]),
+                max([i.gfx.fit.y + i.gfx.size[1] for i in self.structure.values()]))
+        if any(dimension > 20000 for dimension in size):
             self.report({'ERROR'}, 'Output image size is too large')
             return {'FINISHED'}
-        atlas = get_atlas(scn, self.structure, size)
-        get_aligned_uv(scn, self.structure, atlas.size)
+        timing_packed = perf_counter()
+        atlas, packed_atlas_size = get_atlas(scn, self.structure, size)
+        # The atlas may have been resized if it's set to use a custom maximum size, but the uvs are based on the
+        # original packed size
+        get_aligned_uv(scn, self.structure, packed_atlas_size)
         assign_comb_mats(scn, self.data, self.mats_uv, atlas)
         clear_mats(scn, self.mats_uv)
+        timing_atlased = perf_counter()
+        print("Found images in {}s".format(found_images - timing_start))
+        print("Packed atlas in {}s".format(timing_packed - found_images))
+        print("Atlased materials in {}s".format(timing_atlased - timing_packed))
         bpy.ops.smc.refresh_ob_data()
         self.report({'INFO'}, 'Materials were combined.')
         return {'FINISHED'}
@@ -42,15 +58,15 @@ class Combiner(bpy.types.Operator):
         if self.cats:
             scn.smc_size = 'PO2'
             scn.smc_gaps = 0.0
-        set_ob_mode(context.view_layer if globs.version > 0 else scn)
+        set_ob_mode(context.view_layer if globs.is_blender_2_80_or_newer else scn)
         self.data = get_data(scn.smc_ob_data)
         self.mats_uv = get_mats_uv(scn, self.data)
         clear_empty_mats(scn, self.data, self.mats_uv)
-        get_duplicates(self.mats_uv)
+        set_root_mats(self.mats_uv)
         self.structure = get_structure(scn, self.data, self.mats_uv)
-        if globs.version == 0:
+        if globs.is_blender_2_79_or_older:
             context.space_data.viewport_shade = 'MATERIAL'
-        if (len(self.structure) == 1) and next(iter(self.structure.values()))['dup']:
+        if (len(self.structure) == 1) and next(iter(self.structure.values())).duplicate_materials:
             clear_duplicates(scn, self.structure)
             bpy.ops.smc.refresh_ob_data()
             self.report({'INFO'}, 'Duplicates were combined')

@@ -1,16 +1,19 @@
 import bpy
-import sys
-import site
 
-sys.path.insert(0, site.getusersitepackages())
+is_blender_2_79_or_older = bpy.app.version < (2, 80, 0)
+is_blender_2_80_or_newer = not is_blender_2_79_or_older
+is_blender_2_81_or_newer = bpy.app.version >= (2, 81)
 
-try:
-    from PIL import Image
-    from PIL import ImageChops
+# Change to True to enable debug print statements
+debug = False
+if not debug:
+    def debug_print(*_args, **_kwargs):
+        pass
+else:
+    debug_print = print
 
-    pil_exist = True
-except ImportError:
-    pil_exist = False
-
-version = 0 if bpy.app.version < (2, 80, 0) else 2 if bpy.app.version > (2, 80, 99) else 1
 smc_pi = False
+
+# CombineList type constants
+C_L_OBJECT = 0
+C_L_MATERIAL = 1
