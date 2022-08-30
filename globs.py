@@ -7,6 +7,7 @@ sys.path.insert(0, site.getusersitepackages())
 try:
     from PIL import Image
     from PIL import ImageChops
+    from z3 import Solver
 
     pil_exist = True
 except ImportError:

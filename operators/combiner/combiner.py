@@ -1,6 +1,7 @@
 from bpy.props import *
 from .combiner_ops import *
 from .packer import BinPacker
+from .z3_packer import Z3Packer, UnsatError
 from ... import globs
 
 
@@ -22,7 +23,28 @@ class Combiner(bpy.types.Operator):
             self.invoke(context, None)
         scn = context.scene
         scn.smc_save_path = self.directory
-        self.structure = BinPacker(get_size(scn, self.structure)).fit()
+
+        images = get_size(scn, self.structure)
+
+        if scn.smc_use_advanced_packer:
+            packer = None
+            if scn.smc_size == 'CUST':
+                # max width/height can only be specified in custom mode in the UI, hence we only
+                # provide it in custom mode here, even though specifying it in other modes is also
+                # allowed.
+                packer = Z3Packer(images, mode='CUST', width=scn.smc_size_width,
+                    height=scn.smc_size_height, timeout=scn.smc_advanced_packing_round_time_limit*1000)
+            else:
+                packer = Z3Packer(images, mode=scn.smc_size,
+                    timeout=scn.smc_advanced_packing_round_time_limit*1000)
+            try:
+                self.structure = packer.fit()
+            except (ValueError, UnsatError) as e:
+                self.report({'ERROR'}, 'Advanced packer failed: ' + str(e))
+                return {'FINISHED'}
+        else:
+            self.structure = BinPacker(images).fit()
+
         size = (max([i['gfx']['fit']['x'] + i['gfx']['size'][0] for i in self.structure.values()]),
                 max([i['gfx']['fit']['y'] + i['gfx']['size'][1] for i in self.structure.values()]))
         if any(size) > 20000:

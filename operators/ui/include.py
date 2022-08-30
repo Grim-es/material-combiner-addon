@@ -29,11 +29,11 @@ def draw_ui(context, m_col):
             col.label(text='Please restart Blender', icon_value=get_icon_id('null'))
         else:
             col = m_col.box().column()
-            col.label(text='Python Imaging Library required to continue')
+            col.label(text='Dependencies (Pillow and Z3) required to continue')
             col.separator()
             row = col.row()
             row.scale_y = 1.5
-            row.operator('smc.get_pillow', text='Install Pillow', icon_value=get_icon_id('download'))
+            row.operator('smc.get_pillow', text='Install Dependencies', icon_value=get_icon_id('download'))
             col.separator()
             col.separator()
             col.label(text='If the installation process is repeated')
