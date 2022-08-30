@@ -32,24 +32,37 @@ class MaterialMenu(bpy.types.Panel):
             if scn.smc_size == 'CUST':
                 box.prop(scn, 'smc_size_width')
                 box.prop(scn, 'smc_size_height')
-            box.scale_y = 1.2
+            box.scale_y = 1.0
+            box.prop(scn, 'smc_use_advanced_packer')
+            row = box.row()
+            col = row.column()
+            col.label(text=bpy.types.Scene.smc_advanced_packing_round_time_limit[1]["name"])
+            col = row.column()
+            col.scale_x = .75
+            col.scale_y = 1.0
+            col.alignment = 'RIGHT'
+            col.prop(scn, 'smc_advanced_packing_round_time_limit', text='')
+            if scn.smc_use_advanced_packer:
+                col.enabled = True
+            else:
+                col.enabled = False
             box.prop(scn, 'smc_crop')
             row = box.row()
             col = row.column()
-            col.scale_y = 1.2
+            col.scale_y = 1.0
             col.label(text='Size of materials without image')
             col = row.column()
             col.scale_x = .75
-            col.scale_y = 1.2
+            col.scale_y = 1.0
             col.alignment = 'RIGHT'
             col.prop(scn, 'smc_diffuse_size', text='')
             row = box.row()
             col = row.column()
-            col.scale_y = 1.2
+            col.scale_y = 1.0
             col.label(text='Size of gaps between images')
             col = row.column()
             col.scale_x = .75
-            col.scale_y = 1.2
+            col.scale_y = 1.0
             col.alignment = 'RIGHT'
             col.prop(scn, 'smc_gaps', text='')
             col = box.column()
@@ -63,11 +76,11 @@ class MaterialMenu(bpy.types.Panel):
                 col.label(text='Installation complete', icon_value=get_icon_id('done'))
                 col.label(text='Please restart Blender', icon_value=get_icon_id('null'))
             else:
-                col.label(text='Python Imaging Library required to continue')
+                col.label(text='Dependencies (Pillow and Z3) required to continue')
                 col.separator()
                 row = col.row()
                 row.scale_y = 1.5
-                row.operator('smc.get_pillow', text='Install Pillow', icon_value=get_icon_id('download'))
+                row.operator('smc.get_pillow', text='Install Dependencies', icon_value=get_icon_id('download'))
                 col.separator()
                 col.separator()
                 col = col.box().column()

@@ -111,6 +111,17 @@ def register():
     bpy.types.Scene.smc_save_path = StringProperty(
         description='Select the directory in which the generated texture atlas will be saved',
         default='')
+    bpy.types.Scene.smc_use_advanced_packer = BoolProperty(
+        name='Use advanced packing',
+        description='Use the Z3 SMT powered packing optimizer to minimize texture size',
+        default=True)
+    bpy.types.Scene.smc_advanced_packing_round_time_limit = IntProperty(
+        name="Advanced packing round time limit in seconds",
+        description="The time limit for each round of packing. Depending on your settings and " +
+        "source textures, packing may take 1 to 4 rounds",
+        default=5,
+        min=1,
+        max=600)
 
     bpy.types.Material.root_mat = PointerProperty(
         name='Material Root',
@@ -147,6 +158,12 @@ def unregister():
     del bpy.types.Scene.smc_size
     del bpy.types.Scene.smc_size_width
     del bpy.types.Scene.smc_size_height
+    del bpy.types.Scene.smc_crop
+    del bpy.types.Scene.smc_diffuse_size
+    del bpy.types.Scene.smc_gaps
+    del bpy.types.Scene.smc_save_path
+    del bpy.types.Scene.smc_use_advanced_packer
+    del bpy.types.Scene.smc_advanced_packing_round_time_limit
 
     del bpy.types.Material.root_mat
     del bpy.types.Material.smc_diffuse
