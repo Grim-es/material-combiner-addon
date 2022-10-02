@@ -10,6 +10,17 @@ def is_single_colour_generated(img):
     return img.source == 'GENERATED' and not img.is_dirty and img.generated_type == 'BLANK'
 
 
+def is_image_too_large(width, height, components_per_pixel=4) -> bool:
+    # The total length of an image's pixels array cannot exceed the signed integer maximum, which is usually
+    # 2147483647 (for 32-bit signed integers). For a square image, this maximum is first exceeded by a
+    # 23171x23171 pixel image.
+    # If this maximum is exceeded, the length of the array will overflow in Blender's code, leading to an error
+    # message like "TypeError: expected sequence size -2147483648, got -2147483648" when trying to set the
+    # image's pixels.
+    # Width * height * r,g,b,a
+    return (width * height * components_per_pixel) > np.iinfo(np.intc).max
+
+
 # Convert a single color generated image to a color
 # The image's generated color is in linear, if the image is in sRGB, the color must be converted
 def single_color_generated_to_color(img, diffuse_to_multiply=None, target_colorspace='sRGB'):

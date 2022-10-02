@@ -255,15 +255,19 @@ def get_gfx(scn, mat, mat_data: RootMatData, src: MaterialSource, atlas_is_srgb=
     return img_buffer
 
 
-def get_atlas(scn, structure: Structure, size: Size) -> Tuple[Image, Size]:
+def get_packed_atlas_size(scn, size: Size) -> Size:
     globs.debug_print("DEBUG: Atlas input size: {}".format(size))
     if scn.smc_size == 'PO2':
         size = tuple(1 << (x - 1).bit_length() for x in size)
     elif scn.smc_size == 'QUAD':
         size = (max(size),) * 2
+    globs.debug_print("DEBUG: Atlas size: {}".format(size))
+    return size
+
+
+def get_atlas(scn, structure: Structure, size: Size) -> Image:
     # The default color is black, which is the same in both linear and sRGB, so no need to convert
     atlas_pixel_buffer = new_pixel_buffer(size, convert_linear_to_srgb=False)
-    globs.debug_print("DEBUG: Atlas size: {}".format(size))
     for mat, mat_data in structure.items():
         top_left_corner = mat_data.get_top_left_corner(scn)
         if top_left_corner:
@@ -271,10 +275,10 @@ def get_atlas(scn, structure: Structure, size: Size) -> Tuple[Image, Size]:
             pixel_buffer_paste(atlas_pixel_buffer, material_pixel_buffer, top_left_corner)
     atlas = buffer_to_image(atlas_pixel_buffer, name='temp_material_combine_atlas')
     if scn.smc_size == 'CUST':
-        atlas_width = atlas.size[0]
-        atlas_height = atlas.size[1]
+        atlas_width, atlas_height = atlas.size
         max_atlas_height = scn.smc_size_height
         max_atlas_width = scn.smc_size_width
+        # Uniformly scale down the image until its dimensions fit within the custom max size
         if atlas_height > max_atlas_height or atlas_width > max_atlas_width:
             height_ratio = max_atlas_height / atlas_height
             width_ratio = max_atlas_width / atlas_width
@@ -285,7 +289,7 @@ def get_atlas(scn, structure: Structure, size: Size) -> Tuple[Image, Size]:
                 new_width = max_atlas_width
                 new_height = round(atlas_height * width_ratio)
             atlas.scale(new_width, new_height)
-    return atlas, size
+    return atlas
 
 
 def get_aligned_uv(scn, structure: Structure, size: Size):

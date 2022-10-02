@@ -3,6 +3,7 @@ from .combiner_ops import *
 from .packer import BinPacker
 from ... import globs
 from time import perf_counter
+from ...utils.images import is_image_too_large
 
 
 class Combiner(bpy.types.Operator):
@@ -34,11 +35,12 @@ class Combiner(bpy.types.Operator):
         self.structure = BinPacker(get_size(scn, self.structure)).fit()
         size = (max([i.gfx.fit.x + i.gfx.size[0] for i in self.structure.values()]),
                 max([i.gfx.fit.y + i.gfx.size[1] for i in self.structure.values()]))
-        if any(dimension > 20000 for dimension in size):
-            self.report({'ERROR'}, 'Output image size is too large')
-            return {'FINISHED'}
         timing_packed = perf_counter()
-        atlas, packed_atlas_size = get_atlas(scn, self.structure, size)
+        packed_atlas_size = get_packed_atlas_size(scn, size)
+        if is_image_too_large(*packed_atlas_size):
+            self.report({'ERROR'}, 'Output image size {} is too large'.format(packed_atlas_size))
+            return {'FINISHED'}
+        atlas = get_atlas(scn, self.structure, packed_atlas_size)
         # The atlas may have been resized if it's set to use a custom maximum size, but the uvs are based on the
         # original packed size
         get_aligned_uv(scn, self.structure, packed_atlas_size)
