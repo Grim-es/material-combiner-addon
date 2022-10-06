@@ -58,7 +58,7 @@ class Combiner(bpy.types.Operator):
         if self.cats:
             scn.smc_size = 'PO2'
             scn.smc_gaps = 0.0
-        set_ob_mode(context.view_layer if globs.is_blender_2_80_or_newer else scn)
+        set_ob_mode(context)
         self.data = get_data(scn.smc_ob_data)
         self.mats_uv = get_mats_uv(scn, self.data)
         clear_empty_mats(scn, self.data, self.mats_uv)

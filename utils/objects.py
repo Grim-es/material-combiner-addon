@@ -1,13 +1,6 @@
 import math
 from collections import defaultdict
 
-from .. import globs
-
-
-def get_obs(obs):
-    return [ob for ob in obs if ob.type == 'MESH' and
-            ob.data.uv_layers.active and not (ob.hide_get() if globs.is_blender_2_80_or_newer else ob.hide)]
-
 
 def get_polys(ob):
     polys = defaultdict(list)

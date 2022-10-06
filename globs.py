@@ -3,6 +3,7 @@ import bpy
 is_blender_2_79_or_older = bpy.app.version < (2, 80, 0)
 is_blender_2_80_or_newer = not is_blender_2_79_or_older
 is_blender_2_81_or_newer = bpy.app.version >= (2, 81)
+is_blender_3_2_or_newer = bpy.app.version >= (3, 2)
 
 # Change to True to enable debug print statements
 debug = False
