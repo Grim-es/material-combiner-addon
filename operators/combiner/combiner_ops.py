@@ -184,9 +184,9 @@ def get_gfx(scn, mat, item, src):
         if src:
             img = Image.open(src).convert('RGBA')
             if img.size != size:
-                img.resize(size, Image.ANTIALIAS)
+                img.resize(size, Image.LANCZOS)
             if mat.smc_size:
-                img.thumbnail((mat.smc_size_width, mat.smc_size_height), Image.ANTIALIAS)
+                img.thumbnail((mat.smc_size_width, mat.smc_size_height), Image.LANCZOS)
             if any(item['gfx']['uv_size']) > 0.999:
                 img = get_uv_image(item, img, size)
             if mat.smc_diffuse:
@@ -221,7 +221,7 @@ def get_atlas(scn, data, size):
                 img.paste(get_gfx(scn, mat, i, i['gfx']['img']), (i['gfx']['fit']['x'] + int(scn.smc_gaps / 2),
                                                                   i['gfx']['fit']['y'] + int(scn.smc_gaps / 2)))
     if scn.smc_size == 'CUST':
-        img.thumbnail((scn.smc_size_width, scn.smc_size_height), Image.ANTIALIAS)
+        img.thumbnail((scn.smc_size_width, scn.smc_size_height), Image.LANCZOS)
     return img
 
 
