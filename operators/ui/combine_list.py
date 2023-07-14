@@ -4,7 +4,6 @@ import bpy
 from bpy.props import *
 from ...utils.materials import get_materials
 from ...utils.materials import sort_materials
-from ...utils.objects import get_obs
 from ... import globs
 
 class RefreshObData(bpy.types.Operator):
@@ -29,8 +28,8 @@ class RefreshObData(bpy.types.Operator):
                 old_layers[old_combine_item.ob][old_combine_item.mat] = old_combine_item.layer
         # Clear the old data from the scene
         scn.smc_ob_data.clear()
-        # Iterate through all the non-hidden mesh objects in the scene
-        for idx, ob in enumerate(get_obs(scn.objects)):
+        # Iterate through all visible mesh objects in the current context
+        for idx, ob in enumerate(ob for ob in context.visible_objects if ob.type == 'MESH' and ob.data.uv_layers.active):
             mat_dict = sort_materials(get_materials(ob))
             item = scn.smc_ob_data.add()
             item.type = globs.C_L_OBJECT

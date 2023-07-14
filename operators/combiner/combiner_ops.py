@@ -11,7 +11,7 @@ import bpy
 from bpy.types import Image
 
 from ... import globs
-from ...utils.objects import get_obs, get_polys, get_uv, align_uv
+from ...utils.objects import get_polys, get_uv, align_uv
 from ...utils.materials import sort_materials
 from ...utils.material_source import MaterialSource
 from ...utils.images import save_generated_image_to_file, is_single_colour_generated, single_color_generated_to_color
@@ -21,11 +21,21 @@ from .combiner_types import RootMatData, Data, MatsUV, Structure, StructureItem
 from ...utils.type_hints import Size, PixelBuffer
 
 
-def set_ob_mode(scn):
-    obs = get_obs(scn.objects)
-    for ob in obs:
-        scn.objects.active = ob
-        bpy.ops.object.mode_set(mode='OBJECT')
+def set_ob_mode(context):
+    for ob in (item.ob for item in context.scene.smc_ob_data if item.type == globs.C_L_OBJECT):
+        if ob.mode == 'OBJECT':
+            # Object is already in the correct mode, nothing to do
+            continue
+
+        # Call bpy.ops.object.mode_set, but override the active_object of the context so that the Operator acts on ob
+        # instead of the currently active Object
+        if globs.is_blender_3_2_or_newer:
+            # The positional argument context override is deprecated as of Blender 3.2, to be replaced by
+            # Context.temp_override
+            with context.temp_override(active_object=ob):
+                bpy.ops.object.mode_set(mode='OBJECT')
+        else:
+            bpy.ops.object.mode_set({'active_object': ob}, mode='OBJECT')
 
 
 def get_data(data) -> Data:
