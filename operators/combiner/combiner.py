@@ -1,4 +1,6 @@
+import bpy
 from bpy.props import *
+
 from .combiner_ops import *
 from .packer import BinPacker
 from ... import globs
@@ -17,48 +19,58 @@ class Combiner(bpy.types.Operator):
     mats_uv = None
     structure = None
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         if not self.data:
             self.invoke(context, None)
         scn = context.scene
         scn.smc_save_path = self.directory
         self.structure = BinPacker(get_size(scn, self.structure)).fit()
-        size = (max([i['gfx']['fit']['x'] + i['gfx']['size'][0] for i in self.structure.values()]),
-                max([i['gfx']['fit']['y'] + i['gfx']['size'][1] for i in self.structure.values()]))
-        if any(size) > 20000:
-            self.report({'ERROR'}, 'Output image size is too large')
+
+        size = get_atlas_size(self.structure)
+        atlas_size = calculate_adjusted_size(scn, size)
+
+        if max(atlas_size, default=0) > 20000:
+            self.report({'ERROR'}, 'The output image size of {0}x{1}px is too large'.format(*atlas_size))
             return {'FINISHED'}
-        atlas = get_atlas(scn, self.structure, size)
-        get_aligned_uv(scn, self.structure, atlas.size)
-        assign_comb_mats(scn, self.data, self.mats_uv, atlas)
+
+        atlas = get_atlas(scn, self.structure, atlas_size)
+        align_uvs(scn, self.structure, atlas.size, size)
+        comb_mats = get_comb_mats(scn, atlas, self.mats_uv)
+        assign_comb_mats(scn, self.data, comb_mats)
         clear_mats(scn, self.mats_uv)
         bpy.ops.smc.refresh_ob_data()
-        self.report({'INFO'}, 'Materials were combined.')
+        self.report({'INFO'}, 'Materials were combined')
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> Set[str]:
         scn = context.scene
         bpy.ops.smc.refresh_ob_data()
+
         if self.cats:
             scn.smc_size = 'PO2'
-            scn.smc_gaps = 0.0
-        set_ob_mode(context.view_layer if globs.version > 0 else scn)
+            scn.smc_gaps = 0
+
+        set_ob_mode(context.view_layer if globs.is_blender_2_80_or_newer else scn, scn.smc_ob_data)
         self.data = get_data(scn.smc_ob_data)
         self.mats_uv = get_mats_uv(scn, self.data)
         clear_empty_mats(scn, self.data, self.mats_uv)
         get_duplicates(self.mats_uv)
         self.structure = get_structure(scn, self.data, self.mats_uv)
-        if globs.version == 0:
+
+        if globs.is_blender_2_79_or_older:
             context.space_data.viewport_shade = 'MATERIAL'
-        if (len(self.structure) == 1) and next(iter(self.structure.values()))['dup']:
+
+        if len(self.structure) == 1 and next(iter(self.structure.values()))['dup']:
             clear_duplicates(scn, self.structure)
-            bpy.ops.smc.refresh_ob_data()
-            self.report({'INFO'}, 'Duplicates were combined')
-            return {'FINISHED'}
-        elif not self.structure or (len(self.structure) == 1):
-            bpy.ops.smc.refresh_ob_data()
-            self.report({'ERROR'}, 'No unique materials selected')
-            return {'FINISHED'}
+            return self._return_with_message('INFO', 'Duplicates were combined')
+        elif not self.structure or len(self.structure) == 1:
+            return self._return_with_message('ERROR', 'No unique materials selected')
         if event is not None:
             context.window_manager.fileselect_add(self)
+
         return {'RUNNING_MODAL'}
+
+    def _return_with_message(self, message_type: str, message: str) -> Set[str]:
+        bpy.ops.smc.refresh_ob_data()
+        self.report({message_type}, message)
+        return {'FINISHED'}

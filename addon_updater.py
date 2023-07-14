@@ -1306,7 +1306,7 @@ class SingletonUpdater(object):
             raise ValueError("Version tag not found: " + name)
 
     def run_update(self, force=False, revert_tag=None, clean=False, callback=None):
-        """Runs an install, update, or reversion of an addon from online source
+        """Runs an installation, update, or reversion of an addon from online source
 
         Arguments:
             force: Install assigned link, even if self.update_ready is False
@@ -1561,7 +1561,7 @@ class SingletonUpdater(object):
     def stop_async_check_update(self):
         """Method to give impression of stopping check for update.
 
-        Currently does nothing but allows user to retry/stop blocking UI from
+        Currently, does nothing but allows user to retry/stop blocking UI from
         hitting a refresh button. This does not actually stop the thread, as it
         will complete after the connection timeout regardless. If the thread
         does complete with a successful response, this will be still displayed
@@ -1616,7 +1616,7 @@ class BitbucketEngine(object):
 
 
 class GithubEngine(object):
-    """Integration to Github API"""
+    """Integration to GitHub API"""
 
     def __init__(self):
         self.api_url = 'https://api.github.com'

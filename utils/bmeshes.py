@@ -1,9 +1,10 @@
-from collections import defaultdict
+from typing import Dict
+from typing import Iterable
+from typing import List
+from typing import cast
+
+import bmesh
 
 
-def get_loops(bm):
-    loops = defaultdict(list)
-    for face in bm.faces:
-        for loop in face.loops:
-            loops[face].append(loop)
-    return loops
+def get_loops(bm: bmesh.types.BMesh) -> Dict[bmesh.types.BMFace, List[bmesh.types.BMLoop]]:
+    return {face: list(face.loops) for face in cast(Iterable, bm.faces)}

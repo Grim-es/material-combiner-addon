@@ -24,21 +24,22 @@ bl_info = {
     'name': "Shotariya's Material Combiner",
     'description': 'Public Release Material Combiner 2',
     'author': 'shotariya',
-    'version': (2, 1, 2, 4),
+    'version': (2, 1, 2, 5),
     'blender': (2, 80, 0),
     'location': 'View3D',
     # 'warning': '',
     'wiki_url': 'https://vrcat.club/threads/material-combiner-blender-addon.2255/',
-    'category': 'Object'}
+    'category': 'Object'
+}
 
 from .registration import register_all
 from .registration import unregister_all
 
 
-def register():
+def register() -> None:
     print('Loading Material Combiner..')
     register_all(bl_info)
 
 
-def unregister():
+def unregister() -> None:
     unregister_all()

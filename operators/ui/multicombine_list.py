@@ -1,4 +1,5 @@
 import os
+from typing import Set
 
 import bpy
 from bpy.props import *
@@ -8,7 +9,7 @@ class MultiCombineImageAdd(bpy.types.Operator):
     bl_idname = 'smc.img_add'
     bl_label = 'Add Item'
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
         m_item = item.mat.smc_multi_list.add()
@@ -23,7 +24,7 @@ class MultiCombineImageRemove(bpy.types.Operator):
     bl_idname = 'smc.img_remove'
     bl_label = 'Remove Item'
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
         if len(item.mat.smc_multi_list) > 0:
@@ -39,12 +40,12 @@ class MultiCombineImageMove(bpy.types.Operator):
 
     type = bpy.props.StringProperty(default='UP')
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
         if self.type == 'UP':
             item.mat.smc_multi_list.move(item.mat.smc_multi_list_id, item.mat.smc_multi_list_id - 1)
-            if (item.mat.smc_multi_list_id - 1) >= 0:
+            if item.mat.smc_multi_list_id >= 1:
                 item.mat.smc_multi_list_id = item.mat.smc_multi_list_id - 1
         elif self.type == 'DOWN':
             item.mat.smc_multi_list.move(item.mat.smc_multi_list_id, item.mat.smc_multi_list_id + 1)
@@ -61,7 +62,7 @@ class MultiCombineImageReset(bpy.types.Operator):
 
     list_id = IntProperty(default=0)
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
         item.mat.smc_multi_list[self.list_id].img_name = 'Empty'
@@ -78,7 +79,7 @@ class MultiCombineColor(bpy.types.Operator):
 
     list_id = IntProperty(default=0)
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
         item.mat.smc_multi_list[self.list_id].img_name = 'Color'
@@ -103,7 +104,7 @@ class MultiCombineImagePath(bpy.types.Operator):
         options={'HIDDEN'}
     )
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
         name = self.filename
@@ -112,9 +113,9 @@ class MultiCombineImagePath(bpy.types.Operator):
         item.mat.smc_multi_list[self.list_id].img_path = path
         item.mat.smc_multi_list[self.list_id].img_color = (1.0, 1.0, 1.0)
         item.mat.smc_multi_list[self.list_id].img_type = 1
-        bpy.ops.smc.properties_menu('INVOKE_DEFAULT', list_id=scn.smc_list_id)
+        bpy.ops.smc.property_menu('INVOKE_DEFAULT', list_id=scn.smc_list_id)
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> Set[str]:
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
