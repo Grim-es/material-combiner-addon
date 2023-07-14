@@ -1,7 +1,7 @@
 import math
 import numpy as np
 import os
-import random
+import re
 from collections import OrderedDict
 from collections import defaultdict
 from itertools import chain
@@ -318,12 +318,25 @@ def get_comb_mats(scn, atlas: Image, mats_uv: MatsUV):
         if combine_list_item.type == globs.C_L_MATERIAL:
             if combine_list_item.used and combine_list_item.mat in mats_uv[combine_list_item.ob.name]:
                 layers.add(combine_list_item.layer)
-            mat_name = combine_list_item.mat.name
-            if mat_name.startswith('material_atlas_'):
-                existed_id = int(mat_name.split('_')[-2])
-                existed_ids.add(existed_id)
-    available_ids = set(range(10000, 99999)) - existed_ids
-    unique_id = random.choice(list(available_ids))
+    # Make sure that when we save the atlas, that it doesn't overwrite an existing file by finding all existing atlases
+    # in the smc_save_path directory and extracting the unique id of each
+    if os.path.isdir(scn.smc_save_path):
+        # Pattern matching the 'Atlas_{0}.png'.format(unique_id) format used below when naming atlases
+        atlas_file_pattern = re.compile(r"Atlas_(\d+).png")
+        for file_or_directory_name in os.listdir(scn.smc_save_path):
+            # Match against the full string
+            match = atlas_file_pattern.fullmatch(file_or_directory_name)
+            if match:
+                # (\d+) is the only subgroup, so it will be at index 1 (index 0 is the fully matched string)
+                existed_ids.add(int(match.group(1)))
+    unique_id = 1
+    while unique_id in existed_ids:
+        # Add one until the id doesn't already exist
+        unique_id += 1
+    # Format for at least 5 digits, this keeps generated atlases in order when sorted alphabetically, up to 5 digits.
+    # e.g. Atlas_10.png would be sorted alphabetically before Atlas_9.png despite typically being generated afterwards,
+    # whereas Atlas_00010.png would be sorted after Atlas_00009.png
+    unique_id = "{0:05d}".format(unique_id)
     atlas_name = 'Atlas_{0}.png'.format(unique_id)
     path = os.path.join(scn.smc_save_path, atlas_name)
     atlas.name = atlas_name
