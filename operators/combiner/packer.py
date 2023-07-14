@@ -18,60 +18,58 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from typing import Union
+from typing import Dict
+
 
 class BinPacker(object):
-    def __init__(self, images):
+    def __init__(self, images: Dict) -> None:
         self.root = {}
         self.bin = images
 
-    def fit(self):
-        images = self.bin
-        img_len = len(self.bin)
-        w = 0
-        h = 0
-        if img_len > 0:
-            w, h = images[next(iter(images))]['gfx']['size']
-        self.root = {'x': 0, 'y': 0, 'w': w, 'h': h}
-        for img in images.values():
-            w, h = img['gfx']['size']
-            if self.find_node(self.root, w, h):
-                node = self.find_node(self.root, w, h)
-                img['gfx']['fit'] = self.split_node(node, w, h)
-            else:
-                img['gfx']['fit'] = self.grow_node(w, h)
-        return images
+    def fit(self) -> Dict:
+        self.root = {'x': 0, 'y': 0, 'w': 0, 'h': 0}
 
-    def find_node(self, root, w, h):
+        if not self.bin:
+            return self.bin
+
+        self.root['w'], self.root['h'] = next(iter(self.bin.values()))['gfx']['size']
+
+        for img in self.bin.values():
+            w, h = img['gfx']['size']
+            node = self.find_node(self.root, w, h)
+            img['gfx']['fit'] = self.split_node(node, w, h) if node else self.grow_node(w, h)
+
+        return self.bin
+
+    def find_node(self, root: Dict, w: int, h: int) -> Union[Dict, None]:
         if 'used' in root and root['used']:
             return self.find_node(root['right'], w, h) or self.find_node(root['down'], w, h)
-        elif (w <= root['w']) and (h <= root['h']):
+        elif w <= root['w'] and h <= root['h']:
             return root
         return None
 
-    def split_node(self, node, w, h):
+    @staticmethod
+    def split_node(node: Dict, w: int, h: int) -> Dict:
         node['used'] = True
         node['down'] = {'x': node['x'], 'y': node['y'] + h, 'w': node['w'], 'h': node['h'] - h}
         node['right'] = {'x': node['x'] + w, 'y': node['y'], 'w': node['w'] - w, 'h': h}
         return node
 
-    def grow_node(self, w, h):
-        can_grow_right = (h <= self.root['h'])
-        can_grow_down = (w <= self.root['w'])
+    def grow_node(self, w: int, h: int) -> Union[Dict, None]:
+        can_grow_right = h <= self.root['h']
+        can_grow_down = w <= self.root['w']
 
-        should_grow_right = can_grow_right and (self.root['h'] >= (self.root['w'] + w))
-        should_grow_down = can_grow_down and (self.root['w'] >= (self.root['h'] + h))
+        should_grow_right = can_grow_right and self.root['h'] >= self.root['w'] + w
+        should_grow_down = can_grow_down and self.root['w'] >= self.root['h'] + h
 
-        if should_grow_right:
+        if should_grow_right or not should_grow_down and can_grow_right:
             return self.grow_right(w, h)
-        elif should_grow_down:
-            return self.grow_down(w, h)
-        elif can_grow_right:
-            return self.grow_right(w, h)
-        elif can_grow_down:
+        elif should_grow_down or can_grow_down:
             return self.grow_down(w, h)
         return None
 
-    def grow_right(self, w, h):
+    def grow_right(self, w: int, h: int) -> Union[Dict, None]:
         self.root = {
             'used': True,
             'x': 0,
@@ -79,13 +77,12 @@ class BinPacker(object):
             'w': self.root['w'] + w,
             'h': self.root['h'],
             'down': self.root,
-            'right': {'x': self.root['w'], 'y': 0, 'w': w, 'h': self.root['h']}}
-        if self.find_node(self.root, w, h):
-            node = self.find_node(self.root, w, h)
-            return self.split_node(node, w, h)
-        return None
+            'right': {'x': self.root['w'], 'y': 0, 'w': w, 'h': self.root['h']}
+        }
+        node = self.find_node(self.root, w, h)
+        return self.split_node(node, w, h) if node else None
 
-    def grow_down(self, w, h):
+    def grow_down(self, w: int, h: int) -> Union[Dict, None]:
         self.root = {
             'used': True,
             'x': 0,
@@ -95,7 +92,5 @@ class BinPacker(object):
             'down': {'x': 0, 'y': self.root['h'], 'w': self.root['w'], 'h': h},
             'right': self.root
         }
-        if self.find_node(self.root, w, h):
-            node = self.find_node(self.root, w, h)
-            return self.split_node(node, w, h)
-        return None
+        node = self.find_node(self.root, w, h)
+        return self.split_node(node, w, h) if node else None

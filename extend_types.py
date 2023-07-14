@@ -1,5 +1,6 @@
 import bpy
 from bpy.props import *
+
 from . import addon_updater_ops
 
 
@@ -56,21 +57,23 @@ class UpdatePreferences(bpy.types.AddonPreferences):
         max=0
     )
 
-    def draw(self, context):
+    def draw(self, context: bpy.types.Context):
         addon_updater_ops.update_settings_ui(self, context)
 
 
-def register():
+def register() -> None:
     bpy.types.Scene.smc_ob_data = CollectionProperty(type=CombineList)
     bpy.types.Scene.smc_ob_data_id = IntProperty(default=0)
     bpy.types.Scene.smc_list_id = IntProperty(default=0)
     bpy.types.Scene.smc_size = EnumProperty(
         name='Atlas size',
-        items=(
+        items=[
             ('PO2', 'Power of 2', 'Combined image size is power of 2'),
             ('QUAD', 'Quadratic', 'Combined image has same width and height'),
             ('AUTO', 'Automatic', 'Combined image has minimal size'),
-            ('CUST', 'Custom', 'Custom max width and height')),
+            ('CUST', 'Custom', 'Combined image has proportionally scaled to fit in custom size'),
+            ('STRICTCUST', 'Strict Custom', 'Combined image has exact custom width and height'),
+        ],
         description='Select atlas size',
         default='QUAD')
     bpy.types.Scene.smc_size_width = IntProperty(
@@ -99,12 +102,11 @@ def register():
         max=256,
         step=1,
         default=32)
-    bpy.types.Scene.smc_gaps = FloatProperty(
+    bpy.types.Scene.smc_gaps = IntProperty(
         name='Size of gaps between images',
         description='Select size of gaps between images',
         min=0,
         max=32,
-        precision=0,
         step=200,
         default=0,
         options={'HIDDEN'})
@@ -140,13 +142,17 @@ def register():
         default=2048)
 
 
-def unregister():
+def unregister() -> None:
     del bpy.types.Scene.smc_ob_data
     del bpy.types.Scene.smc_ob_data_id
     del bpy.types.Scene.smc_list_id
     del bpy.types.Scene.smc_size
     del bpy.types.Scene.smc_size_width
     del bpy.types.Scene.smc_size_height
+    del bpy.types.Scene.smc_crop
+    del bpy.types.Scene.smc_diffuse_size
+    del bpy.types.Scene.smc_gaps
+    del bpy.types.Scene.smc_save_path
 
     del bpy.types.Material.root_mat
     del bpy.types.Material.smc_diffuse

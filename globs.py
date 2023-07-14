@@ -12,5 +12,12 @@ try:
 except ImportError:
     pil_exist = False
 
-version = 0 if bpy.app.version < (2, 80, 0) else 2 if bpy.app.version > (2, 80, 99) else 1
+is_blender_2_79_or_older = bpy.app.version < (2, 80, 0)
+is_blender_2_80_or_newer = bpy.app.version >= (2, 80, 0)
+is_blender_2_92_or_newer = bpy.app.version >= (2, 92, 0)
+
 smc_pi = False
+
+CL_OBJECT = 0
+CL_MATERIAL = 1
+CL_SEPARATOR = 2

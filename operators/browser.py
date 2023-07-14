@@ -1,4 +1,5 @@
 import webbrowser
+from typing import Set
 
 import bpy
 from bpy.props import *
@@ -11,7 +12,7 @@ class OpenBrowser(bpy.types.Operator):
 
     link = StringProperty(default='')
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         webbrowser.open(self.link)
         self.report({'INFO'}, 'Browser opened')
         return {'FINISHED'}

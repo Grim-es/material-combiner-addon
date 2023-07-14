@@ -1,8 +1,13 @@
-def get_texture(mat):
-    return next((mat.texture_slots[slot_idx].texture for slot_idx in range(len(mat.texture_slots))
-                 if (mat.texture_slots[slot_idx] is not None) and mat.use_textures[slot_idx]), None)
+from typing import Dict
+
+import bpy
 
 
-def get_textures(mat):
-    return {slot_idx: mat.texture_slots[slot_idx].texture for slot_idx in range(len(mat.texture_slots))
-            if (mat.texture_slots[slot_idx] is not None) and mat.use_textures[slot_idx]}
+def get_texture(mat: bpy.types.Material) -> bpy.types.Texture:
+    return next((slot.texture for idx, slot in enumerate(mat.texture_slots) if
+                 slot is not None and mat.use_textures[idx]), None)
+
+
+def get_textures(mat: bpy.types.Material) -> Dict[int, bpy.types.Texture]:
+    return {idx: slot.texture for idx, slot in enumerate(mat.texture_slots) if
+            slot is not None and mat.use_textures[idx]}

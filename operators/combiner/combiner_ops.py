@@ -1,15 +1,46 @@
+import itertools
 import math
 import os
 import random
+import re
 from collections import OrderedDict
 from collections import defaultdict
+from typing import Dict
+from typing import List
+from typing import Set
+from typing import Tuple
+from typing import Union
+from typing import cast
 
 import bpy
+import numpy as np
+
+from ... import globs
+from ...type_annotations import CombMats
+from ...type_annotations import MatsUV
+from ...type_annotations import ObMats
+from ...type_annotations import SMCObData
+from ...type_annotations import SMCObDataItem
+from ...type_annotations import Scene
+from ...type_annotations import Structure
+from ...type_annotations import StructureItem
+from ...utils.images import get_image
+from ...utils.images import get_image_path
+from ...utils.materials import get_diffuse
+from ...utils.materials import shader_type
+from ...utils.materials import sort_materials
+from ...utils.objects import align_uv
+from ...utils.objects import get_polys
+from ...utils.objects import get_uv
+from ...utils.textures import get_texture
 
 try:
     from PIL import Image
+
+    ImageType = Image.Image
 except ImportError:
     Image = None
+    ImageType = None
 
 try:
     from PIL import ImageChops
@@ -21,78 +52,83 @@ try:
 except ImportError:
     ImageFile = None
 
-from ... import globs
-from ...utils.objects import get_obs
-from ...utils.objects import get_polys
-from ...utils.objects import get_uv
-from ...utils.objects import align_uv
-from ...utils.materials import shader_type
-from ...utils.materials import get_diffuse
-from ...utils.materials import sort_materials
-from ...utils.textures import get_texture
-from ...utils.images import get_image
-from ...utils.images import get_image_path
-
 if Image:
     Image.MAX_IMAGE_PIXELS = None
+    try:
+        resampling = Image.LANCZOS
+    except AttributeError:
+        resampling = Image.ANTIALIAS
+
 if ImageFile:
     ImageFile.LOAD_TRUNCATED_IMAGES = True
 
+atlas_prefix = 'Atlas_'
+atlas_texture_prefix = 'texture_atlas_'
+atlas_material_prefix = 'material_atlas_'
 
-def set_ob_mode(scn):
-    obs = get_obs(scn.objects)
-    for ob in obs:
+
+def set_ob_mode(scn: Scene, data: SMCObData) -> None:
+    ob = next(item.ob for item in data if item.type == globs.CL_OBJECT)
+    if ob:
         scn.objects.active = ob
         bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def get_data(data):
+def get_data(data: SMCObData) -> SMCObData:
     mats = defaultdict(dict)
-    for i in data:
-        if i.type == 1 and i.used:
-            mats[i.ob.name][i.mat] = i.layer
+    for item in data:
+        if item.type == globs.CL_MATERIAL and item.used:
+            mats[item.ob.name][item.mat] = item.layer
     return mats
 
 
-def get_mats_uv(scn, ob_mats):
+def get_mats_uv(scn: Scene, data: SMCObData) -> MatsUV:
     mats_uv = {}
-    for ob_n, i in ob_mats.items():
+    for ob_n, item in data.items():
         ob = scn.objects[ob_n]
         mats_uv[ob_n] = defaultdict(list)
         for idx, polys in get_polys(ob).items():
-            if ob.data.materials[idx] in i.keys():
+            mat = ob.data.materials[idx]
+            if mat in item:
                 for poly in polys:
-                    mats_uv[ob_n][ob.data.materials[idx]].extend(align_uv(get_uv(ob, poly)))
+                    mats_uv[ob_n][mat].extend(align_uv(get_uv(ob, poly)))
     return mats_uv
 
 
-def clear_empty_mats(scn, data, mats_uv):
-    for ob_n, i in data.items():
+def clear_empty_mats(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> None:
+    for ob_n, item in data.items():
         ob = scn.objects[ob_n]
-        for mat in i.keys():
-            if mat not in mats_uv[ob_n].keys():
-                mat_idx = ob.data.materials.find(mat.name)
-                if globs.version > 1:
-                    ob.data.materials.pop(index=mat_idx)
-                else:
-                    ob.data.materials.pop(index=mat_idx, update_data=True)
+        for mat in item:
+            if mat not in mats_uv[ob_n]:
+                _delete_material(ob, mat.name)
 
 
-def get_duplicates(mats_uv):
-    mat_list = list(set([mat for mats in mats_uv.values() for mat in mats.keys()]))
-    mat_dict = sort_materials(mat_list)
-    for mats in mat_dict.values():
+def _delete_material(ob: bpy.types.Object, mat_name: str) -> None:
+    ob_mats = ob.data.materials
+    mat_idx = ob_mats.find(mat_name)
+    if mat_idx > -1:
+        if globs.is_blender_2_92_or_newer:
+            ob_mats.pop(index=mat_idx)
+        else:
+            ob_mats.pop(index=mat_idx, update_data=True)
+
+
+def get_duplicates(mats_uv: MatsUV) -> None:
+    mat_list = {mat for mats in mats_uv.values() for mat in mats}
+    sorted_mat_list = sort_materials(mat_list)
+    for mats in sorted_mat_list:
+        root_mat = mats[0]
         for mat in mats[1:]:
-            mat.root_mat = mats[0]
+            mat.root_mat = root_mat
 
 
-def get_structure(scn, data, mats_uv):
+def get_structure(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> Structure:
     structure = {}
-    for ob_n, i in data.items():
+    for ob_n, item in data.items():
         ob = scn.objects[ob_n]
-        for mat in i.keys():
+        for mat in item:
             if mat.name in ob.data.materials:
-                root_mat = mat.root_mat if mat.root_mat else mat
+                root_mat = mat.root_mat or mat
                 if root_mat not in structure:
                     structure[root_mat] = {
                         'gfx': {
@@ -104,195 +140,350 @@ def get_structure(scn, data, mats_uv):
                         'ob': [],
                         'uv': []
                     }
-                if mat.root_mat and mat not in structure[root_mat]['dup']:
+                if mat.root_mat and mat.name not in structure[root_mat]['dup']:
                     structure[root_mat]['dup'].append(mat.name)
-                if ob not in structure[root_mat]['ob']:
+                if ob.name not in structure[root_mat]['ob']:
                     structure[root_mat]['ob'].append(ob.name)
                 structure[root_mat]['uv'].extend(mats_uv[ob_n][mat])
     return structure
 
 
-def clear_duplicates(scn, data):
-    for i in data.values():
-        for ob_n in i['ob']:
+def clear_duplicates(scn: Scene, data: Structure) -> None:
+    for item in data.values():
+        for ob_n in item['ob']:
             ob = scn.objects[ob_n]
-            for dup_n in i['dup']:
-                delete_material(ob, dup_n)
+            for dup_name in item['dup']:
+                _delete_material(ob, dup_name)
 
 
-def delete_material(mesh, mat_name):
-    mat_idx = get_material_index(mesh, mat_name)
-    if mat_idx:
-        if globs.version > 1:
-            mesh.data.materials.pop(index=mat_idx)
-        else:
-            mesh.data.materials.pop(index=mat_idx, update_data=True)
-
-
-def get_material_index(mesh, mat_name):
-    for i, mat in enumerate(mesh.data.materials):
-        if mat and mat.name == mat_name:
-            return i
-
-
-def get_size(scn, data):
-    for mat, i in data.items():
-        if globs.version > 0:
-            img = None
-            shader = shader_type(mat) if mat else None
-            if shader == 'mmd':
-                img = mat.node_tree.nodes['mmd_base_tex'].image
-            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
-                img = mat.node_tree.nodes['Image Texture'].image
-        else:
-            img = get_image(get_texture(mat))
+def get_size(scn: Scene, data: Structure) -> Dict:
+    for mat, item in data.items():
+        img = _get_image(mat)
         path = get_image_path(img)
-        max_x = max(max([uv.x for uv in i['uv'] if not math.isnan(uv.x)], default=1), 1)
-        max_y = max(max([uv.y for uv in i['uv'] if not math.isnan(uv.y)], default=1), 1)
-        i['gfx']['uv_size'] = (max_x if max_x < 25 else 1, max_y if max_y < 25 else 1)
+        max_x, max_y = _get_max_uv_coordinates(item['uv'])
+        item['gfx']['uv_size'] = (np.clip(max_x, 1, 25), np.clip(max_y, 1, 25))
+
         if not scn.smc_crop:
-            i['gfx']['uv_size'] = tuple(map(math.ceil, i['gfx']['uv_size']))
+            item['gfx']['uv_size'] = tuple(math.ceil(x) for x in item['gfx']['uv_size'])
+
         if path:
-            if mat.smc_size:
-                img_size = (min(mat.smc_size_width, img.size[0]),
-                            min(mat.smc_size_height, img.size[1]))
-            else:
-                img_size = (img.size[0], img.size[1])
-            i['gfx']['size'] = tuple(
-                int(s * uv_s + int(scn.smc_gaps)) for s, uv_s in zip(img_size, i['gfx']['uv_size']))
+            img_size = _get_image_size(mat, img)
+            item['gfx']['size'] = _calculate_size(img_size, item['gfx']['uv_size'], scn.smc_gaps)
         else:
-            i['gfx']['size'] = (scn.smc_diffuse_size + int(scn.smc_gaps),) * 2
+            item['gfx']['size'] = (scn.smc_diffuse_size + scn.smc_gaps,) * 2
     return OrderedDict(sorted(data.items(), key=lambda x: min(x[1]['gfx']['size']), reverse=True))
 
 
-def get_uv_image(item, img, size):
+def _get_image(mat: bpy.types.Material) -> Union[bpy.types.Image, None]:
+    if globs.is_blender_2_79_or_older:
+        return get_image(get_texture(mat))
+
+    shader = shader_type(mat) if mat else None
+
+    if shader == 'mmd':
+        return mat.node_tree.nodes['mmd_base_tex'].image
+    elif shader in ['vrm', 'xnalara', 'diffuse', 'emission']:
+        return mat.node_tree.nodes['Image Texture'].image
+
+
+def _get_image_size(mat: bpy.types.Material, img: bpy.types.Image) -> Tuple[int, int]:
+    return (
+        (
+            min(mat.smc_size_width, img.size[0]),
+            min(mat.smc_size_height, img.size[1]),
+        )
+        if mat.smc_size
+        else (img.size[0], img.size[1])
+    )
+
+
+def _get_max_uv_coordinates(uv_loops: List[bpy.types.MeshUVLoop]) -> Tuple[float, float]:
+    max_x = 1
+    max_y = 1
+
+    for uv in uv_loops:
+        if not math.isnan(uv.x):
+            max_x = max(max_x, uv.x)
+        if not math.isnan(uv.y):
+            max_y = max(max_y, uv.y)
+
+    return max_x, max_y
+
+
+def _calculate_size(img_size: Tuple[int, int], uv_size: Tuple[int, int], gaps: int) -> Tuple[int, int]:
+    return cast(Tuple[int, int], tuple(s * uv_s + gaps for s, uv_s in zip(img_size, uv_size)))
+
+
+def get_atlas_size(structure: Structure) -> Tuple[int, int]:
+    max_x = 1
+    max_y = 1
+
+    for item in structure.values():
+        max_x = max(max_x, item['gfx']['fit']['x'] + item['gfx']['size'][0])
+        max_y = max(max_y, item['gfx']['fit']['y'] + item['gfx']['size'][1])
+
+    return int(max_x), int(max_y)
+
+
+def calculate_adjusted_size(scn: Scene, size: Tuple[int, int]) -> Tuple[int, int]:
+    if scn.smc_size == 'PO2':
+        return cast(Tuple[int, int], tuple(1 << int(x - 1).bit_length() for x in size))
+    elif scn.smc_size == 'QUAD':
+        return (int(max(size)),) * 2
+    return size
+
+
+def get_atlas(scn: Scene, data: Structure, atlas_size: Tuple[int, int]) -> ImageType:
+    smc_size = (scn.smc_size_width, scn.smc_size_height)
+    img = Image.new('RGBA', atlas_size)
+    half_gaps = int(scn.smc_gaps / 2)
+
+    for mat, item in data.items():
+        _set_image_path(item, mat)
+        _paste_gfx(scn, item, mat, img, half_gaps)
+
+    if scn.smc_size in ['CUST', 'STRICTCUST']:
+        img.thumbnail(smc_size, resampling)
+
+    if scn.smc_size == 'STRICTCUST':
+        canvas_img = Image.new('RGBA', smc_size)
+        canvas_img.paste(img)
+        return canvas_img
+
+    return img
+
+
+def _set_image_path(item: StructureItem, mat: bpy.types.Material) -> None:
+    if globs.is_blender_2_80_or_newer:
+        item['gfx']['img'] = ''
+        shader = shader_type(mat) if mat else None
+        if shader == 'mmd':
+            item['gfx']['img'] = get_image_path(mat.node_tree.nodes['mmd_base_tex'].image)
+        elif shader in ['vrm', 'xnalara', 'diffuse', 'emission']:
+            item['gfx']['img'] = get_image_path(mat.node_tree.nodes['Image Texture'].image)
+    else:
+        item['gfx']['img'] = get_image_path(get_image(get_texture(mat)))
+
+
+def _paste_gfx(scn: Scene, item: StructureItem, mat: bpy.types.Material, img: ImageType, half_gaps: int) -> None:
+    if item['gfx']['fit'] and item['gfx']['img'] is not None:
+        img.paste(
+            _get_gfx(scn, mat, item, item['gfx']['img']),
+            (int(item['gfx']['fit']['x'] + half_gaps), int(item['gfx']['fit']['y'] + half_gaps))
+        )
+
+
+def _get_gfx(scn: Scene, mat: bpy.types.Material, item: StructureItem, src: Union[str, Tuple]) -> ImageType:
+    size = cast(Tuple[int, int], tuple(int(size - scn.smc_gaps) for size in item['gfx']['size']))
+
+    if not isinstance(src, str):
+        return Image.new('RGBA', size, src)
+    if not src:
+        return Image.new('RGBA', size, get_diffuse(mat))
+
+    img = Image.open(src).convert('RGBA')
+    if img.size != size:
+        img.resize(size, resampling)
+    if mat.smc_size:
+        img.thumbnail((mat.smc_size_width, mat.smc_size_height), resampling)
+    if max(item['gfx']['uv_size'], default=0) > 1:
+        img = _get_uv_image(item, img, size)
+    if mat.smc_diffuse:
+        diffuse_img = Image.new('RGBA', size, get_diffuse(mat))
+        img = ImageChops.multiply(img, diffuse_img)
+
+    return img
+
+
+def _get_uv_image(item: StructureItem, img: bpy.types.Image, size: Tuple[int, int]) -> ImageType:
     uv_img = Image.new('RGBA', size)
-    for w in range(math.ceil(item['gfx']['uv_size'][0])):
-        for h in range(math.ceil(item['gfx']['uv_size'][1])):
-            uv_img.paste(img, (
-                w * img.size[0],
-                uv_img.size[1] - img.size[1] - h * img.size[1],
-                w * img.size[0] + img.size[0],
-                uv_img.size[1] - img.size[1] - h * img.size[1] + img.size[1]
-            ))
+    width, height = size
+    img_width, img_height = img.size
+    uv_width, uv_height = (math.ceil(x) for x in item['gfx']['uv_size'])
+
+    for w in range(uv_width):
+        for h in range(uv_height):
+            x = w * img_width
+            y = size[1] - img_height - h * img_height
+            coords = (x, y, x + img_width, y + img_height)
+            # coords = (
+            #     w * img_width,
+            #     height - img_height - h * img_height,
+            #     w * img_width + img_width,
+            #     height - img_height - h * img_height + img_height
+            # )
+            uv_img.paste(img, coords)
+
     return uv_img
 
 
-def get_gfx(scn, mat, item, src):
-    size = tuple(size - int(scn.smc_gaps) for size in item['gfx']['size'])
-    if isinstance(src, str):
-        if src:
-            img = Image.open(src).convert('RGBA')
-            if img.size != size:
-                img.resize(size, Image.ANTIALIAS)
-            if mat.smc_size:
-                img.thumbnail((mat.smc_size_width, mat.smc_size_height), Image.ANTIALIAS)
-            if any(item['gfx']['uv_size']) > 0.999:
-                img = get_uv_image(item, img, size)
-            if mat.smc_diffuse:
-                diffuse_img = Image.new('RGBA', size, get_diffuse(mat))
-                img = ImageChops.multiply(img, diffuse_img)
-        else:
-            img = Image.new('RGBA', size, get_diffuse(mat))
-    else:
-        img = Image.new('RGBA', size, src)
-    return img
+def align_uvs(scn: Scene, data: Structure, atlas_size: Tuple[int, int], size: Tuple[int, int]) -> None:
+    size_width, size_height = size
 
+    scaled_width, scaled_height = _get_scale_factors(atlas_size, size)
 
-def get_atlas(scn, data, size):
-    if scn.smc_size == 'PO2':
-        size = tuple(1 << (x - 1).bit_length() for x in size)
-    elif scn.smc_size == 'QUAD':
-        size = (max(size),) * 2
+    margin = scn.smc_gaps + 2
+    border_margin = 1 + int(scn.smc_gaps / 2)
+
     for mat, item in data.items():
-        if globs.version > 0:
-            item['gfx']['img'] = ''
-            shader = shader_type(mat) if mat else None
-            if shader == 'mmd':
-                item['gfx']['img'] = get_image_path(mat.node_tree.nodes['mmd_base_tex'].image)
-            elif shader == 'vrm' or shader == 'xnalara' or shader == 'diffuse' or shader == 'emission':
-                item['gfx']['img'] = get_image_path(mat.node_tree.nodes['Image Texture'].image)
-        else:
-            item['gfx']['img'] = get_image_path(get_image(get_texture(mat)))
-    img = Image.new('RGBA', size)
-    for mat, i in data.items():
-        if i['gfx']['fit']:
-            if i['gfx']['img'] is not None:
-                img.paste(get_gfx(scn, mat, i, i['gfx']['img']), (i['gfx']['fit']['x'] + int(scn.smc_gaps / 2),
-                                                                  i['gfx']['fit']['y'] + int(scn.smc_gaps / 2)))
-    if scn.smc_size == 'CUST':
-        img.thumbnail((scn.smc_size_width, scn.smc_size_height), Image.ANTIALIAS)
-    return img
+        gfx_size = item['gfx']['size']
+        gfx_height = gfx_size[1]
+
+        gfx_width_margin, gfx_height_margin = (x - margin for x in gfx_size)
+
+        uv_width, uv_height = item['gfx']['uv_size']
+
+        x_offset = item['gfx']['fit']['x'] + border_margin
+        y_offset = item['gfx']['fit']['y'] - border_margin
+
+        for uv in item['uv']:
+            reset_x = uv.x / uv_width * gfx_width_margin
+            reset_y = uv.y / uv_height * gfx_height_margin - gfx_height
+
+            uv_x = (reset_x + x_offset) / size_width
+            uv_y = (reset_y - y_offset) / size_height
+
+            uv.x = uv_x * scaled_width
+            uv.y = uv_y * scaled_height + 1
 
 
-def get_aligned_uv(scn, data, size):
-    for mat, i in data.items():
-        w, h = i['gfx']['size']
-        uv_w, uv_h = i['gfx']['uv_size']
-        for uv in i['uv']:
-            reset_x = uv.x / uv_w * (w - 2 - int(scn.smc_gaps)) / size[0]
-            reset_y = 1 + uv.y / uv_h * (h - 2 - int(scn.smc_gaps)) / size[1] - h / size[1]
-            uv.x = reset_x + (i['gfx']['fit']['x'] + 1 + int(scn.smc_gaps / 2)) / size[0]
-            uv.y = reset_y - (i['gfx']['fit']['y'] - 1 - int(scn.smc_gaps / 2)) / size[1]
+def _get_scale_factors(atlas_size: Tuple[int, int], size: Tuple[int, int]) -> Tuple[float, float]:
+    scaled_factors = tuple(x / y for x, y in zip(size, atlas_size))
+
+    if all(factor <= 1 for factor in scaled_factors):
+        return cast(Tuple[float, float], scaled_factors)
+
+    atlas_width, atlas_height = atlas_size
+    size_width, size_height = size
+
+    aspect_ratio = (size_width * atlas_height) / (size_height * atlas_width)
+    return (1, 1 / aspect_ratio) if aspect_ratio > 1 else (aspect_ratio, 1)
 
 
-def get_comb_mats(scn, atlas, mats_uv):
-    layers = set(i.layer for i in scn.smc_ob_data if (i.type == 1) and i.used and (i.mat in mats_uv[i.ob.name].keys()))
-    existed_ids = [int(i.mat.name.split('_')[-2]) for i in scn.smc_ob_data if (i.type == 1) and
-                   i.mat.name.startswith('material_atlas_')]
-    unique_id = random.choice([i for i in range(10000, 99999) if i not in existed_ids])
-    path = os.path.join(scn.smc_save_path, 'Atlas_{0}.png'.format(unique_id))
+def get_comb_mats(scn: Scene, atlas: ImageType, mats_uv: MatsUV) -> CombMats:
+    unique_id = _get_unique_id(scn)
+    layers = _get_layers(scn, mats_uv)
+    path = _save_atlas(scn, atlas, unique_id)
+    texture = _create_texture(path, unique_id)
+    return cast(CombMats, {idx: _create_material(texture, unique_id, idx) for idx in layers})
+
+
+def _get_layers(scn: Scene, mats_uv: MatsUV) -> Set[int]:
+    return {
+        item.layer
+        for item in scn.smc_ob_data
+        if item.type == globs.CL_MATERIAL and item.used and item.mat in mats_uv[item.ob.name]
+    }
+
+
+def _get_unique_id(scn: Scene) -> str:
+    existed_ids = set()
+    _add_its_from_existing_materials(scn, existed_ids)
+
+    if not os.path.isdir(scn.smc_save_path):
+        return _generate_random_unique_id(existed_ids)
+
+    _add_ids_from_existing_files(scn, existed_ids)
+    unique_id = next(x for x in itertools.count(start=1) if x not in existed_ids)
+    return '{:05d}'.format(unique_id)
+
+
+def _add_its_from_existing_materials(scn: Scene, existed_ids: Set[int]) -> None:
+    atlas_material_pattern = re.compile(r'{0}(\d+)_\d+'.format(atlas_material_prefix))
+    for item in scn.smc_ob_data:
+        if item.type == globs.CL_MATERIAL:
+            match = atlas_material_pattern.fullmatch(item.mat.name)
+            if match:
+                existed_ids.add(int(match.group(1)))
+
+
+def _generate_random_unique_id(existed_ids: Set[int]) -> str:
+    unused_ids = set(range(10000, 99999)) - existed_ids
+    return str(random.choice(list(unused_ids)))
+
+
+def _add_ids_from_existing_files(scn: Scene, existed_ids: Set[int]) -> None:
+    atlas_file_pattern = re.compile(r'{0}(\d+).png'.format(atlas_prefix))
+    for file_name in os.listdir(scn.smc_save_path):
+        match = atlas_file_pattern.fullmatch(file_name)
+        if match:
+            existed_ids.add(int(match.group(1)))
+
+
+def _save_atlas(scn: Scene, atlas: ImageType, unique_id: str) -> str:
+    path = os.path.join(scn.smc_save_path, '{0}{1}.png'.format(atlas_prefix, unique_id))
     atlas.save(path)
-    texture = bpy.data.textures.new('texture_atlas_{0}'.format(unique_id), 'IMAGE')
+    return path
+
+
+def _create_texture(path: str, unique_id: str) -> bpy.types.Texture:
+    texture = bpy.data.textures.new('{0}{1}'.format(atlas_texture_prefix, unique_id), 'IMAGE')
     image = bpy.data.images.load(path)
     texture.image = image
-    mats = {}
-    for idx in layers:
-        mat = bpy.data.materials.new(name='material_atlas_{0}_{1}'.format(unique_id, idx))
-        if globs.version > 0:
-            mat.blend_method = 'CLIP'
-            mat.use_backface_culling = True
-            mat.use_nodes = True
-            node_texture = mat.node_tree.nodes.new(type='ShaderNodeTexImage')
-            node_texture.image = image
-            node_texture.label = 'Material Combiner Texture'
-            node_texture.location = -300, 300
-            mat.node_tree.links.new(node_texture.outputs['Color'],
-                                    mat.node_tree.nodes['Principled BSDF'].inputs['Base Color'])
-            mat.node_tree.links.new(node_texture.outputs['Alpha'],
-                                    mat.node_tree.nodes['Principled BSDF'].inputs['Alpha'])
-        else:
-            mat.use_shadeless = True
-            mat.alpha = 0
-            mat.use_transparency = True
-            mat.diffuse_color = (1, 1, 1)
-            tex = mat.texture_slots.add()
-            tex.texture = texture
-            tex.use_map_alpha = True
-        mats[idx] = mat
-    return mats
+    return texture
 
 
-def assign_comb_mats(scn, ob_mats, mats_uv, atlas):
-    comb_mats = get_comb_mats(scn, atlas, mats_uv)
-    for ob_n, i in ob_mats.items():
+def _create_material(texture: bpy.types.Texture, unique_id: str, idx: int) -> bpy.types.Material:
+    mat = bpy.data.materials.new(name='{0}{1}_{2}'.format(atlas_material_prefix, unique_id, idx))
+    if globs.is_blender_2_80_or_newer:
+        _configure_material(mat, texture)
+    else:
+        _configure_material_legacy(mat, texture)
+    return mat
+
+
+def _configure_material(mat: bpy.types.Material, texture: bpy.types.Texture) -> None:
+    mat.blend_method = 'CLIP'
+    mat.use_backface_culling = True
+    mat.use_nodes = True
+
+    node_texture = mat.node_tree.nodes.new(type='ShaderNodeTexImage')
+    node_texture.image = texture.image
+    node_texture.label = 'Material Combiner Texture'
+    node_texture.location = -300, 300
+
+    mat.node_tree.links.new(node_texture.outputs['Color'],
+                            mat.node_tree.nodes['Principled BSDF'].inputs['Base Color'])
+    mat.node_tree.links.new(node_texture.outputs['Alpha'],
+                            mat.node_tree.nodes['Principled BSDF'].inputs['Alpha'])
+
+
+def _configure_material_legacy(mat: bpy.types.Material, texture: bpy.types.Texture) -> None:
+    mat.alpha = 0
+    mat.use_transparency = True
+    mat.diffuse_color = (1, 1, 1)
+    mat.use_shadeless = True
+
+    tex = mat.texture_slots.add()
+    tex.texture = texture
+    tex.use_map_alpha = True
+
+
+def assign_comb_mats(scn: Scene, data: SMCObData, comb_mats: CombMats) -> None:
+    for ob_n, item in data.items():
         ob = scn.objects[ob_n]
-        for idx in set(i.values()):
-            if idx in comb_mats.keys():
-                ob.data.materials.append(comb_mats[idx])
-        for idx, polys in get_polys(ob).items():
-            if ob.data.materials[idx] in i.keys():
-                mat_idx = ob.data.materials.find(comb_mats[i[ob.data.materials[idx]]].name)
-                for poly in polys:
-                    poly.material_index = mat_idx
+        ob_materials = ob.data.materials
+        _assign_mats(item, comb_mats, ob_materials)
+        _assign_mats_to_polys(item, comb_mats, ob, ob_materials)
 
 
-def clear_mats(scn, mats_uv):
-    for ob_n, i in mats_uv.items():
+def _assign_mats(item: SMCObDataItem, comb_mats: CombMats, ob_materials: ObMats) -> None:
+    for idx in set(item.values()):
+        if idx in comb_mats:
+            ob_materials.append(comb_mats[idx])
+
+
+def _assign_mats_to_polys(item: SMCObDataItem, comb_mats: CombMats, ob: bpy.types.Object, ob_materials: ObMats) -> None:
+    for idx, polys in get_polys(ob).items():
+        if ob_materials[idx] in item:
+            mat_name = comb_mats[item[ob_materials[idx]]].name
+            mat_idx = ob_materials.find(mat_name)
+            for poly in polys:
+                poly.material_index = mat_idx
+
+
+def clear_mats(scn: Scene, mats_uv: MatsUV) -> None:
+    for ob_n, item in mats_uv.items():
         ob = scn.objects[ob_n]
-        for mat in i.keys():
-            mat_idx = ob.data.materials.find(mat.name)
-            if globs.version > 1:
-                ob.data.materials.pop(index=mat_idx)
-            else:
-                ob.data.materials.pop(index=mat_idx, update_data=True)
+        for mat in item:
+            _delete_material(ob, mat.name)

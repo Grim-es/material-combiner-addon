@@ -23,6 +23,7 @@ from subprocess import call
 import bpy
 from bpy.app.handlers import persistent
 
+from . import registration
 from .icons import get_icon_id
 
 try:
@@ -59,23 +60,6 @@ except Exception as e:
     Updater.error_msg = str(e)
 
 Updater.addon = "smc"
-
-
-def make_annotations(cls):
-    if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
-        return cls
-    if bpy.app.version < (2, 93, 0):
-        bl_props = {k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
-    else:
-        bl_props = {k: v for k, v in cls.__dict__.items() if isinstance(v, bpy.props._PropertyDeferred)}
-    if bl_props:
-        if '__annotations__' not in cls.__dict__:
-            setattr(cls, '__annotations__', {})
-        annotations = cls.__dict__['__annotations__']
-        for k, v in bl_props.items():
-            annotations[k] = v
-            delattr(cls, k)
-    return cls
 
 
 def layout_split(layout, factor=0.0, align=False):
@@ -1003,6 +987,7 @@ def register(bl_info):
     if Updater.error:
         print("Exiting updater registration, " + Updater.error)
         return
+
     Updater.clear_state()
     Updater.engine = "Github"
     Updater.private_token = None
@@ -1028,7 +1013,7 @@ def register(bl_info):
     Updater.select_link = select_link_function
 
     for cls in classes:
-        make_annotations(cls)
+        registration.make_annotations(cls)
         bpy.utils.register_class(cls)
 
     show_reload_popup()
