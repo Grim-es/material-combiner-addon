@@ -1,11 +1,12 @@
 import os
+from typing import cast
 
 import bpy
 import bpy.utils.previews
 
 from ..type_annotations import SMCIcons
 
-smc_icons = SMCIcons(None)
+smc_icons = cast(SMCIcons, None)
 icons_directory = os.path.dirname(__file__)
 
 

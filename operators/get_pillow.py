@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from typing import Set
@@ -14,7 +15,7 @@ class InstallPIL(bpy.types.Operator):
 
     def execute(self, context: bpy.types.Context) -> Set[str]:
         try:
-            import pip
+            from pip import _internal
             try:
                 from PIL import Image, ImageChops
             except ImportError:
@@ -28,17 +29,24 @@ class InstallPIL(bpy.types.Operator):
         self.report({'INFO'}, 'Installation complete')
         return {'FINISHED'}
 
-    @staticmethod
-    def _install_pip() -> None:
+    def _install_pip(self) -> None:
         if globs.is_blender_2_80_or_newer:
-            import ensurepip
-            ensurepip.bootstrap()
+            try:
+                import ensurepip
+                ensurepip.bootstrap()
+            except ImportError:
+                self._install_pip_clean()
         else:
-            python_executable = sys.executable if globs.is_blender_2_92_or_newer else bpy.app.binary_path_python
-            subprocess.call([python_executable, 'get-pip.py'], shell=True)
+            self._install_pip_clean()
+
+    @staticmethod
+    def _install_pip_clean() -> None:
+        python_executable = sys.executable if globs.is_blender_2_92_or_newer else bpy.app.binary_path_python
+        get_pip = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'get-pip.py')
+        subprocess.call([python_executable, get_pip, '--user', '--force-reinstall'], shell=True)
 
     @staticmethod
     def _install_pillow() -> None:
         from pip import _internal
-        _internal.main(['install', 'pip', 'setuptools', 'wheel', '-U'])
-        _internal.main(['install', 'Pillow'])
+        _internal.main(['install', 'pip', 'setuptools', 'wheel', '-U', '--user'])
+        _internal.main(['install', 'Pillow', '--user'])

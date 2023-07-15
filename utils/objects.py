@@ -15,7 +15,7 @@ def get_polys(ob: bpy.types.Object) -> Dict[int, bpy.types.MeshPolygon]:
 
 def get_uv(ob: bpy.types.Object, poly: bpy.types.MeshPolygon) -> List[Vector]:
     data = ob.data.uv_layers.active.data
-    return [data[loop_idx].uv for loop_idx in poly.loop_indices if poly.loop_indices]
+    return [data[loop_idx].uv if loop_idx < len(data) else Vector((0, 0, 0)) for loop_idx in poly.loop_indices]
 
 
 def align_uv(face_uv: List[Vector]) -> List[Vector]:

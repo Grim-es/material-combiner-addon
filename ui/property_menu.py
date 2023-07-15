@@ -6,7 +6,8 @@ from bpy.props import IntProperty
 
 from .. import globs
 from ..utils.images import get_image
-from ..utils.materials import shader_type
+from ..utils.materials import get_shader_type
+from ..utils.materials import shader_image_nodes
 from ..utils.textures import get_texture
 
 
@@ -35,12 +36,12 @@ class PropertyMenu(bpy.types.Operator):
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
         if globs.is_blender_2_80_or_newer:
+            node_tree = item.mat.node_tree if item.mat else None
             image = None
-            shader = shader_type(item.mat) if item.mat else None
-            if shader == 'mmd':
-                image = item.mat.node_tree.nodes['mmd_base_tex'].image
-            elif shader in ['vrm', 'xnalara', 'diffuse', 'emission']:
-                image = item.mat.node_tree.nodes['Image Texture'].image
+            shader = get_shader_type(item.mat) if item.mat else None
+            node_name = shader_image_nodes.get(shader)
+            if node_name:
+                image = node_tree.nodes[node_name].image
         else:
             image = get_image(get_texture(item.mat))
         layout = self.layout
@@ -73,8 +74,10 @@ class PropertyMenu(bpy.types.Operator):
             col.prop(item.mat, 'diffuse_color', text='')
             return
 
-        shader = shader_type(item.mat)
+        shader = get_shader_type(item.mat)
         if shader in ['mmd', 'mmdCol']:
             col.prop(item.mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'], 'default_value', text='')
+        if shader in ['mtoon', 'mtoonCol']:
+            col.prop(item.mat.node_tree.nodes['Mtoon1PbrMetallicRoughness.BaseColorFactor'], 'color', text='')
         elif shader in ['vrm', 'vrmCol']:
             col.prop(item.mat.node_tree.nodes['RGB'].outputs[0], 'default_value', text='')

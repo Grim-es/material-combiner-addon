@@ -10,7 +10,7 @@ class Combiner(bpy.types.Operator):
     bl_idname = 'smc.combiner'
     bl_label = 'Create Atlas'
     bl_description = 'Combine materials'
-    bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
+    bl_options = {'UNDO', 'INTERNAL'}
 
     directory = StringProperty(maxlen=1024, default='', subtype='FILE_PATH', options={'HIDDEN'})
     filter_glob = StringProperty(default='', options={'HIDDEN'})
