@@ -56,7 +56,7 @@ class RefreshObData(bpy.types.Operator):
             for mats in mat_dict:
                 for mat in mats:
                     if mat:
-                        if globs.is_blender_2_92_or_newer:
+                        if globs.is_blender_3_or_newer and not mat.preview:
                             mat.preview_ensure()
                         used = ob not in combine_list or mat in combine_list[ob]
                         layer = layers[ob][mat] if mat in layers[ob] else 1
@@ -105,17 +105,17 @@ class CombineSwitch(bpy.types.Operator):
         return {'FINISHED'}
 
     @staticmethod
-    def _switch_ob_state(items: SMCObData, item: SMCObDataItem) -> None:
-        ob = next((item for item in items if (item.ob_id == item.ob_id) and item.type == globs.CL_OBJECT), None)
-        if ob:
-            if not item.used:
-                ob.used = True
-            item.used = not item.used
-
-    @staticmethod
-    def _switch_mat_state(data: SMCObData, item: SMCObDataItem) -> None:
-        mat_list = [item for item in data if (item.ob_id == item.ob_id) and item.type != 0]
+    def _switch_ob_state(data: SMCObData, item: SMCObDataItem) -> None:
+        mat_list = [mat for mat in data if mat.ob_id == item.ob_id and mat.type == globs.CL_MATERIAL]
         if mat_list:
             item.used = not item.used
             for mat in mat_list:
                 mat.used = item.used
+
+    @staticmethod
+    def _switch_mat_state(data: SMCObData, item: SMCObDataItem) -> None:
+        ob = next((ob for ob in data if ob.ob_id == item.ob_id and ob.type == globs.CL_OBJECT), None)
+        if ob:
+            if not item.used:
+                ob.used = True
+            item.used = not item.used

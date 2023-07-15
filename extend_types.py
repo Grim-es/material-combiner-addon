@@ -82,14 +82,14 @@ def register() -> None:
         min=8,
         max=8192,
         step=1,
-        default=8192)
+        default=4096)
     bpy.types.Scene.smc_size_height = IntProperty(
         name='Max height (px)',
         description='Select max height for combined image',
         min=8,
         max=8192,
         step=1,
-        default=8192)
+        default=4096)
     bpy.types.Scene.smc_crop = BoolProperty(
         name='Crop outside images by UV',
         description='Crop images by UV if materials UV outside of bounds',
