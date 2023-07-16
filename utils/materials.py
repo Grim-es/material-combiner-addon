@@ -126,6 +126,6 @@ def get_diffuse(mat: bpy.types.Material) -> Diffuse:
         return rgb_to_255_scale(mat.node_tree.nodes['Diffuse BSDF'].inputs['Color'].default_value)
     elif shader == 'xnalaraNewCol':
         return rgb_to_255_scale(mat.node_tree.nodes['Group'].inputs['Diffuse'].default_value)
-    elif shader == 'xnalaraCol':
+    elif shader in ['principledCol', 'xnalaraCol']:
         return rgb_to_255_scale(mat.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value)
     return 255, 255, 255

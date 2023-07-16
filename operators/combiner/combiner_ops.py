@@ -8,8 +8,8 @@ from collections import OrderedDict
 from collections import defaultdict
 from itertools import chain
 from typing import Dict
-from typing import Iterable
 from typing import List
+from typing import Sequence
 from typing import Set
 from typing import Tuple
 from typing import Union
@@ -20,6 +20,7 @@ import numpy as np
 
 from ... import globs
 from ...type_annotations import CombMats
+from ...type_annotations import Diffuse
 from ...type_annotations import MatsUV
 from ...type_annotations import ObMats
 from ...type_annotations import SMCObData
@@ -78,7 +79,7 @@ def set_ob_mode(scn: Scene, data: SMCObData) -> None:
         bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def get_data(data: Iterable[bpy.types.PropertyGroup]) -> SMCObData:
+def get_data(data: Sequence[bpy.types.PropertyGroup]) -> SMCObData:
     mats = defaultdict(dict)
     for item in data:
         if item.type == globs.CL_MATERIAL and item.used:
@@ -179,9 +180,18 @@ def get_size(scn: Scene, data: Structure) -> Dict:
     return OrderedDict(sorted(data.items(), key=_size_sorting, reverse=True))
 
 
-def _size_sorting(item: Iterable[StructureItem]) -> Tuple[int, int, int]:
-    size_x, size_y = item[1]['gfx']['size']
-    return max(size_x, size_y), size_x * size_y, size_x
+def _size_sorting(item: Sequence[StructureItem]) -> Tuple[int, int, int, Union[str, Diffuse, None]]:
+    gfx = item[1]['gfx']
+    size_x, size_y = gfx['size']
+
+    img_or_color = gfx['img_or_color']
+    name_or_color = None
+    if isinstance(img_or_color, tuple):
+        name_or_color = gfx['img_or_color']
+    elif isinstance(img_or_color, bpy.types.PackedFile):
+        name_or_color = img_or_color.id_data.name
+
+    return max(size_x, size_y), size_x * size_y, size_x, name_or_color
 
 
 def _get_image(mat: bpy.types.Material) -> Union[bpy.types.Image, None]:

@@ -21,7 +21,8 @@ class SMC_UL_Combine_List(bpy.types.UIList):
 
     @staticmethod
     def _draw_object(row: bpy.types.UILayout, item: Any, index: int) -> None:
-        row.prop(item.ob, 'name', text='', icon='META_CUBE' if globs.is_blender_2_80_or_newer else 'VIEW3D', emboss=False)
+        row.prop(item.ob, 'name', text='', icon='META_CUBE' if globs.is_blender_2_80_or_newer else 'VIEW3D',
+                 emboss=False)
         row = row.row()
         row.alignment = 'RIGHT'
         row.operator('smc.combine_switch',
@@ -49,9 +50,16 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         data = getattr(data, propname)
         filter_name = self.filter_name.lower()
 
+        matched_materials_ob = {
+            item.ob
+            for item in data
+            if item.type == globs.CL_MATERIAL and filter_name in item.mat.name.lower()
+        }
+
         flt_flags = [
             self.bitflag_filter_item
-            if (item.type == globs.CL_MATERIAL and filter_name in item.mat.name.lower()) or item.type == globs.CL_OBJECT
+            if (item.type == globs.CL_MATERIAL and filter_name in item.mat.name.lower()) or
+               (item.type == globs.CL_OBJECT and item.ob in matched_materials_ob)
             else 0
             for item in data
         ]

@@ -16,9 +16,9 @@ class CreditsMenu(bpy.types.Panel):
         github = 'https://github.com/Grim-es/material-combiner-addon/issues'
         discord = 'https://discordapp.com/users/275608234595713024'
         patreon = 'https://www.patreon.com/shotariya'
+        buymeacoffee = 'https://buymeacoffee.com/shotariya'
 
-        layout = self.layout
-        m_col = layout.column()
+        m_col = self.layout.column()
         box = m_col.box()
         col = box.column()
         col.scale_y = 1.2
@@ -37,3 +37,4 @@ class CreditsMenu(bpy.types.Panel):
         col.separator()
         col.label(text='If this saved you time:')
         col.operator('smc.browser', text='Support Material Combiner', icon_value=get_icon_id('patreon')).link = patreon
+        col.operator('smc.browser', text='Buy Me a Coffee', icon_value=get_icon_id('bmc')).link = buymeacoffee
