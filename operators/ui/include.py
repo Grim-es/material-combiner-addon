@@ -19,6 +19,7 @@ def draw_ui(context: bpy.types.Context, m_col: bpy.types.UILayout) -> None:
 
 def _materials_list(scn: Scene, m_col: bpy.types.UILayout) -> None:
     patreon = 'https://www.patreon.com/shotariya'
+    buymeacoffee = 'https://buymeacoffee.com/shotariya'
 
     if scn.smc_ob_data:
         m_col.template_list('SMC_UL_Combine_List', 'combine_list', scn, 'smc_ob_data',
@@ -35,3 +36,4 @@ def _materials_list(scn: Scene, m_col: bpy.types.UILayout) -> None:
     col = m_col.column()
     col.label(text='If this saved you time:')
     col.operator('smc.browser', text='Support Material Combiner', icon_value=get_icon_id('patreon')).link = patreon
+    col.operator('smc.browser', text='Buy Me a Coffee', icon_value=get_icon_id('bmc')).link = buymeacoffee

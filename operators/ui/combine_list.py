@@ -25,7 +25,8 @@ class RefreshObData(bpy.types.Operator):
     @staticmethod
     def execute(self, context: bpy.types.Context) -> Set[str]:
         scn = context.scene
-        ob_list = [ob for ob in context.visible_objects if ob.type == 'MESH' and ob.data.uv_layers.active]
+        ob_list = [ob for ob in context.visible_objects if
+                   ob.type == 'MESH' and ob.data.uv_layers.active and ob.data.materials]
         combine_list, layers = self._cache_previous_values(scn)
         self._rebuild_items_list(scn, ob_list, combine_list, layers)
         return {'FINISHED'}
@@ -61,7 +62,7 @@ class RefreshObData(bpy.types.Operator):
                         used = ob not in combine_list or mat in combine_list[ob]
                         layer = layers[ob][mat] if mat in layers[ob] else 1
                         self._create_mat_item(scn, ob, ob_id, mat, used, layer)
-            self._create_separator_item(scn, 2)
+            self._create_separator_item(scn)
 
     @staticmethod
     def _create_ob_item(scn: Scene, ob: bpy.types.Object, ob_id: int) -> None:
@@ -82,9 +83,9 @@ class RefreshObData(bpy.types.Operator):
         item.layer = layer
 
     @staticmethod
-    def _create_separator_item(scn: Scene, type_value: int) -> None:
+    def _create_separator_item(scn: Scene) -> None:
         item = scn.smc_ob_data.add()
-        item.type = type_value
+        item.type = 2
 
 
 class CombineSwitch(bpy.types.Operator):

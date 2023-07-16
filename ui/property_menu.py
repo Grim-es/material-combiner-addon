@@ -1,5 +1,5 @@
+from typing import Optional
 from typing import Set
-from typing import Tuple
 
 import bpy
 from bpy.props import IntProperty
@@ -44,40 +44,65 @@ class PropertyMenu(bpy.types.Operator):
                 image = node_tree.nodes[node_name].image
         else:
             image = get_image(get_texture(item.mat))
-        layout = self.layout
-        col = layout.column()
+        col = self.layout.column()
         col.scale_y = 1.2
         col.prop(item.mat, 'name', text='', icon_value=item.mat.preview.icon_id)
         if image:
-            self._draw_image(col, item, image.size)
+            self._show_image(col, image)
+            self._show_diffuse_color(col, item, image)
+            self._show_size_settings(col, item)
         else:
             col.label(text='Image size: {0}x{0}px'.format(scn.smc_diffuse_size))
-            col.separator()
-            self._draw_diffuse_color(col, item)
-
-    def _draw_image(self, col: bpy.types.UILayout, item: bpy.types.PropertyGroup, size: Tuple[int, int]) -> None:
-        col.label(text='Image size: {0}x{1}px'.format(*size))
-        col.separator()
-        col.prop(item.mat, 'smc_diffuse')
-        if item.mat.smc_diffuse:
-            self._draw_diffuse_color(col, item)
-            col.separator()
-        col.prop(item.mat, 'smc_size')
-        if item.mat.smc_size:
-            col.prop(item.mat, 'smc_size_width')
-            col.prop(item.mat, 'smc_size_height')
-            col.separator()
+            self._show_diffuse_color(col, item)
 
     @staticmethod
-    def _draw_diffuse_color(col: bpy.types.UILayout, item: bpy.types.PropertyGroup) -> None:
+    def _show_image(col: bpy.types.UILayout, image: bpy.types.Image) -> None:
+        if globs.is_blender_3_or_newer and not image.preview:
+            image.preview_ensure()
+        row = col.row()
+        image_name = '{0}...'.format(image.name[:16]) if len(image.name) > 16 else image.name
+        row.label(text=image_name, icon_value=image.preview.icon_id)
+        row.label(text='Image size: {0}x{1}px'.format(*image.size))
+
+    @staticmethod
+    def _show_diffuse_color(col: bpy.types.UILayout, item: bpy.types.PropertyGroup,
+                            image: Optional[bpy.types.Image] = None) -> None:
         if globs.is_blender_2_79_or_older:
-            col.prop(item.mat, 'diffuse_color', text='')
+            col.prop(item.mat, 'smc_diffuse')
+            if item.mat.smc_diffuse:
+                split = col.row().split(factor=0.1)
+                split.separator()
+                split.prop(item.mat, 'diffuse_color', text='')
             return
 
         shader = get_shader_type(item.mat)
+
+        if shader in ['principled', 'xnalara'] and image:
+            return
+
+        col.prop(item.mat, 'smc_diffuse')
+        if not item.mat.smc_diffuse:
+            return
+
+        split = col.row().split(factor=0.1)
+        split.separator()
         if shader in ['mmd', 'mmdCol']:
-            col.prop(item.mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'], 'default_value', text='')
+            split.prop(item.mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'], 'default_value', text='')
         if shader in ['mtoon', 'mtoonCol']:
-            col.prop(item.mat.node_tree.nodes['Mtoon1PbrMetallicRoughness.BaseColorFactor'], 'color', text='')
+            split.prop(item.mat.node_tree.nodes['Mtoon1PbrMetallicRoughness.BaseColorFactor'], 'color', text='')
         elif shader in ['vrm', 'vrmCol']:
-            col.prop(item.mat.node_tree.nodes['RGB'].outputs[0], 'default_value', text='')
+            split.prop(item.mat.node_tree.nodes['RGB'].outputs[0], 'default_value', text='')
+        elif shader == 'xnalaraNewCol':
+            split.prop(item.mat.node_tree.nodes['Group'].inputs['Diffuse'], 'default_value', text='')
+        elif shader in ['principledCol', 'xnalaraCol']:
+            split.prop(item.mat.node_tree.nodes['Principled BSDF'].inputs['Base Color'], 'default_value', text='')
+
+    @staticmethod
+    def _show_size_settings(col: bpy.types.UILayout, item: bpy.types.PropertyGroup):
+        col.prop(item.mat, 'smc_size')
+        if item.mat.smc_size:
+            split = col.row().split(factor=0.1)
+            split.separator()
+            col = split.column()
+            col.prop(item.mat, 'smc_size_width')
+            col.prop(item.mat, 'smc_size_height')

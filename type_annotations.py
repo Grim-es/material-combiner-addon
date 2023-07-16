@@ -1,7 +1,6 @@
 from typing import DefaultDict
 from typing import Dict
 from typing import List
-from typing import NewType
 from typing import Tuple
 from typing import Union
 
@@ -11,7 +10,8 @@ from mathutils import Vector
 from . import globs
 
 BlClasses = Union[
-    bpy.types.Panel, bpy.types.Operator, bpy.types.PropertyGroup, bpy.types.AddonPreferences, bpy.types.UIList]
+    bpy.types.Panel, bpy.types.Operator, bpy.types.PropertyGroup, bpy.types.AddonPreferences, bpy.types.UIList
+]
 
 SMCIcons = Union[bpy.utils.previews.ImagePreviewCollection, None]
 
