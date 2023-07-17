@@ -62,7 +62,8 @@ class PropertyMenu(bpy.types.Operator):
         row = col.row()
         image_name = '{0}...'.format(image.name[:16]) if len(image.name) > 16 else image.name
         row.label(text=image_name, icon_value=image.preview.icon_id)
-        row.label(text='Image size: {0}x{1}px'.format(*image.size))
+        row.alignment = 'RIGHT'
+        row.label(text='Size: {0}x{1}px'.format(*image.size))
 
     @staticmethod
     def _show_diffuse_color(col: bpy.types.UILayout, item: bpy.types.PropertyGroup,
@@ -70,7 +71,8 @@ class PropertyMenu(bpy.types.Operator):
         if globs.is_blender_2_79_or_older:
             col.prop(item.mat, 'smc_diffuse')
             if item.mat.smc_diffuse:
-                split = col.row().split(factor=0.1)
+                split = col.row().split(factor=0.1) if globs.is_blender_2_80_or_newer else col.row().split(
+                    percentage=0.1)
                 split.separator()
                 split.prop(item.mat, 'diffuse_color', text='')
             return
@@ -84,7 +86,7 @@ class PropertyMenu(bpy.types.Operator):
         if not item.mat.smc_diffuse:
             return
 
-        split = col.row().split(factor=0.1)
+        split = col.row().split(factor=0.1) if globs.is_blender_2_80_or_newer else col.row().split(percentage=0.1)
         split.separator()
         if shader in ['mmd', 'mmdCol']:
             split.prop(item.mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'], 'default_value', text='')
@@ -101,7 +103,7 @@ class PropertyMenu(bpy.types.Operator):
     def _show_size_settings(col: bpy.types.UILayout, item: bpy.types.PropertyGroup):
         col.prop(item.mat, 'smc_size')
         if item.mat.smc_size:
-            split = col.row().split(factor=0.1)
+            split = col.row().split(factor=0.1) if globs.is_blender_2_80_or_newer else col.row().split(percentage=0.1)
             split.separator()
             col = split.column()
             col.prop(item.mat, 'smc_size_width')
