@@ -1,20 +1,14 @@
 from collections import defaultdict
-from typing import DefaultDict
-from typing import Dict
 from typing import List
 from typing import Set
-from typing import Tuple
 
 import bpy
 from bpy.props import *
 
 from ... import globs
-from ...type_annotations import ObMats
-from ...type_annotations import SMCObData
-from ...type_annotations import SMCObDataItem
+from ...type_annotations import CombineListData
 from ...type_annotations import Scene
 from ...utils.materials import get_materials
-from ...utils.materials import sort_materials
 
 
 class RefreshObData(bpy.types.Operator):
@@ -27,49 +21,55 @@ class RefreshObData(bpy.types.Operator):
         scn = context.scene
         ob_list = [ob for ob in context.visible_objects if
                    ob.type == 'MESH' and ob.data.uv_layers.active and ob.data.materials]
-        combine_list, layers = self._cache_previous_values(scn)
-        self._rebuild_items_list(scn, ob_list, combine_list, layers)
+        combine_list_data = self._cache_previous_values(scn)
+        self._rebuild_items_list(scn, ob_list, combine_list_data)
         return {'FINISHED'}
 
     @staticmethod
-    def _cache_previous_values(scn: Scene) -> Tuple[
-        DefaultDict[bpy.types.Object, ObMats],
-        DefaultDict[bpy.types.Object, Dict[ObMats, int]]
-    ]:
+    def _cache_previous_values(scn: Scene) -> CombineListData:
+        combine_list_data = defaultdict(lambda: {
+            'used': True,
+            'mats': defaultdict(lambda: {
+                'used': True,
+                'layer': 1,
+            }),
+        })
 
-        combine_list = defaultdict(list)
-        layers = defaultdict(dict)
         for item in scn.smc_ob_data:
+            if item.type == globs.CL_OBJECT:
+                combine_list_data[item.ob]['used'] = item.used
             if item.type == globs.CL_MATERIAL:
-                if item.used:
-                    combine_list[item.ob].append(item.mat)
-                layers[item.ob][item.mat] = item.layer
-        return combine_list, layers
+                mat_data = combine_list_data[item.ob]['mats'][item.mat]
+                mat_data['used'] = item.used
+                mat_data['layer'] = item.layer
+        return combine_list_data
 
-    def _rebuild_items_list(self, scn: Scene, ob_list: List[bpy.types.Object],
-                            combine_list: DefaultDict[bpy.types.Object, ObMats],
-                            layers: DefaultDict[bpy.types.Object, Dict[ObMats, int]]) -> None:
+    def _rebuild_items_list(self, scn: Scene, ob_list: Set[bpy.types.Object],
+                            combine_list_data: CombineListData) -> None:
         scn.smc_ob_data.clear()
 
         for ob_id, ob in enumerate(ob_list):
-            mat_dict = sort_materials(get_materials(ob))
-            self._create_ob_item(scn, ob, ob_id)
-            for mats in mat_dict:
-                for mat in mats:
-                    if mat:
-                        if globs.is_blender_3_or_newer and not mat.preview:
-                            mat.preview_ensure()
-                        used = ob not in combine_list or mat in combine_list[ob]
-                        layer = layers[ob][mat] if mat in layers[ob] else 1
-                        self._create_mat_item(scn, ob, ob_id, mat, used, layer)
+            ob_data = combine_list_data[ob]
+            ob_used = ob_data['used']
+            self._create_ob_item(scn, ob, ob_id, ob_used)
+
+            for mat in get_materials(ob):
+                if globs.is_blender_3_or_newer and not mat.preview:
+                    mat.preview_ensure()
+
+                mat_data = ob_data['mats'][mat]
+                mat_used = ob_used and mat_data['used']
+                mat_layer = mat_data['layer']
+                self._create_mat_item(scn, ob, ob_id, mat, mat_used, mat_layer)
             self._create_separator_item(scn)
 
     @staticmethod
-    def _create_ob_item(scn: Scene, ob: bpy.types.Object, ob_id: int) -> None:
+    def _create_ob_item(scn: Scene, ob: bpy.types.Object, ob_id: int, used: bool) -> None:
         item = scn.smc_ob_data.add()
         item.ob = ob
         item.ob_id = ob_id
         item.type = 0
+        item.used = used
 
     @staticmethod
     def _create_mat_item(scn: Scene, ob: bpy.types.Object, ob_id: int, mat: bpy.types.Material, used: bool,
@@ -106,17 +106,21 @@ class CombineSwitch(bpy.types.Operator):
         return {'FINISHED'}
 
     @staticmethod
-    def _switch_ob_state(data: SMCObData, item: SMCObDataItem) -> None:
+    def _switch_ob_state(data: List[bpy.types.PropertyGroup], item: bpy.types.PropertyGroup) -> None:
         mat_list = [mat for mat in data if mat.ob_id == item.ob_id and mat.type == globs.CL_MATERIAL]
-        if mat_list:
-            item.used = not item.used
-            for mat in mat_list:
-                mat.used = item.used
+        if not mat_list:
+            return
+
+        item.used = not item.used
+        for mat in mat_list:
+            mat.used = item.used
 
     @staticmethod
-    def _switch_mat_state(data: SMCObData, item: SMCObDataItem) -> None:
+    def _switch_mat_state(data: List[bpy.types.PropertyGroup], item: bpy.types.PropertyGroup) -> None:
         ob = next((ob for ob in data if ob.ob_id == item.ob_id and ob.type == globs.CL_OBJECT), None)
-        if ob:
-            if not item.used:
-                ob.used = True
-            item.used = not item.used
+        if not ob:
+            return
+
+        if not item.used:
+            ob.used = True
+        item.used = not item.used

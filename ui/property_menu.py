@@ -70,11 +70,13 @@ class PropertyMenu(bpy.types.Operator):
                             image: Optional[bpy.types.Image] = None) -> None:
         if globs.is_blender_2_79_or_older:
             col.prop(item.mat, 'smc_diffuse')
-            if item.mat.smc_diffuse:
-                split = col.row().split(factor=0.1) if globs.is_blender_2_80_or_newer else col.row().split(
-                    percentage=0.1)
-                split.separator()
-                split.prop(item.mat, 'diffuse_color', text='')
+            if not item.mat.smc_diffuse:
+                return
+
+            split = col.row().split(factor=0.1) if globs.is_blender_2_80_or_newer else col.row().split(
+                percentage=0.1)
+            split.separator()
+            split.prop(item.mat, 'diffuse_color', text='')
             return
 
         shader = get_shader_type(item.mat)
@@ -82,12 +84,17 @@ class PropertyMenu(bpy.types.Operator):
         if shader in ['principled', 'xnalara'] and image:
             return
 
-        col.prop(item.mat, 'smc_diffuse')
-        if not item.mat.smc_diffuse:
-            return
+        if image:
+            col.prop(item.mat, 'smc_diffuse')
+            if not item.mat.smc_diffuse:
+                return
 
-        split = col.row().split(factor=0.1) if globs.is_blender_2_80_or_newer else col.row().split(percentage=0.1)
+        split = (
+            col.row().split(factor=0.1) if globs.is_blender_2_80_or_newer and image else
+            col.row().split(percentage=0.1) if image else col
+        )
         split.separator()
+
         if shader in ['mmd', 'mmdCol']:
             split.prop(item.mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'], 'default_value', text='')
         if shader in ['mtoon', 'mtoonCol']:

@@ -121,7 +121,7 @@ class SingletonUpdater(object):
         self._error_msg = None
         self._prefiltered_tag_count = 0
 
-        # UI code only, ie not used within this module but still useful
+        # UI code only, i.e., not used within this module but still useful
         # properties to have
 
         # to verify a valid import, in place of placeholder import
