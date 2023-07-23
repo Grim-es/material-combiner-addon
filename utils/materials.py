@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from collections import defaultdict
-from typing import Set
+from typing import List
 from typing import Union
 from typing import ValuesView
 from typing import cast
@@ -40,8 +40,8 @@ shader_image_nodes = {
 }
 
 
-def get_materials(ob: bpy.types.Object) -> Set[bpy.types.Material]:
-    return {mat_slot.material for mat_slot in ob.material_slots}
+def get_materials(ob: bpy.types.Object) -> List[bpy.types.Material]:
+    return [mat_slot.material for mat_slot in ob.material_slots if mat_slot.material]
 
 
 def get_shader_type(mat: bpy.types.Material) -> Union[str, None]:
@@ -70,7 +70,7 @@ def get_shader_type(mat: bpy.types.Material) -> Union[str, None]:
     )
 
 
-def sort_materials(mat_list: Set[bpy.types.Material]) -> ValuesView[MatDictItem]:
+def sort_materials(mat_list: List[bpy.types.Material]) -> ValuesView[MatDictItem]:
     for mat in bpy.data.materials:
         mat.root_mat = None
 
@@ -80,13 +80,13 @@ def sort_materials(mat_list: Set[bpy.types.Material]) -> ValuesView[MatDictItem]
 
         packed_file = None
 
-        if globs.is_blender_2_80_or_newer and node_tree:
+        if globs.is_blender_2_79_or_older:
+            packed_file = get_packed_file(get_image(get_texture(mat)))
+        elif node_tree:
             shader = get_shader_type(mat)
             node_name = shader_image_nodes.get(shader)
             if node_name:
                 packed_file = get_packed_file(node_tree.nodes[node_name].image)
-        else:
-            packed_file = get_packed_file(get_image(get_texture(mat)))
 
         if packed_file:
             mat_dict[(packed_file, get_diffuse(mat) if mat.smc_diffuse else None)].append(mat)

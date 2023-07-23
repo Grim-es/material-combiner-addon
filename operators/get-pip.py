@@ -131,7 +131,7 @@ def bootstrap(tmpdir=None):
 
     # We want to support people passing things like 'pip<8' to get-pip.py which
     # will let them install a specific version. However, because of the dreaded
-    # DoubleRequirement error if any of the args look like they might be a
+    # DoubleRequirement error, if any of the args look like they might be a
     # specific for one of our packages, then we'll turn off the implicit
     # installation of them.
     for arg in args:

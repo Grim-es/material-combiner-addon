@@ -88,15 +88,15 @@ def get_data(data: Sequence[bpy.types.PropertyGroup]) -> SMCObData:
 
 
 def get_mats_uv(scn: Scene, data: SMCObData) -> MatsUV:
-    mats_uv = {}
+    mats_uv = defaultdict(lambda: defaultdict(list))
     for ob_n, item in data.items():
         ob = scn.objects[ob_n]
-        mats_uv[ob_n] = defaultdict(list)
         for idx, polys in get_polys(ob).items():
             mat = ob.data.materials[idx]
-            if mat in item:
-                for poly in polys:
-                    mats_uv[ob_n][mat].extend(align_uv(get_uv(ob, poly)))
+            if mat not in item:
+                continue
+            for poly in polys:
+                mats_uv[ob_n][mat].extend(align_uv(get_uv(ob, poly)))
     return mats_uv
 
 
@@ -119,7 +119,7 @@ def _delete_material(ob: bpy.types.Object, mat_name: str) -> None:
 
 
 def get_duplicates(mats_uv: MatsUV) -> None:
-    mat_list = set(chain.from_iterable(mats_uv.values()))
+    mat_list = list(chain.from_iterable(mats_uv.values()))
     sorted_mat_list = sort_materials(mat_list)
     for mats in sorted_mat_list:
         root_mat = mats[0]
@@ -128,28 +128,28 @@ def get_duplicates(mats_uv: MatsUV) -> None:
 
 
 def get_structure(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> Structure:
-    structure = {}
+    structure = defaultdict(lambda: {
+        'gfx': {
+            'img_or_color': None,
+            'size': (),
+            'uv_size': ()
+        },
+        'dup': [],
+        'ob': [],
+        'uv': []
+    })
+
     for ob_n, item in data.items():
         ob = scn.objects[ob_n]
         for mat in item:
-            if mat.name in ob.data.materials:
-                root_mat = mat.root_mat or mat
-                if root_mat not in structure:
-                    structure[root_mat] = {
-                        'gfx': {
-                            'img_or_color': None,
-                            'size': (),
-                            'uv_size': ()
-                        },
-                        'dup': [],
-                        'ob': [],
-                        'uv': []
-                    }
-                if mat.root_mat and mat.name not in structure[root_mat]['dup']:
-                    structure[root_mat]['dup'].append(mat.name)
-                if ob.name not in structure[root_mat]['ob']:
-                    structure[root_mat]['ob'].append(ob.name)
-                structure[root_mat]['uv'].extend(mats_uv[ob_n][mat])
+            if mat.name not in ob.data.materials:
+                continue
+            root_mat = mat.root_mat or mat
+            if mat.root_mat and mat.name not in structure[root_mat]['dup']:
+                structure[root_mat]['dup'].append(mat.name)
+            if ob.name not in structure[root_mat]['ob']:
+                structure[root_mat]['ob'].append(ob.name)
+            structure[root_mat]['uv'].extend(mats_uv[ob_n][mat])
     return structure
 
 
@@ -283,11 +283,13 @@ def _set_image_or_color(item: StructureItem, mat: bpy.types.Material) -> None:
 
 
 def _paste_gfx(scn: Scene, item: StructureItem, mat: bpy.types.Material, img: ImageType, half_gaps: int) -> None:
-    if item['gfx']['fit']:
-        img.paste(
-            _get_gfx(scn, mat, item, item['gfx']['img_or_color']),
-            (int(item['gfx']['fit']['x'] + half_gaps), int(item['gfx']['fit']['y'] + half_gaps))
-        )
+    if not item['gfx']['fit']:
+        return
+
+    img.paste(
+        _get_gfx(scn, mat, item, item['gfx']['img_or_color']),
+        (int(item['gfx']['fit']['x'] + half_gaps), int(item['gfx']['fit']['y'] + half_gaps))
+    )
 
 
 def _get_gfx(scn: Scene, mat: bpy.types.Material, item: StructureItem,
@@ -403,10 +405,12 @@ def _get_unique_id(scn: Scene) -> str:
 def _add_its_from_existing_materials(scn: Scene, existed_ids: Set[int]) -> None:
     atlas_material_pattern = re.compile(r'{0}(\d+)_\d+'.format(atlas_material_prefix))
     for item in scn.smc_ob_data:
-        if item.type == globs.CL_MATERIAL:
-            match = atlas_material_pattern.fullmatch(item.mat.name)
-            if match:
-                existed_ids.add(int(match.group(1)))
+        if item.type != globs.CL_MATERIAL:
+            continue
+        
+        match = atlas_material_pattern.fullmatch(item.mat.name)
+        if match:
+            existed_ids.add(int(match.group(1)))
 
 
 def _generate_random_unique_id(existed_ids: Set[int]) -> str:
@@ -487,11 +491,13 @@ def _assign_mats(item: SMCObDataItem, comb_mats: CombMats, ob_materials: ObMats)
 
 def _assign_mats_to_polys(item: SMCObDataItem, comb_mats: CombMats, ob: bpy.types.Object, ob_materials: ObMats) -> None:
     for idx, polys in get_polys(ob).items():
-        if ob_materials[idx] in item:
-            mat_name = comb_mats[item[ob_materials[idx]]].name
-            mat_idx = ob_materials.find(mat_name)
-            for poly in polys:
-                poly.material_index = mat_idx
+        if ob_materials[idx] not in item:
+            continue
+        
+        mat_name = comb_mats[item[ob_materials[idx]]].name
+        mat_idx = ob_materials.find(mat_name)
+        for poly in polys:
+            poly.material_index = mat_idx
 
 
 def clear_mats(scn: Scene, mats_uv: MatsUV) -> None:
