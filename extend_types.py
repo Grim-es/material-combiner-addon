@@ -102,6 +102,12 @@ def register() -> None:
         description='Crop images by UV if materials UV outside of bounds',
         default=True,
     )
+    bpy.types.Scene.smc_pixel_art = BoolProperty(
+        name='Pixel Art / Small Textures',
+        description='Avoids 1-pixel UV scaling for small textures.'
+                    '\nDisable for larger textures to avoid blending with nearby pixels',
+        default=False,
+    )
     bpy.types.Scene.smc_diffuse_size = IntProperty(
         name='Size of materials without image',
         description='Select the size of materials that only consist of a color',
@@ -165,6 +171,7 @@ def unregister() -> None:
     del bpy.types.Scene.smc_size_width
     del bpy.types.Scene.smc_size_height
     del bpy.types.Scene.smc_crop
+    del bpy.types.Scene.smc_pixel_art
     del bpy.types.Scene.smc_diffuse_size
     del bpy.types.Scene.smc_gaps
     del bpy.types.Scene.smc_save_path

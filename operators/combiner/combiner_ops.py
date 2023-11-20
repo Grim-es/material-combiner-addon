@@ -336,8 +336,8 @@ def align_uvs(scn: Scene, data: Structure, atlas_size: Tuple[int, int], size: Tu
 
     scaled_width, scaled_height = _get_scale_factors(atlas_size, size)
 
-    margin = scn.smc_gaps + 2
-    border_margin = 1 + int(scn.smc_gaps / 2)
+    margin = scn.smc_gaps + (0 if scn.smc_pixel_art else 2)
+    border_margin = int(scn.smc_gaps / 2) + (0 if scn.smc_pixel_art else 1)
 
     for item in data.values():
         gfx_size = item['gfx']['size']

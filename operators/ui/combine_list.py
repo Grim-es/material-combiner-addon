@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import List
 from typing import Set
+from typing import cast
 
 import bpy
 from bpy.props import *
@@ -27,21 +28,20 @@ class RefreshObData(bpy.types.Operator):
 
     @staticmethod
     def _cache_previous_values(scn: Scene) -> CombineListData:
-        combine_list_data = defaultdict(lambda: {
+        combine_list_data = cast(CombineListData, defaultdict(lambda: {
             'used': True,
             'mats': defaultdict(lambda: {
                 'used': True,
                 'layer': 1,
             }),
-        })
+        }))
 
         for item in scn.smc_ob_data:
             if item.type == globs.CL_OBJECT:
                 combine_list_data[item.ob]['used'] = item.used
-            if item.type == globs.CL_MATERIAL:
+            elif item.type == globs.CL_MATERIAL:
                 mat_data = combine_list_data[item.ob]['mats'][item.mat]
-                mat_data['used'] = item.used
-                mat_data['layer'] = item.layer
+                mat_data.update({'used': item.used, 'layer': item.layer})
         return combine_list_data
 
     def _rebuild_items_list(self, scn: Scene, ob_list: Set[bpy.types.Object],

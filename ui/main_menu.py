@@ -45,6 +45,8 @@ class MaterialMenu(bpy.types.Panel):
             box.prop(scn, 'smc_size_height')
         box.scale_y = 1.2
         box.prop(scn, 'smc_crop')
+        box.scale_y = 1.2
+        box.prop(scn, 'smc_pixel_art')
         row = box.row()
         col = row.column()
         col.scale_y = 1.2
