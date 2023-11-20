@@ -24,11 +24,11 @@ bl_info = {
     'name': "Shotariya's Material Combiner",
     'description': 'Public Release Material Combiner 2',
     'author': 'shotariya',
-    'version': (2, 1, 2, 8),
+    'version': (2, 1, 2, 9),
     'blender': (2, 80, 0),
     'location': 'View3D',
-    # 'warning': '',
-    'wiki_url': 'https://vrcat.club/threads/material-combiner-blender-addon.2255/',
+    'wiki_url': 'https://github.com/Grim-es/material-combiner-addon',
+    'tracker_url': 'https://github.com/Grim-es/material-combiner-addon/issues',
     'category': 'Object'
 }
 
