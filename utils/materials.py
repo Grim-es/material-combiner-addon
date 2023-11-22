@@ -84,6 +84,8 @@ def sort_materials(mat_list: List[bpy.types.Material]) -> ValuesView[MatDictItem
             packed_file = get_packed_file(get_image(get_texture(mat)))
         elif node_tree:
             shader = get_shader_type(mat)
+            if shader == None:
+                raise ValueError(f"Shader type of {mat.name_full} cannot be recognized, see GitHub known issues")
             node_name = shader_image_nodes.get(shader)
             if node_name:
                 packed_file = get_packed_file(node_tree.nodes[node_name].image)
