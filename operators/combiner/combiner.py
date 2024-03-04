@@ -23,7 +23,10 @@ class Combiner(bpy.types.Operator):
         if not self.data:
             self.invoke(context, None)
         scn = context.scene
-        scn.smc_save_path = self.directory
+        if self.directory:
+            scn.smc_save_path = self.directory
+        else:
+            scn.smc_save_path = bpy.path.abspath("//")
         self.structure = BinPacker(get_size(scn, self.structure)).fit()
 
         size = get_atlas_size(self.structure)
