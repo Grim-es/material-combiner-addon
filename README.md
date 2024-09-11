@@ -28,14 +28,14 @@ material-combiner-addon
 5. You can also set the size for materials that do not have an image. The default size is set to 32 pixels.
 6. Once you have made your selections, click the `Save atlas to..` button to start the atlasing process.
 7. If the materials are not merged properly or the atlas image does not contain all the textures, please refer to the section:
-   [After clicking "Save atlas to.." the materials are simply merged or the atlas image does not have all the textures](readme-ov-file#after-clicking-save-atlas-to-the-materials-are-simply-merged-or-the-atlas-image-does-not-have-all-the-textures).
+   [After clicking "Save atlas to.." the materials are simply merged or the atlas image does not have all the textures](https://github.com/Grim-es/material-combiner-addon/tree/master?tab=readme-ov-file#after-clicking-save-atlas-to-the-materials-are-simply-merged-or-the-atlas-image-does-not-have-all-the-textures).
 
 ## KNOWN ISSUES
 
 ### After clicking "Save atlas to.." the materials are simply merged or the atlas image does not have all the textures
 - Textures are packaged in a .blend file. Save the .blend file to a location of your choice, then go to File > External Data > Unpack Resources / Unpack All Into Files to extract the textures.
 - Your version of Blender is not in English, in this case the nodes will be named differently, their names are strictly written in the script. You need to manually rename the nodes to their own names, or switch the blender version to English and regenerate the nodes by re-importing the model.
-- You are using an unsupported shader (Surface property of material) or incorrect node names. You can check the file [utils/materials.py](https://github.com/Grim-es/material-combiner-addon/blob/master/utils/materials.py) to see which shaders are supported and what node names should be used. For more details, refer to the relevant discussion on GitHub: [Issue #98](https://github.com/Grim-es/material-combiner-addon/issues/98).
+- You are using an unsupported shader (Surface property of material) or incorrect node names. You can check the file [utils/materials.py](https://github.com/Grim-es/material-combiner-addon/blob/781d70fbbc2ddfa6813c61255c0cb6c501307a3e/utils/materials.py#L19-L40) to see which shaders are supported and what node names should be used. For more details, refer to the relevant discussion on GitHub: [Issue #98](https://github.com/Grim-es/material-combiner-addon/issues/98).
 - If objects already share the same material with the same texture, they will not be atlased because they are already optimized, and the existing image will be used instead.
 
 ### Pillow installation process is repeated
