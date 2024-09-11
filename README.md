@@ -35,7 +35,7 @@ material-combiner-addon
 ### After clicking "Save atlas to.." the materials are simply merged or the atlas image does not have all the textures
 - Textures are packaged in a .blend file. Save the .blend file to a location of your choice, then go to File > External Data > Unpack Resources / Unpack All Into Files to extract the textures.
 - Your version of Blender is not in English, in this case the nodes will be named differently, their names are strictly written in the script. You need to manually rename the nodes to their own names, or switch the blender version to English and regenerate the nodes by re-importing the model.
-- You are using an unsupported shader (Surface property of material) or incorrect node names. You can check the file [utils/materials.py](Grim-es/material-combiner-addon/blob/master/utils/materials.py) to see which shaders are supported and what node names should be used. For more details, refer to the relevant discussion on GitHub: [Issue #98](Grim-es/material-combiner-addon/issues/98).
+- You are using an unsupported shader (Surface property of material) or incorrect node names. You can check the file [utils/materials.py](https://github.com/Grim-es/material-combiner-addon/blob/master/utils/materials.py) to see which shaders are supported and what node names should be used. For more details, refer to the relevant discussion on GitHub: [Issue #98](https://github.com/Grim-es/material-combiner-addon/issues/98).
 - If objects already share the same material with the same texture, they will not be atlased because they are already optimized, and the existing image will be used instead.
 
 ### Pillow installation process is repeated
@@ -65,6 +65,7 @@ You have installed the source code from the Releases. Instead, install from the 
     ```console
     C:\Users\YourUserName\AppData\Roaming\Blender Foundation\Blender\BlenderVersion\scripts\addons
     ```
+  Replace ***YourUserName*** with your actual username and ***BlenderVersion*** with the version of Blender you are using.
 * **MacOS**
     ```console
     /Users/YourUserName/Library/Application Support/Blender/BlenderVersion/scripts/addons
