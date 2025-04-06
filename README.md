@@ -1,9 +1,9 @@
 material-combiner-addon
 ===========
 
-#### An addon for Blender that helps reduce draw calls in game engines by combining textures without quality loss and avoiding issues with UV bounds larger than 0-1.
+#### An add-on for Blender that helps reduce draw calls in game engines by combining textures without quality loss and avoiding issues with UV bounds larger than 0-1.
 
-#### If you like an addon, you can support my work on Patreon or Buy me a coffee.
+#### If you like an add-on, you can support my work on Patreon or Buy me a coffee.
 
 [<img src="http://webgrimes.com/buymeacoffee.svg" height="40px">](https://www.buymeacoffee.com/shotariya)
 [<img src="http://webgrimes.com/patreon.png" height="40px">](https://www.patreon.com/join/shotariya?)
@@ -20,15 +20,15 @@ material-combiner-addon
 
 ## INSTALLATION
 
-1. Download an addon: [Material-combiner](https://github.com/Grim-es/material-combiner-addon/archive/master.zip).
-2. Go to File > User Preferences > Addons.
+1. Download an add-on: [Material-combiner](https://github.com/Grim-es/material-combiner-addon/archive/master.zip).
+2. Go to File > User Preferences > Add-ons.
 3. Click on Install Add-on from File.
 4. Choose `material-combiner-addon-master.zip` archive.
 5. Activate Material Combiner.
 
 ## HOW OT USE
 
-1. Once the addon is installed and activated, go to the 3D Viewport in Blender.
+1. Once the add-on is installed and activated, go to the 3D Viewport in Blender.
 2. On the right side of the 3D View (Scene) window, open the side panel by pressing the `N` key on your keyboard.
 3. In the side panel, locate the **MatCombiner** section.
 4. You will see a list of objects and their corresponding materials:
