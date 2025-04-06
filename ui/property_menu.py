@@ -1,13 +1,11 @@
-from typing import Optional
-from typing import Set
+from typing import Optional, Set
 
 import bpy
 from bpy.props import IntProperty
 
 from .. import globs
 from ..utils.images import get_image
-from ..utils.materials import get_shader_type
-from ..utils.materials import shader_image_nodes
+from ..utils.materials import get_image_from_material, get_shader_type
 from ..utils.textures import get_texture
 
 
@@ -36,12 +34,7 @@ class PropertyMenu(bpy.types.Operator):
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
         if globs.is_blender_2_80_or_newer:
-            node_tree = item.mat.node_tree if item.mat else None
-            image = None
-            shader = get_shader_type(item.mat) if item.mat else None
-            node_name = shader_image_nodes.get(shader)
-            if node_name:
-                image = node_tree.nodes[node_name].image
+            image = get_image_from_material(item.mat) if item.mat else None
         else:
             image = get_image(get_texture(item.mat))
         col = self.layout.column()
@@ -95,15 +88,15 @@ class PropertyMenu(bpy.types.Operator):
         )
         split.separator()
 
-        if shader in ['mmd', 'mmdCol']:
+        if shader in ['mmd', 'mmdCol'] and 'mmd_shader' in item.mat.node_tree.nodes:
             split.prop(item.mat.node_tree.nodes['mmd_shader'].inputs['Diffuse Color'], 'default_value', text='')
-        if shader in ['mtoon', 'mtoonCol']:
+        elif shader in ['mtoon', 'mtoonCol'] and 'Mtoon1PbrMetallicRoughness.BaseColorFactor' in item.mat.node_tree.nodes:
             split.prop(item.mat.node_tree.nodes['Mtoon1PbrMetallicRoughness.BaseColorFactor'], 'color', text='')
-        elif shader in ['vrm', 'vrmCol']:
+        elif shader in ['vrm', 'vrmCol'] and 'RGB' in item.mat.node_tree.nodes:
             split.prop(item.mat.node_tree.nodes['RGB'].outputs[0], 'default_value', text='')
-        elif shader == 'xnalaraNewCol':
+        elif shader == 'xnalaraNewCol' and 'Group' in item.mat.node_tree.nodes:
             split.prop(item.mat.node_tree.nodes['Group'].inputs['Diffuse'], 'default_value', text='')
-        elif shader in ['principledCol', 'xnalaraCol']:
+        elif shader in ['principledCol', 'xnalaraCol'] and 'Principled BSDF' in item.mat.node_tree.nodes:
             split.prop(item.mat.node_tree.nodes['Principled BSDF'].inputs['Base Color'], 'default_value', text='')
 
     @staticmethod

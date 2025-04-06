@@ -1,4 +1,3 @@
-from . import credits_menu
-from . import main_menu
-from . import property_menu
-from . import update_menu
+from . import credits_menu, main_menu, property_menu, update_menu
+
+__all__ = ["credits_menu", "main_menu", "property_menu", "update_menu"]

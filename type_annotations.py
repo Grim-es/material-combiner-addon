@@ -1,8 +1,4 @@
-from typing import DefaultDict
-from typing import Dict
-from typing import List
-from typing import Tuple
-from typing import Union
+from typing import DefaultDict, Dict, List, Tuple, Union
 
 import bpy
 from mathutils import Vector

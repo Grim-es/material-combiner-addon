@@ -412,7 +412,7 @@ class SingletonUpdater(object):
 
     @property
     def tags(self):
-        if self._tags is []:
+        if self._tags == []:
             return []
         tag_names = []
         for tag in self._tags:
@@ -500,7 +500,7 @@ class SingletonUpdater(object):
         if not isinstance(value, tuple):
             raise ValueError("Version minimum must be a tuple")
         for subvalue in value:
-            if type(subvalue) != int:
+            if type(subvalue) is not int:
                 raise ValueError("Version elements must be integers")
         self._version_min_update = value
 
@@ -518,7 +518,8 @@ class SingletonUpdater(object):
     # Parameter validation related functions
     # -------------------------------------------------------------------------
 
-    def check_is_url(self, url):
+    @staticmethod
+    def check_is_url(url):
         if not ("http://" in url or "https://" in url):
             return False
         if "." not in url:
@@ -971,7 +972,7 @@ class SingletonUpdater(object):
         # paths to be aware of and not overwrite/remove/etc
         staging_path = os.path.join(self._updater_path, "update_staging")
 
-        # If clean install is enabled, clear existing files ahead of time
+        # If clean installation is enabled, clear existing files ahead of time
         # note: will not delete the update.json, update folder, staging, or staging
         # but will delete all other folders/files in addon directory
         if clean:
@@ -1115,13 +1116,13 @@ class SingletonUpdater(object):
         # and for any given break split into a different section
         segments = []
         tmp = ''
-        for l in str(text):
-            if l.isdigit() is False:
+        for L in str(text):
+            if L.isdigit() is False:
                 if len(tmp) > 0:
                     segments.append(int(tmp))
                     tmp = ''
             else:
-                tmp += l
+                tmp += L
         if len(tmp) > 0:
             segments.append(int(tmp))
 

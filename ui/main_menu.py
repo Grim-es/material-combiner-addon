@@ -2,7 +2,13 @@ import bpy
 
 from .. import globs
 from ..icons import get_icon_id
-from ..type_annotations import Scene
+
+_GITHUB_README_URL = 'https://github.com/Grim-es/material-combiner-addon/?tab=readme-ov-file#pillow-installation-process-is-repeated'
+_DISCORD_CONTACT_URL = 'https://discordapp.com/users/275608234595713024'
+_INSTALL_HELP_TEXT = (
+    'If the installation process is repeated, try running Blender as Administrator '
+    'or check your Internet connection.'
+)
 
 
 class MaterialMenu(bpy.types.Panel):
@@ -13,77 +19,140 @@ class MaterialMenu(bpy.types.Panel):
     bl_category = 'MatCombiner'
 
     def draw(self, context: bpy.types.Context) -> None:
-        scn = context.scene
         layout = self.layout
-        col = layout.column(align=True)
+
         if globs.pil_exist:
-            self._materials_list(col, scn, layout)
+            self._render_main_interface(context, layout)
         elif globs.smc_pi:
-            col = col.box().column()
-            col.label(text='Installation complete', icon_value=get_icon_id('done'))
-            col.label(text='Please restart Blender', icon_value=get_icon_id('null'))
+            self.render_install_success(layout)
         else:
-            self.pillow_installator(col)
+            self.draw_pillow_installer(context, layout)
+
+    def _render_main_interface(self, context: bpy.types.Context, layout: bpy.types.UILayout) -> None:
+        self._create_materials_list(context, layout)
+        self._create_properties_section(context.scene, layout)
+        self._create_action_controls(layout)
 
     @staticmethod
-    def _materials_list(col: bpy.types.UILayout, scn: Scene, layout: bpy.types.UIList) -> None:
-        col.label(text='Materials to combine:')
-        col.template_list('SMC_UL_Combine_List', 'combine_list', scn, 'smc_ob_data',
-                          scn, 'smc_ob_data_id', rows=12, type='DEFAULT')
-        col = col.column(align=True)
-        col.scale_y = 1.2
-        col.operator('smc.refresh_ob_data',
-                     text='Update Material List' if scn.smc_ob_data else 'Generate Material List',
-                     icon_value=get_icon_id('null'))
-        col = layout.column()
-        col.label(text='Properties:')
-        box = col.box()
-        box.scale_y = 1.2
-        box.prop(scn, 'smc_size')
-        if scn.smc_size in ['CUST', 'STRICTCUST']:
-            box.prop(scn, 'smc_size_width')
-            box.prop(scn, 'smc_size_height')
-        box.scale_y = 1.2
-        box.prop(scn, 'smc_crop')
-        box.scale_y = 1.2
-        box.prop(scn, 'smc_pixel_art')
-        row = box.row()
+    def _create_materials_list(context: bpy.types.Context, layout: bpy.types.UILayout) -> None:
+        scene = context.scene
+        column = layout.column(align=True)
+
+        column.label(text='Materials to Combine:') # TODO: Dropdown Menu Select/Deselect All
+        column.template_list(
+            'SMC_UL_Combine_List',
+            'combine_list',
+            scene,
+            'smc_ob_data',
+            scene,
+            'smc_ob_data_id',
+            rows=12
+        )
+
+        action_column = column.column(align=True)
+        action_column.scale_y = 1.2
+        action_text = 'Update Material List' if scene.smc_ob_data else 'Generate Material List'
+        action_column.operator('smc.refresh_ob_data', text=action_text, icon_value=get_icon_id('null'))
+
+    def _create_properties_section(self, scene: bpy.types.Scene, layout: bpy.types.UILayout) -> None:
+        column = layout.column()
+        column.label(text='Atlas Properties:')
+
+        box = column.box()
+        self._add_size_properties(box, scene)
+        self._add_quality_properties(box, scene)
+        self._add_gap_settings(box, scene)
+
+    @staticmethod
+    def _add_size_properties(layout: bpy.types.UILayout, scene: bpy.types.Scene) -> None:
+        layout.prop(scene, 'smc_size', text='Atlas Size')
+
+        if scene.smc_size in {'CUST', 'STRICTCUST'}:
+            size_col = layout.column(align=True)
+            size_col.scale_y = 1.2
+            size_col.prop(scene, 'smc_size_width', text='Width')
+            size_col.prop(scene, 'smc_size_height', text='Height')
+
+    @staticmethod
+    def _add_quality_properties(layout: bpy.types.UILayout, scene: bpy.types.Scene) -> None:
+        layout.prop(scene, 'smc_crop', text='Enable Cropping')
+        layout.prop(scene, 'smc_pixel_art', text='Pixel Art Mode')
+
+    def _add_gap_settings(self, layout: bpy.types.UILayout, scene: bpy.types.Scene) -> None:
+        self._create_property_row(
+            layout,
+            'smc_diffuse_size',
+            'Base Color Size:'
+        )
+
+        self._create_property_row(
+            layout,
+            'smc_gaps',
+            'Spacing Between Textures:'
+        )
+
+    @staticmethod
+    def _create_property_row(layout: bpy.types.UILayout, prop: str, label: str) -> None:
+        row = layout.row()
         col = row.column()
         col.scale_y = 1.2
-        col.label(text='Size of materials without image')
+        col.label(text=label)
         col = row.column()
-        col.scale_x = .75
+        col.scale_x = 0.75
         col.scale_y = 1.2
         col.alignment = 'RIGHT'
-        col.prop(scn, 'smc_diffuse_size', text='')
-        row = box.row()
-        col = row.column()
-        col.scale_y = 1.2
-        col.label(text='Size of gaps between images')
-        col = row.column()
-        col.scale_x = .75
-        col.scale_y = 1.2
-        col.alignment = 'RIGHT'
-        col.prop(scn, 'smc_gaps', text='')
+        col.prop(bpy.context.scene, prop, text='')
+
+    @staticmethod
+    def _create_action_controls(layout: bpy.types.UILayout) -> None:
         col = layout.column()
         col.scale_y = 1.5
-        col.operator('smc.combiner', text='Save Atlas to..', icon_value=get_icon_id('null')).cats = False
+        col.operator(
+            'smc.combiner',
+            text='Generate Texture Atlas',
+            icon_value=get_icon_id('save')
+        ).cats = False
 
     @staticmethod
-    def pillow_installator(col: bpy.types.UILayout) -> None:
-        discord = 'https://discordapp.com/users/275608234595713024'
+    def draw_pillow_installer(context: bpy.types.Context, layout: bpy.types.UILayout) -> None:
+        box = layout.box()
+        MaterialMenu._render_install_header(box)
+        MaterialMenu._render_install_actions(box)
+        MaterialMenu._render_install_troubleshooting(box, context)
 
-        col.label(text='Python Imaging Library required to continue')
+    @staticmethod
+    def _render_install_header(layout: bpy.types.UILayout) -> None:
+        col = layout.column(align=True)
+        col.label(text='Python Imaging Library Required', icon='ERROR')
         col.separator()
-        row = col.row()
+
+    @staticmethod
+    def _render_install_actions(layout: bpy.types.UILayout) -> None:
+        row = layout.row()
         row.scale_y = 1.5
-        row.operator('smc.get_pillow', text='Install Pillow', icon_value=get_icon_id('download'))
-        col.separator()
-        col.separator()
-        col = col.box().column()
-        col.label(text='If the installation process is repeated'
-                       '\ntry to run Blender as Administrator'
-                       '\nor check your Internet Connection.')
-        col.separator()
-        col.label(text='If the error persists, contact me on Discord for a manual installation:')
-        col.operator('smc.browser', text='shotariya#4269', icon_value=get_icon_id('help')).link = discord
+        row.operator('smc.get_pillow', text='Install Pillow', icon='IMPORT')
+
+    @staticmethod
+    def _render_install_troubleshooting(layout: bpy.types.UILayout, context: bpy.types.Context) -> None:
+        layout.separator()
+        layout.label(text=_INSTALL_HELP_TEXT)
+
+        help_col = layout.column(align=True)
+        help_col.scale_y = 1.2
+        help_col.operator(
+            'smc.browser',
+            text='ReadMe on GitHub',
+            icon='URL'
+        ).link = _GITHUB_README_URL
+
+        help_col.operator(
+            'smc.browser',
+            text='Contact Support (Discord)',
+            icon='COMMUNITY'
+        ).link = _DISCORD_CONTACT_URL
+
+    @staticmethod
+    def render_install_success(layout: bpy.types.UILayout) -> None:
+        box = layout.box().column()
+        box.label(text='Installation Complete', icon='CHECKMARK')
+        box.label(text='Please Restart Blender', icon='INFO')

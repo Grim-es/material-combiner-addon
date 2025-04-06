@@ -1,13 +1,13 @@
-from typing import Dict
+from typing import Optional
 
 import bpy
 
 
-def get_texture(mat: bpy.types.Material) -> bpy.types.Texture:
-    return next((slot.texture for idx, slot in enumerate(mat.texture_slots) if
-                 slot is not None and mat.use_textures[idx]), None)
+def get_texture(mat: bpy.types.Material) -> Optional[bpy.types.Texture]:
+    if not hasattr(mat, 'texture_slots') or not mat.texture_slots:
+        return None
 
-
-def get_textures(mat: bpy.types.Material) -> Dict[int, bpy.types.Texture]:
-    return {idx: slot.texture for idx, slot in enumerate(mat.texture_slots) if
-            slot is not None and mat.use_textures[idx]}
+    return next(
+        (slot.texture for idx, slot in enumerate(mat.texture_slots) if mat.use_textures[idx]),
+        None
+    )
