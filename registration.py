@@ -1,16 +1,9 @@
-from typing import Dict
-from typing import Union
+from typing import Dict, Union
 
 import bpy
 
-from . import addon_updater_ops
-from . import extend_lists
-from . import extend_types
-from . import globs
-from . import operators
-from . import ui
-from .icons import initialize_smc_icons
-from .icons import unload_smc_icons
+from . import addon_updater_ops, extend_lists, extend_types, globs, operators, ui
+from .icons import initialize_smc_icons, unload_smc_icons
 from .type_annotations import BlClasses
 
 __bl_classes = [
@@ -22,16 +15,10 @@ __bl_classes = [
     operators.combiner.Combiner,
     operators.combine_list.RefreshObData,
     operators.combine_list.CombineSwitch,
-    operators.multicombine_list.MultiCombineColor,
-    operators.multicombine_list.MultiCombineImageAdd,
-    operators.multicombine_list.MultiCombineImageMove,
-    operators.multicombine_list.MultiCombineImagePath,
-    operators.multicombine_list.MultiCombineImageReset,
-    operators.multicombine_list.MultiCombineImageRemove,
     operators.browser.OpenBrowser,
     operators.get_pillow.InstallPIL,
 
-    extend_types.CombineList,
+    extend_types.CombineListEntry,
     extend_types.UpdatePreferences,
 
     extend_lists.SMC_UL_Combine_List,

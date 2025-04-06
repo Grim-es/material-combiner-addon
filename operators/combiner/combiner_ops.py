@@ -4,39 +4,28 @@ import math
 import os
 import random
 import re
-from collections import OrderedDict
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from itertools import chain
-from typing import Dict
-from typing import List
-from typing import Sequence
-from typing import Set
-from typing import Tuple
-from typing import Union
-from typing import cast
+from typing import Dict, List, Sequence, Set, Tuple, Union, cast
 
 import bpy
 import numpy as np
 
 from ... import globs
-from ...type_annotations import CombMats
-from ...type_annotations import Diffuse
-from ...type_annotations import MatsUV
-from ...type_annotations import ObMats
-from ...type_annotations import SMCObData
-from ...type_annotations import SMCObDataItem
-from ...type_annotations import Scene
-from ...type_annotations import Structure
-from ...type_annotations import StructureItem
-from ...utils.images import get_image
-from ...utils.images import get_packed_file
-from ...utils.materials import get_diffuse
-from ...utils.materials import get_shader_type
-from ...utils.materials import shader_image_nodes
-from ...utils.materials import sort_materials
-from ...utils.objects import align_uv
-from ...utils.objects import get_polys
-from ...utils.objects import get_uv
+from ...type_annotations import (
+    CombMats,
+    Diffuse,
+    MatsUV,
+    ObMats,
+    Scene,
+    SMCObData,
+    SMCObDataItem,
+    Structure,
+    StructureItem,
+)
+from ...utils.images import get_image, get_packed_file
+from ...utils.materials import get_diffuse, get_image_from_material, sort_materials
+from ...utils.objects import align_uv, get_polys, get_uv
 from ...utils.textures import get_texture
 
 try:
@@ -198,9 +187,7 @@ def _get_image(mat: bpy.types.Material) -> Union[bpy.types.Image, None]:
     if globs.is_blender_2_79_or_older:
         return get_image(get_texture(mat))
 
-    shader = get_shader_type(mat) if mat else None
-    node = mat.node_tree.nodes.get(shader_image_nodes.get(shader, ''))
-    return node.image if node else None
+    return get_image_from_material(mat)
 
 
 def _get_image_size(mat: bpy.types.Material, img: bpy.types.Image) -> Tuple[int, int]:
@@ -272,9 +259,8 @@ def get_atlas(scn: Scene, data: Structure, atlas_size: Tuple[int, int]) -> Image
 
 def _set_image_or_color(item: StructureItem, mat: bpy.types.Material) -> None:
     if globs.is_blender_2_80_or_newer:
-        shader = get_shader_type(mat) if mat else None
-        node_name = shader_image_nodes.get(shader)
-        item['gfx']['img_or_color'] = get_packed_file(mat.node_tree.nodes.get(node_name).image) if node_name else None
+        image = get_image_from_material(mat)
+        item['gfx']['img_or_color'] = get_packed_file(image) if image else None
     else:
         item['gfx']['img_or_color'] = get_packed_file(get_image(get_texture(mat)))
 
@@ -302,7 +288,7 @@ def _get_gfx(scn: Scene, mat: bpy.types.Material, item: StructureItem,
     if isinstance(img_or_color, tuple):
         return Image.new('RGBA', size, img_or_color)
 
-    img = Image.open(io.BytesIO(img_or_color.data))
+    img = Image.open(io.BytesIO(img_or_color.data)).convert("RGBA")
     if img.size != size:
         img.resize(size, resampling)
     if mat.smc_size:

@@ -18,8 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Union
-from typing import Dict
+from typing import Dict, Optional
 
 
 class BinPacker(object):
@@ -42,7 +41,7 @@ class BinPacker(object):
 
         return self.bin
 
-    def find_node(self, root: Dict, w: int, h: int) -> Union[Dict, None]:
+    def find_node(self, root: Dict, w: int, h: int) -> Optional[Dict]:
         if 'used' in root and root['used']:
             return self.find_node(root['right'], w, h) or self.find_node(root['down'], w, h)
         elif w <= root['w'] and h <= root['h']:
@@ -56,7 +55,7 @@ class BinPacker(object):
         node['right'] = {'x': node['x'] + w, 'y': node['y'], 'w': node['w'] - w, 'h': h}
         return node
 
-    def grow_node(self, w: int, h: int) -> Union[Dict, None]:
+    def grow_node(self, w: int, h: int) -> Optional[Dict]:
         can_grow_right = h <= self.root['h']
         can_grow_down = w <= self.root['w']
 
@@ -69,7 +68,7 @@ class BinPacker(object):
             return self.grow_down(w, h)
         return None
 
-    def grow_right(self, w: int, h: int) -> Union[Dict, None]:
+    def grow_right(self, w: int, h: int) -> Optional[Dict]:
         self.root = {
             'used': True,
             'x': 0,
@@ -82,7 +81,7 @@ class BinPacker(object):
         node = self.find_node(self.root, w, h)
         return self.split_node(node, w, h) if node else None
 
-    def grow_down(self, w: int, h: int) -> Union[Dict, None]:
+    def grow_down(self, w: int, h: int) -> Optional[Dict]:
         self.root = {
             'used': True,
             'x': 0,

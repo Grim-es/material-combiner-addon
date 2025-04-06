@@ -16,6 +16,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import importlib
 import os
 import sys
 from subprocess import call
@@ -193,18 +194,20 @@ class AddonUpdaterCheckNow(bpy.types.Operator):
             if Updater.verbose:
                 print("Could not get {} preferences, update check skipped".format(__package__))
             return {'CANCELLED'}
-        Updater.set_check_interval(enable=settings.auto_check_update,
-                                   months=settings.updater_intrval_months,
-                                   days=settings.updater_intrval_days,
-                                   hours=settings.updater_intrval_hours,
-                                   minutes=settings.updater_intrval_minutes)
+        Updater.set_check_interval(
+            enable=settings.auto_check_update,
+            months=settings.updater_interval_months,
+            days=settings.updater_interval_days,
+            hours=settings.updater_interval_hours,
+            minutes=settings.updater_interval_minutes,
+        )
         Updater.check_for_update_now(ui_refresh)
         python_executable = bpy.app.binary_path_python if bpy.app.version < (3, 0, 0) else sys.executable
-        try:
-            import pip
+
+        if importlib.util.find_spec('pip'):
             call([python_executable, '-m', 'pip', 'install', 'pip', '--user', '--upgrade'], shell=True)
             call([python_executable, '-m', 'pip', 'install', 'Pillow', '--user', '--upgrade'], shell=True)
-        except ImportError:
+        else:
             call([python_executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'operators',
                                                   'get-pip.py'), '--user'], shell=True)
             call([python_executable, '-m', 'pip', 'install', 'Pillow', '--user', '--upgrade'], shell=True)
@@ -615,10 +618,10 @@ def check_for_update_background():
     if not settings:
         return
     Updater.set_check_interval(enable=settings.auto_check_update,
-                               months=settings.updater_intrval_months,
-                               days=settings.updater_intrval_days,
-                               hours=settings.updater_intrval_hours,
-                               minutes=settings.updater_intrval_minutes)
+                               months=settings.updater_interval_months,
+                               days=settings.updater_interval_days,
+                               hours=settings.updater_interval_hours,
+                               minutes=settings.updater_interval_minutes)
 
     if Updater.verbose:
         print("{} updater: Running background check for update".format(Updater.addon))
@@ -637,10 +640,10 @@ def check_for_update_nonthreaded(self, _):
                 __package__))
         return
     Updater.set_check_interval(enable=settings.auto_check_update,
-                               months=settings.updater_intrval_months,
-                               days=settings.updater_intrval_days,
-                               hours=settings.updater_intrval_hours,
-                               minutes=settings.updater_intrval_minutes)
+                               months=settings.updater_interval_months,
+                               days=settings.updater_interval_days,
+                               hours=settings.updater_interval_hours,
+                               minutes=settings.updater_interval_minutes)
 
     update_ready, version, link = Updater.check_for_update(now=False)
     if update_ready is True:

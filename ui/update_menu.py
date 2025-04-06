@@ -1,7 +1,6 @@
 import bpy
 
-from .. import addon_updater_ops
-from .. import globs
+from .. import addon_updater_ops, globs
 
 
 class UpdateMenu(bpy.types.Panel):
