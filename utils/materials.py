@@ -126,10 +126,10 @@ def get_shader_type(mat: bpy.types.Material) -> Optional[str]:
     """Identifies the shader type of a material through node analysis.
 
     Uses multiple detection methods to determine the shader type:
-    1. Connection-based detection (following from output node)
-    2. Group node detection for special cases (XNALara, VRM, etc.)
-    3. Specific shader name detection (MMD, MToon)
-    4. Node name pattern matching
+    1. Connection-based detection (following from output node).
+    2. Group node detection for special cases (XNALara, VRM, etc.).
+    3. Specific shader name detection (MMD, MToon).
+    4. Node name pattern matching.
 
     Args:
         mat: Material to analyze.

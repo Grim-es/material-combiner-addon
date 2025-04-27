@@ -39,11 +39,11 @@ class PropertyMenu(bpy.types.Operator):
         """Display the property dialog when invoked.
 
         Args:
-            context: Current Blender context
-            event: Event that triggered the operator
+            context: Current Blender context.
+            event: Event that triggered the operator.
 
         Returns:
-            Modal state set indicating dialog should be displayed
+            Modal state set indicating dialog should be displayed.
         """
         context.scene.smc_list_id = self.list_id
         dpi = self._get_system_dpi(context)
@@ -53,10 +53,10 @@ class PropertyMenu(bpy.types.Operator):
         """Validate operator parameters.
 
         Args:
-            context: Current Blender context
+            context: Current Blender context.
 
         Returns:
-            True to continue with execution
+            True to continue with execution.
         """
         return True
 
@@ -64,10 +64,10 @@ class PropertyMenu(bpy.types.Operator):
         """Execute the operator.
 
         Args:
-            context: Current Blender context
+            context: Current Blender context.
 
         Returns:
-            Set with 'FINISHED' status
+            Set with 'FINISHED' status.
         """
         return {'FINISHED'}
 
@@ -75,7 +75,7 @@ class PropertyMenu(bpy.types.Operator):
         """Draw the property dialog UI layout.
 
         Args:
-            context: Current Blender context
+            context: Current Blender context.
         """
         scn = context.scene
         item = scn.smc_ob_data[scn.smc_list_id]
@@ -108,10 +108,10 @@ class PropertyMenu(bpy.types.Operator):
         """Extract the primary image from a material.
 
         Args:
-            mat: Material to extract image from
+            mat: Material to extract image from.
 
         Returns:
-            The primary image texture from the material or None if not found
+            The primary image texture from the material or None if not found.
         """
         if not mat:
             return None
@@ -123,8 +123,8 @@ class PropertyMenu(bpy.types.Operator):
         """Display material name and preview icon.
 
         Args:
-            col: UI column to add the display to
-            mat: Material to display
+            col: UI column to add the display to.
+            mat: Material to display.
         """
         col.prop(mat, 'name', text='', icon_value=mat.preview.icon_id)
 
@@ -132,8 +132,8 @@ class PropertyMenu(bpy.types.Operator):
         """Display image information with name and dimensions.
 
         Args:
-            col: UI column to add the image display to
-            image: Image to display information for
+            col: UI column to add the image display to.
+            image: Image to display information for.
         """
         if globs.is_blender_3_plus and not image.preview:
             image.preview_ensure()
@@ -152,10 +152,10 @@ class PropertyMenu(bpy.types.Operator):
         """Display item size information in a formatted row.
 
         Args:
-            col: UI column to add the label and size display to
-            label: Label text to display
-            icon: Optional icon identifier to display
-            size: Tuple containing width and height dimensions
+            col: UI column to add the label and size display to.
+            label: Label text to display.
+            icon: Optional icon identifier to display.
+            size: Tuple containing width and height dimensions.
         """
         row = col.row()
         label_col = row.column()
@@ -173,9 +173,9 @@ class PropertyMenu(bpy.types.Operator):
         different node configurations across various material types.
 
         Args:
-            col: UI column to add the color settings to
-            item: Material item from the combine list
-            image: Optional texture image from the material
+            col: UI column to add the color settings to.
+            item: Material item from the combine list.
+            image: Optional texture image from the material.
         """
         mat = item.mat
 
@@ -203,9 +203,9 @@ class PropertyMenu(bpy.types.Operator):
         """Display the color input appropriate for the specific shader type.
 
         Args:
-            layout: UI layout to add the color input to
-            mat: Material to display color for
-            shader: Material's shader type identifier
+            layout: UI layout to add the color input to.
+            mat: Material to display color for.
+            shader: Material's shader type identifier.
         """
         if not mat.node_tree or not mat.node_tree.nodes:
             return
@@ -237,8 +237,8 @@ class PropertyMenu(bpy.types.Operator):
         """Display texture size constraint settings.
 
         Args:
-            col: UI column to add the size settings to
-            item: Material item from the combine list
+            col: UI column to add the size settings to.
+            item: Material item from the combine list.
         """
         col.prop(item.mat, 'smc_size')
         if item.mat.smc_size:
@@ -253,10 +253,10 @@ class PropertyMenu(bpy.types.Operator):
         Handles version differences in Blender's preferences system.
 
         Args:
-            context: Current Blender context
+            context: Current Blender context.
 
         Returns:
-            System DPI value for dialog sizing
+            System DPI value for dialog sizing.
         """
         return (
             context.preferences.system.dpi

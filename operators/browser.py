@@ -3,6 +3,9 @@
 This module provides an operator for opening URLs in the user's external web browser,
 with validation to ensure security and correct formatting of URLs. It's used for
 accessing documentation, support resources, and sponsor links.
+
+Usage example:
+    bpy.ops.smc.browser(link=r"https://github.com/Grim-es/material-combiner-addon")
 """
 
 import re
@@ -37,10 +40,10 @@ class OpenBrowser(bpy.types.Operator):
         Validates the URL first, then attempts to open it in the default browser.
 
         Args:
-            context: Current Blender context
+            context: Current Blender context.
 
         Returns:
-            Set containing operation status
+            Set containing operation status.
         """
         valid, message = self._validate_url()
         if not valid:
@@ -61,7 +64,7 @@ class OpenBrowser(bpy.types.Operator):
         and warns if HTTP is used instead of HTTPS.
 
         Returns:
-            Tuple containing (is_valid, error_message)
+            Tuple containing (is_valid, error_message).
         """
         if not self.link:
             return False, "URL cannot be empty"

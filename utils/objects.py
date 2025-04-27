@@ -17,10 +17,10 @@ def get_polys(ob: bpy.types.Object) -> Dict[int, List[bpy.types.MeshPolygon]]:
     """Group polygons by material index.
 
     Args:
-        ob: Mesh object to process
+        ob: Mesh object to process.
 
     Returns:
-        Dictionary mapping material indices to lists of polygons
+        Dictionary mapping material indices to lists of polygons.
     """
     polys = defaultdict(list)
     for poly in ob.data.polygons:
@@ -34,11 +34,11 @@ def get_uv(ob: bpy.types.Object, poly: bpy.types.MeshPolygon) -> List[Vector]:
     Extracts UV coordinates from the active UV layer for each loop in the polygon.
 
     Args:
-        ob: Mesh object containing the polygon
-        poly: Polygon to extract UVs from
+        ob: Mesh object containing the polygon.
+        poly: Polygon to extract UVs from.
 
     Returns:
-        List of UV coordinate vectors for the polygon
+        List of UV coordinate vectors for the polygon.
     """
     uv_data = ob.data.uv_layers.active.data
     return [
@@ -55,10 +55,10 @@ def align_uv(face_uv: List[Vector]) -> List[Vector]:
     This handles UVs that extend beyond the 0-1 range.
 
     Args:
-        face_uv: List of UV coordinate vectors to align
+        face_uv: List of UV coordinate vectors to align.
 
     Returns:
-        The modified UV coordinate list
+        The modified UV coordinate list.
     """
     min_x = min((uv.x for uv in face_uv if not math.isnan(uv.x)), default=0.0)
     min_y = min((uv.y for uv in face_uv if not math.isnan(uv.y)), default=0.0)

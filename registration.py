@@ -106,15 +106,15 @@ def _unregister_classes() -> None:
 
 def make_annotations(cls: BlClasses) -> BlClasses:
     """Convert class properties to annotations for Blender 2.80+.
-    
+
     This function handles the transition from Blender's old property 
     definition system to the new annotation-based system.
-    
+
     Args:
-        cls: Blender class to process
-        
+        cls: Blender class to process.
+
     Returns:
-        The processed class with properties converted to annotations
+        The processed class with properties converted to annotations.
     """
     if globs.is_blender_legacy:
         return cls

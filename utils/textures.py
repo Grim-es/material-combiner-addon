@@ -17,10 +17,10 @@ def get_texture(mat: bpy.types.Material) -> Optional[bpy.types.Texture]:
     that use texture slots.
 
     Args:
-        mat: Material to extract texture from
+        mat: Material to extract texture from.
 
     Returns:
-        First enabled texture from the material or None if not found
+        First enabled texture from the material or None if not found.
     """
     if not hasattr(mat, "texture_slots") or not mat.texture_slots:
         return None

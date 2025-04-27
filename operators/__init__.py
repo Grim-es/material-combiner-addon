@@ -1,10 +1,10 @@
 """Operator implementations for the Material Combiner addon.
 
 This package contains all the operator classes that provide functionality for the addon:
-- browser: External web browser integration for documentation and support links
-- get_pillow: Dependency installation handling
-- combiner: Core material combining functionality
-- combine_list: UI-related operators for the material list
+- browser: External web browser integration for documentation and support links.
+- get_pillow: Dependency installation handling.
+- combiner: Core material combining functionality.
+- combine_list: UI-related operators for the material list.
 """
 
 from . import browser, get_pillow
