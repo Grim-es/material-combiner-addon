@@ -3,6 +3,12 @@
 This module provides operators for managing the material list used in the combining
 process. It includes functionality for refreshing the list, toggling selection
 states, and managing selection of materials and objects.
+
+Usage example:
+    bpy.ops.smc.refresh_ob_data()
+    bpy.ops.smc.combine_switch(list_id=index)
+    bpy.ops.smc.select_all()
+    bpy.ops.smc.select_none()
 """
 
 from collections import defaultdict

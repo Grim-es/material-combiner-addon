@@ -20,10 +20,10 @@ def get_icon_id(identifier: str) -> int:
     """Get the icon ID for a given identifier.
 
     Args:
-        identifier: Icon name without extension
+        identifier: Icon name without extension.
 
     Returns:
-        Blender icon ID to use in UI elements
+        Blender icon ID to use in UI elements.
     """
     return get_icon(identifier).icon_id
 
@@ -34,10 +34,10 @@ def get_icon(identifier: str) -> bpy.types.ImagePreview:
     Loads the icon if not already loaded.
 
     Args:
-        identifier: Icon name without extension
+        identifier: Icon name without extension.
 
     Returns:
-        Blender image preview object
+        Blender image preview object.
     """
     if identifier in smc_icons:
         return smc_icons[identifier]

@@ -4,6 +4,9 @@ This module provides the primary operator class for the Material Combiner addon.
 It orchestrates the entire material combining process, from selecting materials
 to generating the final atlas and updating UV coordinates. The Combiner operator
 manages the main workflow and delegates specific tasks to specialized functions.
+
+Usage example:
+    bpy.ops.smc.combiner(directory=r"/path/to/save/directory")
 """
 
 from typing import Set
@@ -39,13 +42,13 @@ class Combiner(bpy.types.Operator):
     """Main operator for combining materials into a texture atlas.
 
     This operator manages the complete workflow for texture atlas generation:
-    1. Validating user selections
-    2. Analyzing materials and textures
-    3. Detecting and handling duplicates
-    4. Generating the texture atlas
-    5. Adjusting UV coordinates
-    6. Assigning new materials
-    7. Cleaning up unneeded materials
+    1. Validating user selections.
+    2. Analyzing materials and textures.
+    3. Detecting and handling duplicates.
+    4. Generating the texture atlas.
+    5. Adjusting UV coordinates.
+    6. Assigning new materials.
+    7. Cleaning up unneeded materials.
     """
 
     bl_idname = "smc.combiner"
@@ -66,18 +69,18 @@ class Combiner(bpy.types.Operator):
         """Execute the material combining operation.
 
         This method handles the final stages of the combining process:
-        1. Packing textures using bin packing algorithm
-        2. Calculating appropriate atlas dimensions
-        3. Generating atlas image
-        4. Remapping UV coordinates
-        5. Creating and assigning new materials
-        6. Cleaning up unused materials
+        1. Packing textures using bin packing algorithm.
+        2. Calculating appropriate atlas dimensions.
+        3. Generating atlas image.
+        4. Remapping UV coordinates.
+        5. Creating and assigning new materials.
+        6. Cleaning up unused materials.
 
         Args:
-            context: Current Blender context
+            context: Current Blender context.
 
         Returns:
-            Set containing operation status
+            Set containing operation status.
         """
         if not self.data:
             self.invoke(context, None)
@@ -116,19 +119,19 @@ class Combiner(bpy.types.Operator):
         """Initialize the combiner and validate inputs.
 
         This method performs the initial setup and validation:
-        1. Refreshing object data
-        2. Validating selected objects and materials
-        3. Setting up special options for specific workflows
-        4. Preparing material and UV data
-        5. Detecting and handling duplicate materials
-        6. Opening the file browser for saving the atlas
+        1. Refreshing object data.
+        2. Validating selected objects and materials.
+        3. Setting up special options for specific workflows.
+        4. Preparing material and UV data.
+        5. Detecting and handling duplicate materials.
+        6. Opening the file browser for saving the atlas.
 
         Args:
-            context: Current Blender context
-            event: Triggered event
+            context: Current Blender context.
+            event: Triggered event.
 
         Returns:
-            Set containing operation status
+            Set containing operation status.
         """
         scn = context.scene
         bpy.ops.smc.refresh_ob_data()
@@ -188,12 +191,12 @@ class Combiner(bpy.types.Operator):
         Helper method to display a message to the user and refresh the object data.
 
         Args:
-            message_type: Type of message (INFO, ERROR, WARNING)
-            message: Message content to display
+            message_type: Type of message (INFO, ERROR, WARNING).
+            message: Message content to display.
 
         Returns:
-            Set containing operation status
+            Set containing operation status.
         """
         bpy.ops.smc.refresh_ob_data()
         self.report({message_type}, message)
-        return {'FINISHED'}
+        return {"FINISHED"}

@@ -58,15 +58,15 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         based on the item type, with appropriate controls for each.
 
         Args:
-            context: The current Blender context
-            layout: The layout to draw the item in
-            data: The data containing the collection property
-            item: The item to draw
-            icon: The icon to use for the item
-            active_data: The data containing the active property
-            active_propname: The name of the active property
-            index: The index of the item in the list
-            filter_flag: The filter flag for the item
+            context: The current Blender context.
+            layout: The layout to draw the item in.
+            data: The data containing the collection property.
+            item: The item to draw.
+            icon: The icon to use for the item.
+            active_data: The data containing the active property.
+            active_propname: The name of the active property.
+            index: The index of the item in the list.
+            filter_flag: The filter flag for the item.
         """
         if not self.filter_initialized:
             self.use_filter_show = True
@@ -87,9 +87,9 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         all materials belonging to this object.
 
         Args:
-            row: The row layout to draw into
-            item: The object item to display
-            index: The index of the item in the list
+            row: The row layout to draw into.
+            item: The object item to display.
+            index: The index of the item in the list.
         """
         row.prop(item.ob, 'name', text='', icon=ICON_OBJECT, emboss=False)
 
@@ -105,9 +105,9 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         enable/disable toggle, and settings button.
 
         Args:
-            row: The row layout to draw into
-            item: The material item to display
-            index: The index of the item in the list
+            row: The row layout to draw into.
+            item: The material item to display.
+            index: The index of the item in the list.
         """
         row.separator(factor=1.5)
         self._draw_toggle_control(row, item, index)
@@ -127,10 +127,10 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         or a fallback question mark icon if not.
 
         Args:
-            item: The material item to get the preview for
+            item: The material item to get the preview for.
 
         Returns:
-            Icon ID for the material preview or fallback icon
+            Icon ID for the material preview or fallback icon.
         """
         if item.mat and item.mat.preview:
             return item.mat.preview.icon_id
@@ -144,8 +144,8 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         which determines which atlas the material will be added to.
 
         Args:
-            layout: The layout to draw into
-            item: The material item to draw the layer control for
+            layout: The layout to draw into.
+            item: The material item to draw the layer control for.
         """
         col = layout.column(align=True)
         col.scale_x = 0.4
@@ -159,9 +159,9 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         with an icon indicating the current state.
 
         Args:
-            layout: The layout to draw into
-            item: The material item to draw the toggle for
-            index: The index of the item in the list
+            layout: The layout to draw into.
+            item: The material item to draw the toggle for.
+            index: The index of the item in the list.
         """
         icon = 'CHECKBOX_HLT' if item.used else 'CHECKBOX_DEHLT'
         layout.operator('smc.combine_switch', text='', icon=icon, emboss=False).list_id = index
@@ -174,8 +174,8 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         for configuring additional material settings.
 
         Args:
-            layout: The layout to draw into
-            index: The index of the item in the list
+            layout: The layout to draw into.
+            index: The index of the item in the list.
         """
         layout.operator('smc.material_properties', text='', icon=ICON_PROPERTIES).list_id = index
 
@@ -186,8 +186,8 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         filter mode and sort order.
 
         Args:
-            context: The current Blender context
-            layout: The layout to draw the filter panel in
+            context: The current Blender context.
+            layout: The layout to draw the filter panel in.
         """
         row = layout.row(align=True)
         row.prop(self, 'filter_name', text='')
@@ -206,7 +206,7 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         filter mode (material, object, or both).
 
         Returns:
-            Icon name string corresponding to the current filter mode
+            Icon name string corresponding to the current filter mode.
         """
         if self.filter_mode == 'MATERIAL':
             return 'MATERIAL'
@@ -223,12 +223,12 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         grouping, filtering by name, and customized sorting.
 
         Args:
-            context: The current Blender context
-            data: The data containing the collection property
-            propname: The name of the collection property
+            context: The current Blender context.
+            data: The data containing the collection property.
+            propname: The name of the collection property.
 
         Returns:
-            Tuple containing filter flags and new order indices
+            A tuple containing filter flags and new order indices.
         """
         collection = getattr(data, propname)
         total_items = len(collection)
@@ -285,10 +285,10 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         belonging to those objects, preserving the original indices.
 
         Args:
-            items_with_indices: List of tuples containing (original_index, item)
+            items_with_indices: List of tuples containing (original_index, item).
 
         Returns:
-            Dictionary mapping object IDs to lists of (original_index, item) tuples
+            Dictionary mapping object IDs to lists of (original_index, item) tuples.
         """
         groups = {}
         for index, item in items_with_indices:
@@ -307,9 +307,9 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         matches the filter text.
 
         Args:
-            group: List of (original_index, item) tuples for a group
-            filter_text: The text to filter by (lowercase)
-            filter_flags: List of filter flags to modify
+            group: List of (original_index, item) tuples for a group.
+            filter_text: The text to filter by (lowercase).
+            filter_flags: List of filter flags to modify.
         """
         object_match = False
         for _, item in group:
@@ -333,9 +333,9 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         their parent objects remain visible.
 
         Args:
-            group: List of (original_index, item) tuples for a group
-            filter_text: The text to filter by (lowercase)
-            filter_flags: List of filter flags to modify
+            group: List of (original_index, item) tuples for a group.
+            filter_text: The text to filter by (lowercase).
+            filter_flags: List of filter flags to modify.
         """
         material_found = False
         # First pass: mark MATERIAL items.
@@ -366,9 +366,9 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         matching materials with their parent objects otherwise.
 
         Args:
-            group: List of (original_index, item) tuples for a group
-            filter_text: The text to filter by (lowercase)
-            filter_flags: List of filter flags to modify
+            group: List of (original_index, item) tuples for a group.
+            filter_text: The text to filter by (lowercase).
+            filter_flags: List of filter flags to modify.
         """
         object_matches = any(
             filter_text in (item.ob.name.lower() if item.ob else "")
@@ -401,10 +401,10 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         Retrieves the name of the object for sorting purposes.
 
         Args:
-            group: List of (original_index, item) tuples for a group
+            group: List of (original_index, item) tuples for a group.
 
         Returns:
-            Lowercase object name or empty string if not found
+            Lowercase object name or empty string if not found.
         """
         for _, item in group:
             if item.type == CombineListTypes.OBJECT and item.ob:
@@ -419,11 +419,11 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         respecting the hierarchical relationship between them.
 
         Args:
-            group: List of (original_index, item) tuples for a group
-            reverse_sort: Whether to sort in reverse order
+            group: List of (original_index, item) tuples for a group.
+            reverse_sort: Whether to sort in reverse order.
 
         Returns:
-            List of original indices in the desired sort order
+            List of original indices in the desired sort order.
         """
         object_entries = [(idx, item) for idx, item in group if item.type == CombineListTypes.OBJECT]
         material_entries = [(idx, item) for idx, item in group if item.type == CombineListTypes.MATERIAL]

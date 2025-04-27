@@ -36,21 +36,21 @@ class BinPacker:
 
     This packing algorithm attempts to efficiently arrange rectangular textures
     in a minimal container size. It works by:
-    1. Starting with an empty bin
-    2. Finding a node where a texture can fit
-    3. Splitting that node to leave the remaining space available
-    4. Growing the bin if needed when items don't fit
+    1. Starting with an empty bin.
+    2. Finding a node where a texture can fit.
+    3. Splitting that node to leave the remaining space available.
+    4. Growing the bin if needed when items don't fit.
 
     Attributes:
-        root: The root node of the packing tree
-        bin: Dictionary of images to be packed with their data
+        root: The root node of the packing tree.
+        bin: Dictionary of images to be packed with their data.
     """
 
     def __init__(self, images: Dict) -> None:
         """Initialize the bin packer with a set of images.
 
         Args:
-            images: Dictionary of materials and their image/size data
+            images: Dictionary of materials and their image/size data.
         """
         self.root = {}
         self.bin = images
@@ -62,7 +62,7 @@ class BinPacker:
         It updates each texture's entry with position data in the 'fit' field.
 
         Returns:
-            The updated bin dictionary with position information
+            The updated bin dictionary with position information.
         """
         self.root = {"x": 0, "y": 0, "w": 0, "h": 0}
 
@@ -86,12 +86,12 @@ class BinPacker:
         """Find a node in the tree that can accommodate the specified dimensions.
 
         Args:
-            root: Current node to check
-            w: Width required
-            h: Height required
+            root: Current node to check.
+            w: Width required.
+            h: Height required.
 
         Returns:
-            Suitable node or None if none is found
+            Suitable node or None if none is found.
         """
         if root.get("used"):
             return self.find_node(root["right"], w, h) or self.find_node(
@@ -108,12 +108,12 @@ class BinPacker:
         Creates 'down' and 'right' child nodes with the remaining space.
 
         Args:
-            node: Node to split
-            w: Width required
-            h: Height required
+            node: Node to split.
+            w: Width required.
+            h: Height required.
 
         Returns:
-            The original node, now marked as used
+            The original node, now marked as used.
         """
         node["used"] = True
         node["down"] = {
@@ -137,11 +137,11 @@ class BinPacker:
         the more optimal overall shape.
 
         Args:
-            w: Width required
-            h: Height required
+            w: Width required.
+            h: Height required.
 
         Returns:
-            A suitable node or None if growing isn't possible
+            A suitable node or None if growing isn't possible.
         """
         can_grow_right = h <= self.root["h"]
         can_grow_down = w <= self.root["w"]
@@ -163,11 +163,11 @@ class BinPacker:
         """Grow the bin to the right.
 
         Args:
-            w: Width to grow by
-            h: Height required
+            w: Width to grow by.
+            h: Height required.
 
         Returns:
-            A suitable node or None if finding one fails
+            A suitable node or None if finding one fails.
         """
         self.root = {
             "used": True,
@@ -185,11 +185,11 @@ class BinPacker:
         """Grow the bin downward.
 
         Args:
-            w: Width required
-            h: Height to grow by
+            w: Width required.
+            h: Height to grow by.
 
         Returns:
-            A suitable node or None if finding one fails
+            A suitable node or None if finding one fails.
         """
         self.root = {
             "used": True,
