@@ -1,21 +1,39 @@
+"""Registration module for the Material Combiner addon.
+
+This module handles the registration and unregistration of all Blender classes
+used by the addon. It also manages version-specific property annotations and
+initializes the icon system and updater functionality.
+"""
+
 from typing import Dict, Union
 
 import bpy
 
-from . import addon_updater_ops, extend_lists, extend_types, globs, operators, ui
+from . import (
+    addon_updater_ops,
+    extend_lists,
+    extend_types,
+    globs,
+    operators,
+    ui,
+)
 from .icons import initialize_smc_icons, unload_smc_icons
 from .type_annotations import BlClasses
 
 __bl_classes = [
-    ui.credits_menu.CreditsMenu,
-    ui.main_menu.MaterialMenu,
-    ui.property_menu.PropertyMenu,
-    ui.update_menu.UpdateMenu,
+    ui.selection_menu.SMC_MT_SelectionMenu,
 
-    operators.combiner.Combiner,
-    operators.combine_list.RefreshObData,
-    operators.combine_list.CombineSwitch,
+    ui.credits_panel.CreditsPanel,
+    ui.main_panel.MaterialCombinerPanel,
+    ui.property_panel.PropertyMenu,
+    ui.update_panel.UpdatePanel,
+
     operators.browser.OpenBrowser,
+    operators.combine_list.MaterialListRefreshOperator,
+    operators.combine_list.MaterialListToggleOperator,
+    operators.combine_list.SelectAllMaterials,
+    operators.combine_list.SelectNoneMaterials,
+    operators.combiner.Combiner,
     operators.get_pillow.InstallPIL,
 
     extend_types.CombineListEntry,
@@ -26,6 +44,14 @@ __bl_classes = [
 
 
 def register_all(bl_info: Dict[str, Union[str, tuple]]) -> None:
+    """Register all components of the addon.
+    
+    This is the main registration function called when the addon is enabled.
+    It registers all classes, initializes icons, and sets up the updater.
+    
+    Args:
+        bl_info: Dictionary containing addon metadata
+    """
     _register_classes()
     initialize_smc_icons()
     addon_updater_ops.register(bl_info)
@@ -34,6 +60,11 @@ def register_all(bl_info: Dict[str, Union[str, tuple]]) -> None:
 
 
 def unregister_all() -> None:
+    """Unregister all components of the addon.
+    
+    This is the main unregistration function called when the addon is disabled.
+    It unregisters all classes, cleans up icons, and shuts down the updater.
+    """
     _unregister_classes()
     unload_smc_icons()
     addon_updater_ops.unregister()
@@ -41,6 +72,10 @@ def unregister_all() -> None:
 
 
 def _register_classes() -> None:
+    """Register all Blender classes used by the addon.
+    
+    Converts properties to annotations as needed and logs registration results.
+    """
     count = 0
     for cls in __bl_classes:
         make_annotations(cls)
@@ -55,6 +90,10 @@ def _register_classes() -> None:
 
 
 def _unregister_classes() -> None:
+    """Unregister all Blender classes used by the addon.
+    
+    Classes are unregistered in reverse order to handle dependencies.
+    """
     count = 0
     for cls in reversed(__bl_classes):
         try:
@@ -66,7 +105,18 @@ def _unregister_classes() -> None:
 
 
 def make_annotations(cls: BlClasses) -> BlClasses:
-    if globs.is_blender_2_79_or_older:
+    """Convert class properties to annotations for Blender 2.80+.
+    
+    This function handles the transition from Blender's old property 
+    definition system to the new annotation-based system.
+    
+    Args:
+        cls: Blender class to process
+        
+    Returns:
+        The processed class with properties converted to annotations
+    """
+    if globs.is_blender_legacy:
         return cls
 
     if bpy.app.version >= (2, 93, 0):
@@ -76,7 +126,7 @@ def make_annotations(cls: BlClasses) -> BlClasses:
 
     if bl_props:
         if '__annotations__' not in cls.__dict__:
-            setattr(cls, '__annotations__', {})
+            cls.__annotations__ = {}
 
         annotations = cls.__dict__['__annotations__']
 
