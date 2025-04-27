@@ -7,13 +7,13 @@ assignees: Grim-es
 
 ---
 
-### Summar
+### Summary
 
 Summarize the bug encountered concisely.
 
 ### Steps to reproduce
 
-Describe how one can reproduce the issue - this is very important. Please use an ordered list.
+Describe how one can reproduce the issue — this is crucial. Please use an ordered list.
 
 ### What is the current *bug* behavior?
 
@@ -25,7 +25,7 @@ Describe what you should see instead.
 
 ### Relevant console output and/or screenshots
 
-Paste any relevant console output - please use code blocks (```) to format console output and code, as it’s tough to
+Paste any relevant console output — please use code blocks (```) to format console output and code, as it’s tough to
 read otherwise.
 
 ### System Information

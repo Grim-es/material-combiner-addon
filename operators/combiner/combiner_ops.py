@@ -1,3 +1,12 @@
+"""Core operations for combining materials and textures.
+
+This module implements the core functionality for the Material Combiner addon,
+including UV mapping analysis, texture extraction, atlas generation, and
+material assignment. It handles the complex process of creating optimized
+texture atlases from multiple materials while preserving texture quality
+and proper UV mapping.
+"""
+
 import io
 import itertools
 import math
@@ -6,12 +15,16 @@ import random
 import re
 from collections import OrderedDict, defaultdict
 from itertools import chain
-from typing import Dict, List, Sequence, Set, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union, cast
 
 import bpy
 import numpy as np
 
-from ... import globs
+from ...globs import (
+    CombineListTypes,
+    is_blender_legacy,
+    is_blender_modern,
+)
 from ...type_annotations import (
     CombMats,
     Diffuse,
@@ -24,59 +37,97 @@ from ...type_annotations import (
     StructureItem,
 )
 from ...utils.images import get_image, get_packed_file
-from ...utils.materials import get_diffuse, get_image_from_material, sort_materials
+from ...utils.materials import (
+    get_diffuse,
+    get_image_from_material,
+    sort_materials,
+)
 from ...utils.objects import align_uv, get_polys, get_uv
 from ...utils.textures import get_texture
 
+Image = None
+ImageChops = None
+ImageFile = None
+ImageType = None
+resampling = None
+
 try:
-    from PIL import Image
+    from PIL import Image, ImageChops, ImageFile
 
     ImageType = Image.Image
-except ImportError:
-    Image = None
-    ImageType = None
 
-try:
-    from PIL import ImageChops
-except ImportError:
-    ImageChops = None
-
-try:
-    from PIL import ImageFile
-except ImportError:
-    ImageFile = None
-
-if Image:
     Image.MAX_IMAGE_PIXELS = None
     try:
         resampling = Image.LANCZOS
     except AttributeError:
         resampling = Image.ANTIALIAS
 
-if ImageFile:
-    ImageFile.LOAD_TRUNCATED_IMAGES = True
+    if ImageFile:
+        ImageFile.LOAD_TRUNCATED_IMAGES = True
+except ImportError:
+    pass
 
 atlas_prefix = 'Atlas_'
 atlas_texture_prefix = 'texture_atlas_'
 atlas_material_prefix = 'material_atlas_'
 
 
+def validate_ob_data(data: Sequence[bpy.types.PropertyGroup]) -> Optional[Dict[str, Any]]:
+    """Validates that the input data contains at least one object.
+
+    Args:
+        data: Collection of property group items
+
+    Returns:
+        None if validation passes, otherwise a dictionary with status
+    """
+    return None if any(item.type == CombineListTypes.OBJECT for item in data) else {'CANCELLED'}
+
+
 def set_ob_mode(scn: Scene, data: SMCObData) -> None:
-    ob = next(item.ob for item in data if item.type == globs.CL_OBJECT)
+    """Set active object to Object mode.
+
+    Args:
+        scn: Current scene or view layer
+        data: Dictionary of object data items
+    """
+    ob = next(item.ob for item in data if item.type == CombineListTypes.OBJECT)
     if ob:
         scn.objects.active = ob
         bpy.ops.object.mode_set(mode='OBJECT')
 
 
 def get_data(data: Sequence[bpy.types.PropertyGroup]) -> SMCObData:
+    """Extract material data from property group items.
+
+    Builds a dictionary mapping object names to their materials and respective layers.
+
+    Args:
+        data: Collection of property group items
+
+    Returns:
+        Dictionary mapping object names to their materials with layer numbers
+    """
     mats = defaultdict(dict)
     for item in data:
-        if item.type == globs.CL_MATERIAL and item.used:
+        if item.type == CombineListTypes.MATERIAL and item.used:
             mats[item.ob.name][item.mat] = item.layer
     return mats
 
 
 def get_mats_uv(scn: Scene, data: SMCObData) -> MatsUV:
+    """Get UV coordinates for all selected materials.
+
+    Extracts and aligns UV coordinates from all polygons using the selected
+    materials in each object.
+
+    Args:
+        scn: Current scene
+        data: Dictionary mapping object names to materials
+
+    Returns:
+        Dictionary mapping object names to materials with UV coordinates
+    """
     mats_uv = defaultdict(lambda: defaultdict(list))
     for ob_n, item in data.items():
         ob = scn.objects[ob_n]
@@ -90,6 +141,13 @@ def get_mats_uv(scn: Scene, data: SMCObData) -> MatsUV:
 
 
 def clear_empty_mats(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> None:
+    """Remove materials without valid UV coordinates.
+
+    Args:
+        scn: Current scene
+        data: Dictionary mapping object names to materials
+        mats_uv: Dictionary mapping object names to materials with UV coordinates
+    """
     for ob_n, item in data.items():
         ob = scn.objects[ob_n]
         for mat in item:
@@ -97,17 +155,31 @@ def clear_empty_mats(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> None:
                 _delete_material(ob, mat.name)
 
 
-def _delete_material(ob: bpy.types.Object, mat_name: str) -> None:
-    ob_mats = ob.data.materials
-    mat_idx = ob_mats.find(mat_name)
-    if mat_idx > -1:
-        if globs.is_blender_2_80_or_newer:
-            ob_mats.pop(index=mat_idx)
-        else:
-            ob_mats.pop(index=mat_idx, update_data=True)
+def _delete_material(ob: bpy.types.Object, name: str) -> None:
+    """Remove a material from an object.
+
+    Args:
+        ob: Object to remove material from
+        name: Name of the material to remove
+    """
+    if ob.type == 'MESH':
+        mat_idx = ob.data.materials.find(name)
+        if mat_idx >= 0:
+            if is_blender_modern:
+                ob.data.materials.pop(index=mat_idx)
+            else:
+                ob.data.materials.pop(index=mat_idx, update_data=True)
 
 
 def get_duplicates(mats_uv: MatsUV) -> None:
+    """Identify and mark duplicate materials.
+
+    Finds visually identical materials and marks duplicates by setting
+    their root_mat property to the first matching material.
+
+    Args:
+        mats_uv: Dictionary mapping object names to materials with UV coordinates
+    """
     mat_list = list(chain.from_iterable(mats_uv.values()))
     sorted_mat_list = sort_materials(mat_list)
     for mats in sorted_mat_list:
@@ -117,6 +189,19 @@ def get_duplicates(mats_uv: MatsUV) -> None:
 
 
 def get_structure(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> Structure:
+    """Build the structure for atlas generation.
+
+    Creates a dictionary mapping materials to their metadata, including
+    graphics info, duplicate materials, objects that use them, and UV coordinates.
+
+    Args:
+        scn: Current scene
+        data: Dictionary mapping object names to materials
+        mats_uv: Dictionary mapping object names to materials with UV coordinates
+
+    Returns:
+        Dictionary mapping materials to their metadata
+    """
     structure = defaultdict(lambda: {
         'gfx': {
             'img_or_color': None,
@@ -143,6 +228,12 @@ def get_structure(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> Structure:
 
 
 def clear_duplicates(scn: Scene, data: Structure) -> None:
+    """Remove duplicate materials from objects.
+
+    Args:
+        scn: Current scene
+        data: Dictionary mapping materials to their metadata
+    """
     for item in data.values():
         for ob_n in item['ob']:
             ob = scn.objects[ob_n]
@@ -151,6 +242,18 @@ def clear_duplicates(scn: Scene, data: Structure) -> None:
 
 
 def get_size(scn: Scene, data: Structure) -> Dict:
+    """Calculate sizes for all material textures.
+
+    Determines the dimensions of each texture based on UV coordinates
+    and the material's settings.
+
+    Args:
+        scn: Current scene
+        data: Dictionary mapping materials to their metadata
+
+    Returns:
+        Sorted dictionary of materials with size information
+    """
     for mat, item in data.items():
         img = _get_image(mat)
         packed_file = get_packed_file(img)
@@ -170,6 +273,14 @@ def get_size(scn: Scene, data: Structure) -> Dict:
 
 
 def _size_sorting(item: Sequence[StructureItem]) -> Tuple[int, int, int, Union[str, Diffuse, None]]:
+    """Key function for sorting materials by size.
+
+    Args:
+        item: Material and its metadata
+
+    Returns:
+        Tuple of sorting keys (max dimension, area, width, name/color)
+    """
     gfx = item[1]['gfx']
     size_x, size_y = gfx['size']
 
@@ -184,13 +295,30 @@ def _size_sorting(item: Sequence[StructureItem]) -> Tuple[int, int, int, Union[s
 
 
 def _get_image(mat: bpy.types.Material) -> Union[bpy.types.Image, None]:
-    if globs.is_blender_2_79_or_older:
+    """Get image from a material, handling different Blender versions.
+
+    Args:
+        mat: Material to extract image from
+
+    Returns:
+        Image from the material or None if not found
+    """
+    if is_blender_legacy:
         return get_image(get_texture(mat))
 
     return get_image_from_material(mat)
 
 
 def _get_image_size(mat: bpy.types.Material, img: bpy.types.Image) -> Tuple[int, int]:
+    """Get the size of an image, respecting material size constraints.
+
+    Args:
+        mat: Material containing the image
+        img: Image to get size from
+
+    Returns:
+        Tuple of (width, height) dimensions
+    """
     return (
         (
             min(mat.smc_size_width, img.size[0]),
@@ -202,6 +330,14 @@ def _get_image_size(mat: bpy.types.Material, img: bpy.types.Image) -> Tuple[int,
 
 
 def _get_max_uv_coordinates(uv_loops: List[bpy.types.MeshUVLoop]) -> Tuple[float, float]:
+    """Find the maximum UV coordinates across a list of UV loops.
+
+    Args:
+        uv_loops: List of UV coordinate vectors
+
+    Returns:
+        Tuple of (max_x, max_y) values
+    """
     max_x = 1
     max_y = 1
 
@@ -215,10 +351,28 @@ def _get_max_uv_coordinates(uv_loops: List[bpy.types.MeshUVLoop]) -> Tuple[float
 
 
 def _calculate_size(img_size: Tuple[int, int], uv_size: Tuple[int, int], gaps: int) -> Tuple[int, int]:
+    """Calculate the size needed for a texture in the atlas.
+
+    Args:
+        img_size: Original image dimensions
+        uv_size: UV coordinate range
+        gaps: Padding between textures
+
+    Returns:
+        Tuple of (width, height) dimensions for the atlas texture
+    """
     return cast(Tuple[int, int], tuple(s * uv_s + gaps for s, uv_s in zip(img_size, uv_size)))
 
 
 def get_atlas_size(structure: Structure) -> Tuple[int, int]:
+    """Calculate the total size needed for the atlas.
+
+    Args:
+        structure: Dictionary mapping materials to their metadata
+
+    Returns:
+        Tuple of (width, height) dimensions for the atlas
+    """
     max_x = 1
     max_y = 1
 
@@ -230,6 +384,15 @@ def get_atlas_size(structure: Structure) -> Tuple[int, int]:
 
 
 def calculate_adjusted_size(scn: Scene, size: Tuple[int, int]) -> Tuple[int, int]:
+    """Adjust atlas size based on the chosen sizing strategy.
+
+    Args:
+        scn: Current scene with atlas size settings
+        size: Original calculated size
+
+    Returns:
+        Adjusted size based on the selected size strategy
+    """
     if scn.smc_size == 'PO2':
         return cast(Tuple[int, int], tuple(1 << int(x - 1).bit_length() for x in size))
     elif scn.smc_size == 'QUAD':
@@ -238,6 +401,19 @@ def calculate_adjusted_size(scn: Scene, size: Tuple[int, int]) -> Tuple[int, int
 
 
 def get_atlas(scn: Scene, data: Structure, atlas_size: Tuple[int, int]) -> ImageType:
+    """Generate the texture atlas image.
+
+    Creates a new image with all textures positioned according to their
+    calculated fit positions.
+
+    Args:
+        scn: Current scene
+        data: Dictionary mapping materials to their metadata
+        atlas_size: Dimensions for the atlas
+
+    Returns:
+        Generated atlas image
+    """
     smc_size = (scn.smc_size_width, scn.smc_size_height)
     img = Image.new('RGBA', atlas_size)
     half_gaps = int(scn.smc_gaps / 2)
@@ -258,7 +434,13 @@ def get_atlas(scn: Scene, data: Structure, atlas_size: Tuple[int, int]) -> Image
 
 
 def _set_image_or_color(item: StructureItem, mat: bpy.types.Material) -> None:
-    if globs.is_blender_2_80_or_newer:
+    """Set the image or color data for a material.
+
+    Args:
+        item: Material metadata
+        mat: Material to extract image or color from
+    """
+    if is_blender_modern:
         image = get_image_from_material(mat)
         item['gfx']['img_or_color'] = get_packed_file(image) if image else None
     else:
@@ -269,6 +451,15 @@ def _set_image_or_color(item: StructureItem, mat: bpy.types.Material) -> None:
 
 
 def _paste_gfx(scn: Scene, item: StructureItem, mat: bpy.types.Material, img: ImageType, half_gaps: int) -> None:
+    """Paste a material's graphics onto the atlas.
+
+    Args:
+        scn: Current scene
+        item: Material metadata
+        mat: Material providing the graphics
+        img: Atlas image to paste onto
+        half_gaps: Half the padding size between textures
+    """
     if not item['gfx']['fit']:
         return
 
@@ -280,6 +471,20 @@ def _paste_gfx(scn: Scene, item: StructureItem, mat: bpy.types.Material, img: Im
 
 def _get_gfx(scn: Scene, mat: bpy.types.Material, item: StructureItem,
              img_or_color: Union[bpy.types.PackedFile, Tuple, None]) -> ImageType:
+    """Generate image data for a material.
+
+    Creates an appropriate image based on whether the material has a texture
+    or just a color.
+
+    Args:
+        scn: Current scene
+        mat: Material to process
+        item: Material metadata
+        img_or_color: Image data or color tuple
+
+    Returns:
+        PIL Image to paste onto the atlas
+    """
     size = cast(Tuple[int, int], tuple(int(size - scn.smc_gaps) for size in item['gfx']['size']))
 
     if not img_or_color:
@@ -303,6 +508,19 @@ def _get_gfx(scn: Scene, mat: bpy.types.Material, item: StructureItem,
 
 
 def _get_uv_image(item: StructureItem, img: ImageType, size: Tuple[int, int]) -> ImageType:
+    """Create a tiled image based on UV coordinates.
+
+    For UVs that extend beyond the 0-1 range, this creates a tiled image
+    that repeats the texture appropriately.
+
+    Args:
+        item: Material metadata
+        img: Source image to tile
+        size: Output size
+
+    Returns:
+        Tiled image
+    """
     uv_img = Image.new('RGBA', size)
     size_height = size[1]
     img_width, img_height = img.size
@@ -318,6 +536,16 @@ def _get_uv_image(item: StructureItem, img: ImageType, size: Tuple[int, int]) ->
 
 
 def align_uvs(scn: Scene, data: Structure, atlas_size: Tuple[int, int], size: Tuple[int, int]) -> None:
+    """Align UV coordinates to the atlas positions.
+
+    Transforms UV coordinates to match their new positions in the atlas.
+
+    Args:
+        scn: Current scene
+        data: Dictionary mapping materials to their metadata
+        atlas_size: Dimensions of the atlas
+        size: Original calculated size before adjustment
+    """
     size_width, size_height = size
 
     scaled_width, scaled_height = _get_scale_factors(atlas_size, size)
@@ -348,6 +576,15 @@ def align_uvs(scn: Scene, data: Structure, atlas_size: Tuple[int, int], size: Tu
 
 
 def _get_scale_factors(atlas_size: Tuple[int, int], size: Tuple[int, int]) -> Tuple[float, float]:
+    """Calculate scale factors between original and adjusted atlas sizes.
+
+    Args:
+        atlas_size: Dimensions of the atlas
+        size: Original calculated size before adjustment
+
+    Returns:
+        Tuple of (width_factor, height_factor) scaling values
+    """
     scaled_factors = tuple(x / y for x, y in zip(size, atlas_size))
 
     if all(factor <= 1 for factor in scaled_factors):
@@ -361,6 +598,16 @@ def _get_scale_factors(atlas_size: Tuple[int, int], size: Tuple[int, int]) -> Tu
 
 
 def get_comb_mats(scn: Scene, atlas: ImageType, mats_uv: MatsUV) -> CombMats:
+    """Create materials for the generated atlas.
+
+    Args:
+        scn: Current scene
+        atlas: Generated atlas image
+        mats_uv: Dictionary mapping object names to materials with UV coordinates
+
+    Returns:
+        Dictionary mapping layer indices to materials
+    """
     unique_id = _get_unique_id(scn)
     layers = _get_layers(scn, mats_uv)
     path = _save_atlas(scn, atlas, unique_id)
@@ -369,14 +616,31 @@ def get_comb_mats(scn: Scene, atlas: ImageType, mats_uv: MatsUV) -> CombMats:
 
 
 def _get_layers(scn: Scene, mats_uv: MatsUV) -> Set[int]:
+    """Get all unique layer indices from selected materials.
+
+    Args:
+        scn: Current scene
+        mats_uv: Dictionary mapping object names to materials with UV coordinates
+
+    Returns:
+        Set of unique layer indices
+    """
     return {
         item.layer
         for item in scn.smc_ob_data
-        if item.type == globs.CL_MATERIAL and item.used and item.mat in mats_uv[item.ob.name]
+        if item.type == CombineListTypes.MATERIAL and item.used and item.mat in mats_uv[item.ob.name]
     }
 
 
 def _get_unique_id(scn: Scene) -> str:
+    """Generate a unique ID for the atlas.
+
+    Args:
+        scn: Current scene
+
+    Returns:
+        Unique ID string for the atlas
+    """
     existed_ids = set()
     _add_its_from_existing_materials(scn, existed_ids)
 
@@ -389,23 +653,43 @@ def _get_unique_id(scn: Scene) -> str:
 
 
 def _add_its_from_existing_materials(scn: Scene, existed_ids: Set[int]) -> None:
-    atlas_material_pattern = re.compile(r'{0}(\d+)_\d+'.format(atlas_material_prefix))
+    """Add IDs from existing atlas materials to the set.
+
+    Args:
+        scn: The current scene
+        existed_ids: Set to add IDs to
+    """
+    atlas_material_pattern = re.compile(r'{}(\d+)_\d+'.format(atlas_material_prefix))
     for item in scn.smc_ob_data:
-        if item.type != globs.CL_MATERIAL:
+        if item.type != CombineListTypes.MATERIAL:
             continue
-        
+
         match = atlas_material_pattern.fullmatch(item.mat.name)
         if match:
             existed_ids.add(int(match.group(1)))
 
 
 def _generate_random_unique_id(existed_ids: Set[int]) -> str:
+    """Generate a random unique ID.
+
+    Args:
+        existed_ids: Set of existing IDs to avoid
+
+    Returns:
+        Random unique ID string
+    """
     unused_ids = set(range(10000, 99999)) - existed_ids
     return str(random.choice(list(unused_ids)))
 
 
 def _add_ids_from_existing_files(scn: Scene, existed_ids: Set[int]) -> None:
-    atlas_file_pattern = re.compile(r'{0}(\d+).png'.format(atlas_prefix))
+    """Add IDs from existing atlas files to the set.
+
+    Args:
+        scn: The current scene
+        existed_ids: Set to add IDs to
+    """
+    atlas_file_pattern = re.compile(r'{}(\d+).png'.format(atlas_prefix))
     for file_name in os.listdir(scn.smc_save_path):
         match = atlas_file_pattern.fullmatch(file_name)
         if match:
@@ -413,21 +697,50 @@ def _add_ids_from_existing_files(scn: Scene, existed_ids: Set[int]) -> None:
 
 
 def _save_atlas(scn: Scene, atlas: ImageType, unique_id: str) -> str:
-    path = os.path.join(scn.smc_save_path, '{0}{1}.png'.format(atlas_prefix, unique_id))
+    """Save the atlas image to disk.
+
+    Args:
+        scn: Current scene
+        atlas: Generated atlas image
+        unique_id: Unique ID for the atlas
+
+    Returns:
+        Path to the saved atlas image
+    """
+    path = os.path.join(scn.smc_save_path, '{}{}.png'.format(atlas_prefix, unique_id))
     atlas.save(path)
     return path
 
 
 def _create_texture(path: str, unique_id: str) -> bpy.types.Texture:
-    texture = bpy.data.textures.new('{0}{1}'.format(atlas_texture_prefix, unique_id), 'IMAGE')
+    """Create a Blender texture from the atlas image.
+
+    Args:
+        path: Path to the atlas image
+        unique_id: Unique ID for the atlas
+
+    Returns:
+        Created Blender texture
+    """
+    texture = bpy.data.textures.new('{}{}'.format(atlas_texture_prefix, unique_id), 'IMAGE')
     image = bpy.data.images.load(path)
     texture.image = image
     return texture
 
 
 def _create_material(texture: bpy.types.Texture, unique_id: str, idx: int) -> bpy.types.Material:
-    mat = bpy.data.materials.new(name='{0}{1}_{2}'.format(atlas_material_prefix, unique_id, idx))
-    if globs.is_blender_2_80_or_newer:
+    """Create a Blender material using the atlas texture.
+
+    Args:
+        texture: Atlas texture
+        unique_id: Unique ID for the atlas
+        idx: Layer index for the material
+
+    Returns:
+        Created Blender material
+    """
+    mat = bpy.data.materials.new(name='{}{}_{}'.format(atlas_material_prefix, unique_id, idx))
+    if is_blender_modern:
         _configure_material(mat, texture)
     else:
         _configure_material_legacy(mat, texture)
@@ -435,6 +748,12 @@ def _create_material(texture: bpy.types.Texture, unique_id: str, idx: int) -> bp
 
 
 def _configure_material(mat: bpy.types.Material, texture: bpy.types.Texture) -> None:
+    """Configure a modern (Cycles/Eevee) material with the atlas texture.
+
+    Args:
+        mat: Material to configure
+        texture: Atlas texture
+    """
     mat.blend_method = 'CLIP'
     mat.use_backface_culling = True
     mat.use_nodes = True
@@ -444,13 +763,20 @@ def _configure_material(mat: bpy.types.Material, texture: bpy.types.Texture) -> 
     node_texture.label = 'Material Combiner Texture'
     node_texture.location = -300, 300
 
-    mat.node_tree.links.new(node_texture.outputs['Color'],
-                            mat.node_tree.nodes['Principled BSDF'].inputs['Base Color'])
-    mat.node_tree.links.new(node_texture.outputs['Alpha'],
-                            mat.node_tree.nodes['Principled BSDF'].inputs['Alpha'])
+    node_bsdf = mat.node_tree.nodes['Principled BSDF']
+    node_bsdf.inputs['Roughness'].default_value = 1
+
+    mat.node_tree.links.new(node_texture.outputs['Color'], node_bsdf.inputs['Base Color'])
+    mat.node_tree.links.new(node_texture.outputs['Alpha'], node_bsdf.inputs['Alpha'])
 
 
 def _configure_material_legacy(mat: bpy.types.Material, texture: bpy.types.Texture) -> None:
+    """Configure a legacy (Blender Internal) material with the atlas texture.
+
+    Args:
+        mat: Material to configure
+        texture: Atlas texture
+    """
     mat.alpha = 0
     mat.use_transparency = True
     mat.diffuse_color = (1, 1, 1)
@@ -462,6 +788,13 @@ def _configure_material_legacy(mat: bpy.types.Material, texture: bpy.types.Textu
 
 
 def assign_comb_mats(scn: Scene, data: SMCObData, comb_mats: CombMats) -> None:
+    """Assign combined materials to objects.
+
+    Args:
+        scn: Current scene
+        data: Dictionary mapping object names to materials
+        comb_mats: Dictionary mapping layer indices to materials
+    """
     for ob_n, item in data.items():
         ob = scn.objects[ob_n]
         ob_materials = ob.data.materials
@@ -470,16 +803,31 @@ def assign_comb_mats(scn: Scene, data: SMCObData, comb_mats: CombMats) -> None:
 
 
 def _assign_mats(item: SMCObDataItem, comb_mats: CombMats, ob_materials: ObMats) -> None:
+    """Add combined materials to an object's material slots.
+
+    Args:
+        item: Dictionary mapping materials to layer indices
+        comb_mats: Dictionary mapping layer indices to materials
+        ob_materials: Object's material collection
+    """
     for idx in set(item.values()):
         if idx in comb_mats:
             ob_materials.append(comb_mats[idx])
 
 
 def _assign_mats_to_polys(item: SMCObDataItem, comb_mats: CombMats, ob: bpy.types.Object, ob_materials: ObMats) -> None:
+    """Assign materials to polygons based on their layer.
+
+    Args:
+        item: Dictionary mapping materials to layer indices
+        comb_mats: Dictionary mapping layer indices to materials
+        ob: Object to assign materials to
+        ob_materials: Object's material collection
+    """
     for idx, polys in get_polys(ob).items():
         if ob_materials[idx] not in item:
             continue
-        
+
         mat_name = comb_mats[item[ob_materials[idx]]].name
         mat_idx = ob_materials.find(mat_name)
         for poly in polys:
@@ -487,6 +835,12 @@ def _assign_mats_to_polys(item: SMCObDataItem, comb_mats: CombMats, ob: bpy.type
 
 
 def clear_mats(scn: Scene, mats_uv: MatsUV) -> None:
+    """Remove original materials from objects after a combination.
+
+    Args:
+        scn: Current scene
+        mats_uv: Dictionary mapping object names to materials with UV coordinates
+    """
     for ob_n, item in mats_uv.items():
         ob = scn.objects[ob_n]
         for mat in item:

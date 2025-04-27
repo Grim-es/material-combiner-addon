@@ -34,14 +34,18 @@ PY3 = sys.version_info[0] == 3
 if PY3:
     iterbytes = iter
 else:
+
     def iterbytes(buf):
         return (ord(byte) for byte in buf)
+
 
 try:
     from base64 import b85decode
 except ImportError:
-    _b85alphabet = (b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                    b"abcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~")
+    _b85alphabet = (
+        b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        b"abcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~"
+    )
 
     def b85decode(b):
         _b85dec = [None] * 256
@@ -49,11 +53,11 @@ except ImportError:
             _b85dec[c] = i
 
         padding = (-len(b)) % 5
-        b = b + b'~' * padding
+        b = b + b"~" * padding
         out = []
-        packI = struct.Struct('!I').pack
+        packI = struct.Struct("!I").pack
         for i in range(0, len(b), 5):
-            chunk = b[i:i + 5]
+            chunk = b[i : i + 5]
             acc = 0
             try:
                 for c in iterbytes(chunk):
@@ -62,16 +66,15 @@ except ImportError:
                 for j, c in enumerate(iterbytes(chunk)):
                     if _b85dec[c] is None:
                         raise ValueError(
-                            'bad base85 character at position %d' % (i + j)
+                            "bad base85 character at position %d" % (i + j)
                         )
                 raise
             try:
                 out.append(packI(acc))
             except struct.error:
-                raise ValueError('base85 overflow in hunk starting at byte %d'
-                                 % i)
+                raise ValueError("base85 overflow in hunk starting at byte %d" % i)
 
-        result = b''.join(out)
+        result = b"".join(out)
         if padding:
             result = result[:-padding]
         return result
@@ -96,6 +99,7 @@ def bootstrap(tmpdir=None):
         if not self.parser.get_default_values().cert:
             self.parser.defaults["cert"] = cert_path  # calculated below
         return install_parse_args(self, args)
+
     InstallCommand.parse_args = cert_parse_args
 
     implicit_pip = True
@@ -119,12 +123,14 @@ def bootstrap(tmpdir=None):
     if implicit_setuptools:
         try:
             import setuptools  # noqa
+
             implicit_setuptools = False
         except ImportError:
             pass
     if implicit_wheel:
         try:
             import wheel  # noqa
+
             implicit_wheel = False
         except ImportError:
             pass

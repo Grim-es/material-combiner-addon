@@ -1,0 +1,42 @@
+[tool.ruff]
+line-length = 80
+indent-width = 4
+target-version = "py311"
+extend-exclude = [
+    "addon_updater.py",
+    "addon_updater_ops.py",
+    "operators/get-pip.py"
+]
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle errors
+    "F", # pyflakes
+    "I", # isort
+    "B", # flake8-bugbear
+    "N", # pep8-naming
+    "UP", # pyupgrade
+    "PL", # pylint
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "B905", # zip without explicit strict
+    "E501", # lines too long (handled by formatter)
+    "N801", # invalid class name
+    "N999", # invalid module name
+    "PLW0603", # global statement
+    "RUF012", # mutable class default
+    "UP006", # non pep585 annotation
+    "UP007", # non pep604 annotation union
+    "UP032", # f-string
+    "UP035", # deprecated import
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

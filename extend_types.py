@@ -1,3 +1,11 @@
+"""Type extension and property registration for the Material Combiner addon.
+
+This module extends Blender's type system with custom property groups,
+preferences, and runtime properties needed by the Material Combiner.
+It provides centralized registration and unregistration of all custom
+properties to ensure proper cleanup.
+"""
+
 import bpy
 from bpy.props import (
     BoolProperty,
@@ -36,6 +44,13 @@ _ATLAS_SIZE_ITEMS = [
 
 
 class CombineListEntry(bpy.types.PropertyGroup):
+    """Property group representing an object-material mapping for a combination.
+
+    This class defines the data structure for entries in the material combination list.
+    Each entry can represent an object, material, or visual separator, and contains
+    properties for tracking its selection state and grouping information.
+    """
+
     ob = PointerProperty(
         name='Object',
         type=bpy.types.Object,
@@ -45,7 +60,7 @@ class CombineListEntry(bpy.types.PropertyGroup):
     ob_id = IntProperty(
         name='Object ID',
         default=0,
-        description='Unique identifier for tracking objects in the list'
+        description='Unique identifier for grouping materials under their parent object'
     )
 
     mat = PointerProperty(
@@ -73,11 +88,17 @@ class CombineListEntry(bpy.types.PropertyGroup):
     type = IntProperty(
         name='Entry Type',
         default=0,
-        description='0 = Object, 1 = Material'
+        description='Type of the list entry (Object, Material, or Separator)'
     )
 
 
 class UpdatePreferences(bpy.types.AddonPreferences):
+    """Add-on update configuration and preferences.
+
+    This class defines the addon preferences panel for configuring
+    automatic update behavior and intervals between update checks.
+    """
+
     bl_idname = __package__
 
     auto_check_update = BoolProperty(
@@ -116,11 +137,21 @@ class UpdatePreferences(bpy.types.AddonPreferences):
         description='Minute interval between update checks'
     )
 
-    def draw(self, context: bpy.types.Context):
+    def draw(self, context: bpy.types.Context) -> None:
+        """Draw the preferences panel.
+
+        Args:
+            context: Current Blender context
+        """
         addon_updater_ops.update_settings_ui(self, context)
 
 
 def _register_scene_properties() -> None:
+    """Register all scene-level custom properties.
+
+    This function adds properties to the Scene class for storing
+    object data, atlas configuration, and output settings.
+    """
     bpy.types.Scene.smc_ob_data = CollectionProperty(
         type=CombineListEntry
     )
@@ -192,6 +223,11 @@ def _register_scene_properties() -> None:
 
 
 def _register_material_properties() -> None:
+    """Register all material-level custom properties.
+
+    This function adds properties to the Material class for storing
+    atlas-specific settings and references to original materials.
+    """
     bpy.types.Material.root_mat = PointerProperty(
         name='Base Material',
         type=bpy.types.Material,
@@ -228,11 +264,23 @@ def _register_material_properties() -> None:
 
 
 def register() -> None:
+    """Register all custom properties and types.
+
+    This function initializes all custom properties on Scene and Material
+    objects required by the Material Combiner addon. Called during addon
+    registration.
+    """
     _register_scene_properties()
     _register_material_properties()
 
 
 def unregister() -> None:
+    """Unregister all custom properties and types.
+
+    This function removes all custom properties added to Scene and Material
+    objects by the Material Combiner addon. Called during addon unregistration
+    to prevent property leaks and ensure clean uninstallation.
+    """
     for prop in _SCENE_PROPS:
         if hasattr(bpy.types.Scene, prop):
             delattr(bpy.types.Scene, prop)

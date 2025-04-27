@@ -1,3 +1,11 @@
+"""Main combiner operator for the Material Combiner addon.
+
+This module provides the primary operator class for the Material Combiner addon.
+It orchestrates the entire material combining process, from selecting materials
+to generating the final atlas and updating UV coordinates. The Combiner operator
+manages the main workflow and delegates specific tasks to specialized functions.
+"""
+
 from typing import Set
 
 import bpy
@@ -20,11 +28,26 @@ from .combiner_ops import (
     get_size,
     get_structure,
     set_ob_mode,
+    validate_ob_data,
 )
 from .packer import BinPacker
 
+MAX_ATLAS_SIZE = 20000
+
 
 class Combiner(bpy.types.Operator):
+    """Main operator for combining materials into a texture atlas.
+
+    This operator manages the complete workflow for texture atlas generation:
+    1. Validating user selections
+    2. Analyzing materials and textures
+    3. Detecting and handling duplicates
+    4. Generating the texture atlas
+    5. Adjusting UV coordinates
+    6. Assigning new materials
+    7. Cleaning up unneeded materials
+    """
+
     bl_idname = "smc.combiner"
     bl_label = "Create Atlas"
     bl_description = "Combine materials"
@@ -40,19 +63,41 @@ class Combiner(bpy.types.Operator):
     structure = None
 
     def execute(self, context: bpy.types.Context) -> Set[str]:
+        """Execute the material combining operation.
+
+        This method handles the final stages of the combining process:
+        1. Packing textures using bin packing algorithm
+        2. Calculating appropriate atlas dimensions
+        3. Generating atlas image
+        4. Remapping UV coordinates
+        5. Creating and assigning new materials
+        6. Cleaning up unused materials
+
+        Args:
+            context: Current Blender context
+
+        Returns:
+            Set containing operation status
+        """
         if not self.data:
             self.invoke(context, None)
         scn = context.scene
+
+        if not self.directory:
+            return self._return_with_message("ERROR", "No directory selected")
+
         scn.smc_save_path = self.directory
         self.structure = BinPacker(get_size(scn, self.structure)).fit()
 
         size = get_atlas_size(self.structure)
         atlas_size = calculate_adjusted_size(scn, size)
 
-        if max(atlas_size, default=0) > 20000:
+        if max(atlas_size, default=0) > MAX_ATLAS_SIZE:
             self.report(
                 {"ERROR"},
-                "The output image size of {0}x{1}px is too large".format(*atlas_size),
+                "The output image size of {}x{}px is too large".format(
+                    *atlas_size
+                ),
             )
             return {"FINISHED"}
 
@@ -65,38 +110,90 @@ class Combiner(bpy.types.Operator):
         self.report({"INFO"}, "Materials were combined")
         return {"FINISHED"}
 
-    def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> Set[str]:
+    def invoke(
+        self, context: bpy.types.Context, event: bpy.types.Event
+    ) -> Set[str]:
+        """Initialize the combiner and validate inputs.
+
+        This method performs the initial setup and validation:
+        1. Refreshing object data
+        2. Validating selected objects and materials
+        3. Setting up special options for specific workflows
+        4. Preparing material and UV data
+        5. Detecting and handling duplicate materials
+        6. Opening the file browser for saving the atlas
+
+        Args:
+            context: Current Blender context
+            event: Triggered event
+
+        Returns:
+            Set containing operation status
+        """
         scn = context.scene
         bpy.ops.smc.refresh_ob_data()
+
+        validation_result = validate_ob_data(scn.smc_ob_data)
+        if validation_result:
+            return self._return_with_message(
+                "ERROR", "No valid objects selected"
+            )
 
         if self.cats:
             scn.smc_size = "PO2"
             scn.smc_gaps = 0
 
         set_ob_mode(
-            context.view_layer if globs.is_blender_2_80_or_newer else scn,
+            context.view_layer if globs.is_blender_modern else scn,
             scn.smc_ob_data,
         )
         self.data = get_data(scn.smc_ob_data)
+
+        if not self.data:
+            return self._return_with_message("ERROR", "No materials selected")
+
         self.mats_uv = get_mats_uv(scn, self.data)
         clear_empty_mats(scn, self.data, self.mats_uv)
         get_duplicates(self.mats_uv)
         self.structure = get_structure(scn, self.data, self.mats_uv)
 
-        if globs.is_blender_2_79_or_older:
+        if globs.is_blender_legacy:
             context.space_data.viewport_shade = "MATERIAL"
 
-        if len(self.structure) == 1 and next(iter(self.structure.values()))["dup"]:
+        if (
+            len(self.structure) == 1
+            and next(iter(self.structure.values()))["dup"]
+        ):
             clear_duplicates(scn, self.structure)
             return self._return_with_message("INFO", "Duplicates were combined")
         elif not self.structure or len(self.structure) == 1:
-            return self._return_with_message("ERROR", "No unique materials selected")
+            return self._return_with_message(
+                "ERROR", "No unique materials selected"
+            )
         if event is not None:
             context.window_manager.fileselect_add(self)
 
         return {"RUNNING_MODAL"}
 
+    def draw(self, context: bpy.types.Context) -> None:
+        """Draw the operator UI.
+
+        This method is called to draw the operator UI.
+        """
+        pass
+
     def _return_with_message(self, message_type: str, message: str) -> Set[str]:
+        """Return with a message to the user.
+
+        Helper method to display a message to the user and refresh the object data.
+
+        Args:
+            message_type: Type of message (INFO, ERROR, WARNING)
+            message: Message content to display
+
+        Returns:
+            Set containing operation status
+        """
         bpy.ops.smc.refresh_ob_data()
         self.report({message_type}, message)
         return {'FINISHED'}

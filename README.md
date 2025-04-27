@@ -1,7 +1,7 @@
 material-combiner-addon
 ===========
 
-#### An add-on for Blender that helps reduce draw calls in game engines by combining textures without quality loss and avoiding issues with UV bounds larger than 0-1.
+#### An add-on for Blender that helps reduce draw calls in game engines by combining textures without quality loss and avoiding issues with UV bounds larger than 0–1.
 
 #### If you like an add-on, you can support my work on Patreon or Buy me a coffee.
 
@@ -11,7 +11,7 @@ material-combiner-addon
 ## FEATURES
 
 * **Combining Multiple Materials**: Allows you to mix diffuse colors with textures, and specify both the size of the
-  resulting atlas and the size of each individual texture.
+  resulting atlas and the size of each texture.
 * **Multi-combining**: Adds image-layers for each material, which are combined into different atlases. This feature
   supports the generation of Normal maps, Specular maps, and other atlases. (Not implemented in newer versions |
   Supported in version 2.0.3.3)
@@ -40,11 +40,11 @@ material-combiner-addon
 6. Once you have made your selections, click the `Save atlas to..` button to start the atlasing process.
 7. If the materials are not merged properly or the atlas image does not contain all the textures, please refer to the
    section:
-   [After clicking "Save atlas to.." the materials are simply merged or the atlas image does not have all the textures](https://github.com/Grim-es/material-combiner-addon/tree/master?tab=readme-ov-file#after-clicking-save-atlas-to-the-materials-are-simply-merged-or-the-atlas-image-does-not-have-all-the-textures).
+   [After clicking "Save atlas to…" the materials are simply merged or the atlas image does not have all the textures](https://github.com/Grim-es/material-combiner-addon/tree/master?tab=readme-ov-file#after-clicking-save-atlas-to-the-materials-are-simply-merged-or-the-atlas-image-does-not-have-all-the-textures).
 
 ## KNOWN ISSUES
 
-### After clicking "Save atlas to.." the materials are simply merged or the atlas image does not have all the textures
+### After clicking "Save atlas to…" the materials are simply merged or the atlas image does not have all the textures
 
 - Textures are packaged in a .blend file. Save the .blend file to a location of your choice, then go to File > External
   Data > Unpack Resources / Unpack All Into Files to extract the textures.
@@ -73,7 +73,7 @@ material-combiner-addon
     ```
   Replace ***Your\Copied\Path\To\Python\bin\Folder*** with the path you copied.
 
-- **MacOS** | Open a Terminal console and execute the following commands:
+- **macOS** | Open a Terminal console and execute the following commands:
     ```bash
     /Applications/Blender.app/Contents/MacOS/Blender -b --python-expr "__import__('ensurepip')._bootstrap()" 
 
@@ -81,11 +81,11 @@ material-combiner-addon
 
     /Applications/Blender.app/Contents/MacOS/Blender -b --python-expr "__import__('pip._internal')._internal.main(['install', 'Pillow'])"
     ```
-  If you installed Blender in a different location, adjust the path at the beginning of each command accordingly.
+  If you install Blender in a different location, adjust the path at the beginning of each command accordingly.
 
 ### No module named 'material-combiner-addon-2'
 
-You have installed the source code from the Releases. Instead, install from the master
+You have installed the source code from the Releases. Instead, install from the "master"
 branch [Material-combiner](https://github.com/Grim-es/material-combiner-addon/archive/master.zip). Before doing so,
 remove the old installation folder. The default locations are:
 

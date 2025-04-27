@@ -1,0 +1,8 @@
+{
+  "files.exclude": {
+    "**/__pycache__": true,
+    ".idea/": true,
+    ".ruff_cache/": true,
+    "material-combiner-addon_updater/": true
+  }
+}
