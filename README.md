@@ -1,6 +1,10 @@
 material-combiner-addon
 ===========
 
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/Grim-es/material-combiner-addon)](https://github.com/Grim-es/material-combiner-addon/releases/latest)
+[![GitHub issues](https://img.shields.io/github/issues/Grim-es/material-combiner-addon)](https://github.com/Grim-es/material-combiner-addon/issues)
+[![GitHub stars](https://img.shields.io/github/stars/Grim-es/material-combiner-addon)](https://github.com/Grim-es/material-combiner-addon/stargazers)
+
 #### An add-on for Blender that helps reduce draw calls in game engines by combining textures without quality loss and avoiding issues with UV bounds larger than 0–1.
 
 #### If you like an add-on, you can support my work on Patreon or Buy me a coffee.

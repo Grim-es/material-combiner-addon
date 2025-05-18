@@ -127,6 +127,7 @@ class MaterialCombinerPanel(bpy.types.Panel):
             scene: The current scene containing property values.
         """
         layout.prop(scene, 'smc_size', text='Atlas Size')
+        layout.prop(scene, 'smc_packer_type', text='Packing Algorithm')
 
         if scene.smc_size in {'CUST', 'STRICTCUST'}:
             size_col = layout.column(align=True)

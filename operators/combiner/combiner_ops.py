@@ -98,7 +98,7 @@ def set_ob_mode(scn: Scene, data: SMCObData) -> None:
         scn: Current scene or view layer.
         data: Dictionary of object data items.
     """
-    ob = next(item.ob for item in data if item.type == CombineListTypes.OBJECT)
+    ob = next((item.ob for item in data if item.type == CombineListTypes.OBJECT), None)
     if ob:
         scn.objects.active = ob
         bpy.ops.object.mode_set(mode='OBJECT')

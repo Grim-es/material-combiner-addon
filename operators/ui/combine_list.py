@@ -49,9 +49,7 @@ class MaterialListRefreshOperator(bpy.types.Operator):
         return {"FINISHED"}
 
     @staticmethod
-    def _get_eligible_objects(
-        context: bpy.types.Context,
-    ) -> Set[bpy.types.Object]:
+    def _get_eligible_objects(context: bpy.types.Context) -> Set[bpy.types.Object]:
         """Retrieve valid objects for material processing.
 
         Finds mesh objects that have both an active UV layer and materials.
@@ -136,6 +134,11 @@ class MaterialListRefreshOperator(bpy.types.Operator):
         """
         for material in get_materials(obj):
             self._ensure_material_preview(material)
+
+            if material not in obj_state["materials"]:
+                if material.name.startswith("material_atlas_"):
+                    obj_state["materials"][material]["used"] = False
+
             mat_state = obj_state["materials"][material]
             self._add_material_entry(
                 scene,

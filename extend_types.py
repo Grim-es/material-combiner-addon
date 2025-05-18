@@ -21,7 +21,7 @@ from . import addon_updater_ops
 _SCENE_PROPS = (
     'smc_ob_data', 'smc_ob_data_id', 'smc_list_id', 'smc_size',
     'smc_size_width', 'smc_size_height', 'smc_crop', 'smc_pixel_art',
-    'smc_diffuse_size', 'smc_gaps', 'smc_save_path'
+    'smc_diffuse_size', 'smc_gaps', 'smc_save_path', 'smc_packer_type'
 )
 
 _MATERIAL_PROPS = (
@@ -40,6 +40,14 @@ _ATLAS_SIZE_ITEMS = [
     ('AUTO', 'Automatic', 'Combined image has minimal size'),
     ('CUST', 'Custom', 'Proportionally scaled to fit custom size'),
     ('STRICTCUST', 'Strict Custom', 'Exact custom width and height'),
+]
+
+_DEFAULT_PACKER_TYPE = 'BINARY_TREE'
+
+_PACKER_TYPE_ITEMS = [
+    ('MAX_RECTS', 'Max Rects', 'Uses the Max Rects bin packer algorithm - good balance of speed and efficiency'),
+    ('BINARY_TREE', 'Binary Tree', 'Uses the Binary Tree bin packer algorithm - simple but less efficient'),
+    ('RECT_PACK2D', 'RectPack2D', 'Uses the RectPack2D algorithm - best for tightly packed layouts'),
 ]
 
 
@@ -167,6 +175,13 @@ def _register_scene_properties() -> None:
         items=_ATLAS_SIZE_ITEMS,
         default=_DEFAULT_ATLAS_SIZE,
         description='Texture atlas sizing strategy'
+    )
+
+    bpy.types.Scene.smc_packer_type = EnumProperty(
+        name='Packing Algorithm',
+        items=_PACKER_TYPE_ITEMS,
+        default=_DEFAULT_PACKER_TYPE,
+        description='Algorithm used for packing textures into the atlas'
     )
 
     dimension_args = {
