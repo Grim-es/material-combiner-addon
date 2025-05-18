@@ -26,12 +26,20 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Typical usage example:
+    images = {
+        'mat1': {'gfx': {'size': (100, 200)}},
+        'mat2': {'gfx': {'size': (150, 100)}}
+    }
+    packer = BinaryTreeBinPacker()
+    packed_result = packer.pack(images)
 """
 
 from typing import Dict, Optional
 
 
-class BinPacker:
+class BinaryTreeBinPacker:
     """Binary tree-based bin packing algorithm.
 
     This packing algorithm attempts to efficiently arrange rectangular textures
@@ -46,24 +54,30 @@ class BinPacker:
         bin: Dictionary of images to be packed with their data.
     """
 
-    def __init__(self, images: Dict) -> None:
+    def __init__(self) -> None:
         """Initialize the bin packer with a set of images.
 
         Args:
             images: Dictionary of materials and their image/size data.
         """
         self.root = {}
-        self.bin = images
 
-    def fit(self) -> Dict:
-        """Fit all textures into the bin.
+    def pack(self, images: Dict) -> Dict:
+        """Pack all textures into the bin.
 
         This method places all textures in optimal positions within the atlas.
         It updates each texture's entry with position data in the 'fit' field.
 
+        Args:
+            images: Dictionary of materials and their image/size data.
+                    Each item should have the format:
+                    {material_id: {'gfx': {'size': (width, height)}}}
+
         Returns:
-            The updated bin dictionary with position information.
+            The updated bin dictionary with position information in each item's
+            'gfx.fit' field, containing x, y coordinates, width and height.
         """
+        self.bin = images
         self.root = {"x": 0, "y": 0, "w": 0, "h": 0}
 
         if not self.bin:

@@ -15,6 +15,7 @@ import bpy
 from bpy.props import BoolProperty, StringProperty
 
 from ... import globs
+from ...utils.packers import pack
 from .combiner_ops import (
     align_uvs,
     assign_comb_mats,
@@ -33,7 +34,6 @@ from .combiner_ops import (
     set_ob_mode,
     validate_ob_data,
 )
-from .packer import BinPacker
 
 MAX_ATLAS_SIZE = 20000
 
@@ -90,7 +90,9 @@ class Combiner(bpy.types.Operator):
             return self._return_with_message("ERROR", "No directory selected")
 
         scn.smc_save_path = self.directory
-        self.structure = BinPacker(get_size(scn, self.structure)).fit()
+        self.structure = pack(
+            get_size(scn, self.structure), scn.smc_packer_type
+        )
 
         size = get_atlas_size(self.structure)
         atlas_size = calculate_adjusted_size(scn, size)

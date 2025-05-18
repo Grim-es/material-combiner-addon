@@ -11,7 +11,13 @@ from typing import Any, Dict, List, Tuple
 import bpy
 from bpy.props import BoolProperty, EnumProperty, StringProperty
 
-from .globs import ICON_DROPDOWN, ICON_OBJECT, ICON_PROPERTIES, CombineListTypes
+from .globs import (
+    ICON_DROPDOWN,
+    ICON_OBJECT,
+    ICON_PROPERTIES,
+    CombineListTypes,
+    is_blender_modern,
+)
 
 
 class SMC_UL_Combine_List(bpy.types.UIList):
@@ -109,7 +115,11 @@ class SMC_UL_Combine_List(bpy.types.UIList):
             item: The material item to display.
             index: The index of the item in the list.
         """
-        row.separator(factor=1.5)
+        if is_blender_modern:
+            row.separator(factor=1.5)
+        else:
+            row.separator()
+
         self._draw_toggle_control(row, item, index)
 
         preview_id = self._get_material_preview_id(item)

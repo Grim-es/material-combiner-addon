@@ -93,7 +93,7 @@ class InstallPIL(bpy.types.Operator):
             else:
                 return self._install_pip_clean()
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to install pip: {e}")
+            self.report({"ERROR"}, "Failed to install pip: {}".format(e))
             return False
 
     def _try_install_pip_with_ensurepip(self) -> bool:
@@ -141,12 +141,14 @@ class InstallPIL(bpy.types.Operator):
             )
 
             if process.returncode != 0:
-                self.report({"ERROR"}, f"get-pip.py failed: {process.stderr}")
+                self.report(
+                    {"ERROR"}, "get-pip.py failed: {}".format(process.stderr)
+                )
                 return False
 
             return True
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to run get-pip.py: {e}")
+            self.report({"ERROR"}, "Failed to run get-pip.py: {}".format(e))
             return False
 
     def _install_pillow(self) -> bool:
@@ -179,5 +181,7 @@ class InstallPIL(bpy.types.Operator):
             self.report({"ERROR"}, "Failed to import pip after installation")
             return False
         except Exception as e:
-            self.report({"ERROR"}, f"Error during Pillow installation: {e}")
+            self.report(
+                {"ERROR"}, "Error during Pillow installation: {}".format(e)
+            )
             return False
