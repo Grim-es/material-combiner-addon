@@ -500,10 +500,11 @@ def _trace_connected_shader(
                 # Handle node groups with different internal node trees
                 if node_type == "ShaderNodeGroup" and connected_node.node_tree:
                     group_name = connected_node.node_tree.name
-                    if group_name in SHADER_NODE_TYPES["ShaderNodeGroup"]:
-                        shader_type = SHADER_NODE_TYPES["ShaderNodeGroup"][
-                            group_name
-                        ]
+
+                    if group_name in shader_type:
+                        shader_type = shader_type[group_name]
+                    else:
+                        return _trace_connected_shader(connected_node)
 
                 return connected_node, shader_type
 

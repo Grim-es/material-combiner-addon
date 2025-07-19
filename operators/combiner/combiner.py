@@ -20,7 +20,6 @@ from .combiner_ops import (
     align_uvs,
     assign_comb_mats,
     calculate_adjusted_size,
-    clear_duplicates,
     clear_empty_mats,
     clear_mats,
     get_atlas,
@@ -57,10 +56,10 @@ class Combiner(bpy.types.Operator):
     bl_options = {"UNDO", "INTERNAL"}
 
     directory = StringProperty(
-        maxlen=1024, default="", subtype="FILE_PATH", options={"HIDDEN"}
+        description="Directory to save the atlas", maxlen=1024, default="", subtype="FILE_PATH", options={"HIDDEN"}
     )
     filter_glob = StringProperty(default="", options={"HIDDEN"})
-    cats = BoolProperty(default=False)
+    cats = BoolProperty(description="Enable special cats workflow mode", default=False)
     data = None
     mats_uv = None
     structure = None
@@ -165,16 +164,20 @@ class Combiner(bpy.types.Operator):
         if globs.is_blender_legacy:
             context.space_data.viewport_shade = "MATERIAL"
 
-        if (
-            len(self.structure) == 1
-            and next(iter(self.structure.values()))["dup"]
-        ):
-            clear_duplicates(scn, self.structure)
-            return self._return_with_message("INFO", "Duplicates were combined")
-        elif not self.structure or len(self.structure) == 1:
+        # Check if we're only dealing with duplicate materials
+        total_unique_mats = len(self.structure)
+        has_duplicates = any(len(item['dup']) > 0 for item in self.structure.values())
+
+        # Validate material requirements
+        if total_unique_mats == 0:
+            return self._return_with_message("ERROR", "No materials selected")
+
+        if total_unique_mats == 1 and not has_duplicates:
             return self._return_with_message(
-                "ERROR", "No unique materials selected"
+                "ERROR",
+                "Only one unique material selected - nothing to combine",
             )
+
         if event is not None:
             context.window_manager.fileselect_add(self)
 
@@ -184,6 +187,9 @@ class Combiner(bpy.types.Operator):
         """Draw the operator UI.
 
         This method is called to draw the operator UI.
+
+        Args:
+            context: Current Blender context.
         """
         pass
 

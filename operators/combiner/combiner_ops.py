@@ -226,27 +226,12 @@ def get_structure(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> Structure:
             if mat.name not in ob.data.materials:
                 continue
             root_mat = mat.root_mat or mat
-            if mat.root_mat and mat.name not in structure[root_mat]['dup']:
+            if mat.root_mat and mat.root_mat != mat and mat.name not in structure[root_mat]['dup']:
                 structure[root_mat]['dup'].append(mat.name)
             if ob.name not in structure[root_mat]['ob']:
                 structure[root_mat]['ob'].append(ob.name)
             structure[root_mat]['uv'].extend(mats_uv[ob_n][mat])
     return structure
-
-
-def clear_duplicates(scn: Scene, data: Structure) -> None:
-    """Remove duplicate materials from objects.
-
-    Args:
-        scn: Current scene.
-        data: Dictionary mapping materials to their metadata.
-    """
-    for item in data.values():
-        for ob_n in item['ob']:
-            ob = scn.objects[ob_n]
-            for dup_name in item['dup']:
-                _delete_material(ob, dup_name)
-
 
 def get_size(scn: Scene, data: Structure) -> Dict:
     """Calculate sizes for all material textures.
