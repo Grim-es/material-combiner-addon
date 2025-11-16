@@ -1388,7 +1388,11 @@ class MaxRectsBinPacker:
             if not is_too_small:
                 survivors_pass1.append(fr)
             elif self.verbose:
-                print("[_prune_free_list] Pruning small rect (pass 1): {}".format(fr))
+                print(
+                    "[_prune_free_list] Pruning small rect (pass 1): {}".format(
+                        fr
+                    )
+                )
 
         # Pass 2: Filter out free rectangles that are contained by other free rectangles.
         # This means if rect_m contains rect_k, rect_k is redundant.
@@ -1396,19 +1400,25 @@ class MaxRectsBinPacker:
         for k_idx, rect_k in enumerate(survivors_pass1):
             is_contained_by_another = False
             for m_idx, rect_m in enumerate(survivors_pass1):
-                if k_idx == m_idx: # Don't compare a rectangle to itself.
+                if k_idx == m_idx:  # Don't compare a rectangle to itself.
                     continue
                 if rect_m.contains(rect_k):
                     is_contained_by_another = True
                     if self.verbose:
                         print(
-                            "[_prune_free_list] Pruning {} (contained by {}) (pass 2)".format(rect_k, rect_m)
+                            "[_prune_free_list] Pruning {} (contained by {}) (pass 2)".format(
+                                rect_k, rect_m
+                            )
                         )
-                    break # rect_k is contained, no need to check further.
+                    break  # rect_k is contained, no need to check further.
             if not is_contained_by_another:
                 final_free_rectangles.append(rect_k)
 
         self.free_rectangles = final_free_rectangles
 
         if self.verbose:
-            print("[_prune_free_list] Count after: {}".format(len(self.free_rectangles)))
+            print(
+                "[_prune_free_list] Count after: {}".format(
+                    len(self.free_rectangles)
+                )
+            )

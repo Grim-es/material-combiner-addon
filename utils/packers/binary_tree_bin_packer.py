@@ -55,12 +55,9 @@ class BinaryTreeBinPacker:
     """
 
     def __init__(self) -> None:
-        """Initialize the bin packer with a set of images.
-
-        Args:
-            images: Dictionary of materials and their image/size data.
-        """
         self.root = {}
+        self.bin = None
+        self.images = None
 
     def pack(self, images: Dict) -> Dict:
         """Pack all textures into the bin.

@@ -49,7 +49,9 @@ class MaterialListRefreshOperator(bpy.types.Operator):
         return {"FINISHED"}
 
     @staticmethod
-    def _get_eligible_objects(context: bpy.types.Context) -> Set[bpy.types.Object]:
+    def _get_eligible_objects(
+        context: bpy.types.Context,
+    ) -> Set[bpy.types.Object]:
         """Retrieve valid objects for material processing.
 
         Finds mesh objects that have both an active UV layer and materials.
@@ -370,6 +372,9 @@ class SelectNoneMaterials(bpy.types.Operator):
             Set containing operation status.
         """
         for item in context.scene.smc_ob_data:
-            if item.type in (CombineListTypes.OBJECT, CombineListTypes.MATERIAL):
+            if item.type in (
+                CombineListTypes.OBJECT,
+                CombineListTypes.MATERIAL,
+            ):
                 item.used = False
-        return {'FINISHED'}
+        return {"FINISHED"}

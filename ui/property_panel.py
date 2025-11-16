@@ -28,10 +28,10 @@ class PropertyMenu(bpy.types.Operator):
     are processed during atlas generation.
     """
 
-    bl_label = 'Material Settings'
-    bl_idname = 'smc.material_properties'
-    bl_description = 'Show settings for this material'
-    bl_options = {'UNDO', 'INTERNAL'}
+    bl_label = "Material Settings"
+    bl_idname = "smc.material_properties"
+    bl_description = "Show settings for this material"
+    bl_options = {"UNDO", "INTERNAL"}
 
     list_id = IntProperty(default=0)
 
@@ -47,7 +47,9 @@ class PropertyMenu(bpy.types.Operator):
         """
         context.scene.smc_list_id = self.list_id
         dpi = self._get_system_dpi(context)
-        return context.window_manager.invoke_props_dialog(self, width=dpi * DIALOG_WIDTH_FACTOR)
+        return context.window_manager.invoke_props_dialog(
+            self, width=dpi * DIALOG_WIDTH_FACTOR
+        )
 
     def check(self, context: bpy.types.Context) -> bool:
         """Validate operator parameters.
@@ -69,7 +71,7 @@ class PropertyMenu(bpy.types.Operator):
         Returns:
             Set with 'FINISHED' status.
         """
-        return {'FINISHED'}
+        return {"FINISHED"}
 
     def draw(self, context: bpy.types.Context) -> None:
         """Draw the property dialog UI layout.
@@ -95,16 +97,22 @@ class PropertyMenu(bpy.types.Operator):
             box_col.separator()
             self._show_size_settings(box_col, item)
         else:
-            self._show_size_row(box_col, 'Base Color Only', 0, (scn.smc_diffuse_size,) * 2)
+            self._show_size_row(
+                box_col, "Base Color Only", 0, (scn.smc_diffuse_size,) * 2
+            )
             box_col.separator()
             self._show_diffuse_color(box_col, item)
 
-        if hasattr(col, 'template_popup_confirm'):
+        if hasattr(col, "template_popup_confirm"):
             col.separator()
-            col.template_popup_confirm("", cancel_text="OK", cancel_default=True)
+            col.template_popup_confirm(
+                "", cancel_text="OK", cancel_default=True
+            )
 
     @staticmethod
-    def _get_material_image(mat: Optional[bpy.types.Material]) -> Optional[bpy.types.Image]:
+    def _get_material_image(
+        mat: Optional[bpy.types.Material],
+    ) -> Optional[bpy.types.Image]:
         """Extract the primary image from a material.
 
         Args:
@@ -119,16 +127,20 @@ class PropertyMenu(bpy.types.Operator):
         return get_image_from_material(mat)
 
     @staticmethod
-    def _show_material_header(col: bpy.types.UILayout, mat: bpy.types.Material) -> None:
+    def _show_material_header(
+        col: bpy.types.UILayout, mat: bpy.types.Material
+    ) -> None:
         """Display material name and preview icon.
 
         Args:
             col: UI column to add the display to.
             mat: Material to display.
         """
-        col.prop(mat, 'name', text='', icon_value=mat.preview.icon_id)
+        col.prop(mat, "name", text="", icon_value=mat.preview.icon_id)
 
-    def _show_image_size_row(self, col: bpy.types.UILayout, image: bpy.types.Image) -> None:
+    def _show_image_size_row(
+        self, col: bpy.types.UILayout, image: bpy.types.Image
+    ) -> None:
         """Display image information with name and dimensions.
 
         Args:
@@ -140,7 +152,7 @@ class PropertyMenu(bpy.types.Operator):
 
         # Truncate image name if too long
         image_name = (
-            '{}...'.format(image.name[:MAX_MATERIAL_NAME_LENGTH])
+            "{}...".format(image.name[:MAX_MATERIAL_NAME_LENGTH])
             if len(image.name) > MAX_MATERIAL_NAME_LENGTH
             else image.name
         )
@@ -148,7 +160,12 @@ class PropertyMenu(bpy.types.Operator):
         self._show_size_row(col, image_name, image.preview.icon_id, image.size)
 
     @staticmethod
-    def _show_size_row(col: bpy.types.UILayout, label: str, icon: Optional[int], size: Tuple[int, int]) -> None:
+    def _show_size_row(
+        col: bpy.types.UILayout,
+        label: str,
+        icon: Optional[int],
+        size: Tuple[int, int],
+    ) -> None:
         """Display item size information in a formatted row.
 
         Args:
@@ -162,11 +179,15 @@ class PropertyMenu(bpy.types.Operator):
         label_col.label(text=label, icon_value=icon)
 
         size_col = row.column(align=True)
-        size_col.alignment = 'RIGHT'
-        size_col.label(text='Size: {}x{}px'.format(*size))
+        size_col.alignment = "RIGHT"
+        size_col.label(text="Size: {}x{}px".format(*size))
 
-    def _show_diffuse_color(self, col: bpy.types.UILayout, item: bpy.types.PropertyGroup,
-                            image: Optional[bpy.types.Image] = None) -> None:
+    def _show_diffuse_color(
+        self,
+        col: bpy.types.UILayout,
+        item: bpy.types.PropertyGroup,
+        image: Optional[bpy.types.Image] = None,
+    ) -> None:
         """Display diffuse color settings based on a material shader type.
 
         Shows appropriate color inputs based on the material's shader, handling
@@ -180,11 +201,11 @@ class PropertyMenu(bpy.types.Operator):
         mat = item.mat
 
         if globs.is_blender_legacy:
-            col.prop(mat, 'smc_diffuse')
+            col.prop(mat, "smc_diffuse")
             if not mat.smc_diffuse:
                 return
 
-            col.prop(mat, 'diffuse_color', text='')
+            col.prop(mat, "diffuse_color", text="")
             return
 
         shader = get_shader_type(mat)
@@ -192,14 +213,16 @@ class PropertyMenu(bpy.types.Operator):
             return
 
         if image:
-            col.prop(mat, 'smc_diffuse')
+            col.prop(mat, "smc_diffuse")
             if not mat.smc_diffuse:
                 return
 
         self._display_shader_color_input(col, mat, shader)
 
     @staticmethod
-    def _display_shader_color_input(layout: bpy.types.UILayout, mat: bpy.types.Material, shader: str) -> None:
+    def _display_shader_color_input(
+        layout: bpy.types.UILayout, mat: bpy.types.Material, shader: str
+    ) -> None:
         """Display the color input appropriate for the specific shader type.
 
         Args:
@@ -213,38 +236,60 @@ class PropertyMenu(bpy.types.Operator):
         nodes = mat.node_tree.nodes
 
         # For MMD materials
-        if shader in ['mmd', 'mmdCol'] and 'mmd_shader' in nodes:
-            layout.prop(nodes['mmd_shader'].inputs['Diffuse Color'], 'default_value', text='')
+        if shader in ["mmd", "mmdCol"] and "mmd_shader" in nodes:
+            layout.prop(
+                nodes["mmd_shader"].inputs["Diffuse Color"],
+                "default_value",
+                text="",
+            )
 
         # For MToon materials
-        elif shader in ['mtoon', 'mtoonCol'] and 'Mtoon1PbrMetallicRoughness.BaseColorFactor' in nodes:
-            layout.prop(nodes['Mtoon1PbrMetallicRoughness.BaseColorFactor'], 'color', text='')
+        elif (
+            shader in ["mtoon", "mtoonCol"]
+            and "Mtoon1PbrMetallicRoughness.BaseColorFactor" in nodes
+        ):
+            layout.prop(
+                nodes["Mtoon1PbrMetallicRoughness.BaseColorFactor"],
+                "color",
+                text="",
+            )
 
         # For VRM materials
-        elif shader in ['vrm', 'vrmCol'] and 'RGB' in nodes:
-            layout.prop(nodes['RGB'].outputs[0], 'default_value', text='')
+        elif shader in ["vrm", "vrmCol"] and "RGB" in nodes:
+            layout.prop(nodes["RGB"].outputs[0], "default_value", text="")
 
         # For XNALara New materials
-        elif shader == 'xnalaraNewCol' and 'Group' in nodes:
-            layout.prop(nodes['Group'].inputs['Diffuse'], 'default_value', text='')
+        elif shader == "xnalaraNewCol" and "Group" in nodes:
+            layout.prop(
+                nodes["Group"].inputs["Diffuse"], "default_value", text=""
+            )
 
         # For Principled BSDF and XNALara materials
-        elif shader in ['principled', 'principledCol', 'xnalara', 'xnalaraCol'] and 'Principled BSDF' in nodes:
-            layout.prop(nodes['Principled BSDF'].inputs['Base Color'], 'default_value', text='')
+        elif (
+            shader in ["principled", "principledCol", "xnalara", "xnalaraCol"]
+            and "Principled BSDF" in nodes
+        ):
+            layout.prop(
+                nodes["Principled BSDF"].inputs["Base Color"],
+                "default_value",
+                text="",
+            )
 
     @staticmethod
-    def _show_size_settings(col: bpy.types.UILayout, item: bpy.types.PropertyGroup) -> None:
+    def _show_size_settings(
+        col: bpy.types.UILayout, item: bpy.types.PropertyGroup
+    ) -> None:
         """Display texture size constraint settings.
 
         Args:
             col: UI column to add the size settings to.
             item: Material item from the combine list.
         """
-        col.prop(item.mat, 'smc_size')
+        col.prop(item.mat, "smc_size")
         if item.mat.smc_size:
             col = col.column(align=True)
-            col.prop(item.mat, 'smc_size_width')
-            col.prop(item.mat, 'smc_size_height')
+            col.prop(item.mat, "smc_size_width")
+            col.prop(item.mat, "smc_size_height")
 
     @staticmethod
     def _get_system_dpi(context: bpy.types.Context) -> int:

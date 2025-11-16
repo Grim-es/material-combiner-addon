@@ -5,7 +5,7 @@ with validation to ensure security and correct formatting of URLs. It's used for
 accessing documentation, support resources, and sponsor links.
 
 Usage example:
-    bpy.ops.smc.browser(link=r"https://github.com/Grim-es/material-combiner-addon")
+    bpy.ops.smc.browser(link=r'https://github.com/Grim-es/material-combiner-addon\')
 """
 
 import re

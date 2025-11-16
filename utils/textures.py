@@ -29,7 +29,7 @@ def get_texture(mat: bpy.types.Material) -> Optional[bpy.types.Texture]:
         (
             slot.texture
             for idx, slot in enumerate(mat.texture_slots)
-            if mat.use_textures[idx]
+            if slot and mat.use_textures[idx]
         ),
         None,
     )
