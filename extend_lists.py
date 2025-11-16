@@ -29,35 +29,43 @@ class SMC_UL_Combine_List(bpy.types.UIList):
     """
 
     filter_name = StringProperty(
-        name='Filter',
-        default='',
-        description='Filter items by name',
+        name="Filter",
+        default="",
+        description="Filter items by name",
     )
     filter_mode = EnumProperty(
-        name='Filter Mode',
+        name="Filter Mode",
         items=[
-            ('MATERIAL', 'Material', 'Filter by material name'),
-            ('OBJECT', 'Object', 'Filter by object name'),
-            ('BOTH', 'Both', 'Filter by both material and object name'),
+            ("MATERIAL", "Material", "Filter by material name"),
+            ("OBJECT", "Object", "Filter by object name"),
+            ("BOTH", "Both", "Filter by both material and object name"),
         ],
-        default='BOTH',
-        description='Choose how filtering is applied'
+        default="BOTH",
+        description="Choose how filtering is applied",
     )
     use_filter_sort_reverse = BoolProperty(
-        name='Reverse Sort',
+        name="Reverse Sort",
         default=False,
-        description='Reverse the order of shown items'
+        description="Reverse the order of shown items",
     )
     filter_initialized = BoolProperty(
-        name='Filter Initialized',
+        name="Filter Initialized",
         default=False,
-        description='Whether the filter panel has been initialized'
+        description="Whether the filter panel has been initialized",
     )
 
-    def draw_item(self, context: bpy.types.Context, layout: bpy.types.UILayout, data: Any,  # noqa: PLR0913
-                  item: Any, icon: int, active_data: Any,
-                  active_propname: str, index: int = 0,
-                  filter_flag: int = 0) -> None:
+    def draw_item(  # noqa: PLR0913
+        self,
+        context: bpy.types.Context,
+        layout: bpy.types.UILayout,
+        data: Any,
+        item: Any,
+        icon: int,
+        active_data: Any,
+        active_propname: str,
+        index: int = 0,
+        filter_flag: int = 0,
+    ) -> None:
         """Draw an individual list item with context-sensitive UI elements.
 
         This method renders either an object entry or a material entry
@@ -86,7 +94,9 @@ class SMC_UL_Combine_List(bpy.types.UIList):
             self._draw_material_entry(row, item, index)
 
     @staticmethod
-    def _draw_object_entry(row: bpy.types.UILayout, item: Any, index: int) -> None:
+    def _draw_object_entry(
+        row: bpy.types.UILayout, item: Any, index: int
+    ) -> None:
         """Render an object list entry with appropriate selection controls.
 
         Creates a row with the object name and a button to select/deselect
@@ -97,14 +107,18 @@ class SMC_UL_Combine_List(bpy.types.UIList):
             item: The object item to display.
             index: The index of the item in the list.
         """
-        row.prop(item.ob, 'name', text='', icon=ICON_OBJECT, emboss=False)
+        row.prop(item.ob, "name", text="", icon=ICON_OBJECT, emboss=False)
 
         action_row = row.row(align=True)
-        action_row.alignment = 'RIGHT'
-        action_label = 'Deselect All' if item.used else 'Select All'
-        action_row.operator('smc.combine_switch', text=action_label, emboss=False).list_id = index
+        action_row.alignment = "RIGHT"
+        action_label = "Deselect All" if item.used else "Select All"
+        action_row.operator(
+            "smc.combine_switch", text=action_label, emboss=False
+        ).list_id = index
 
-    def _draw_material_entry(self, row: bpy.types.UILayout, item: Any, index: int) -> None:
+    def _draw_material_entry(
+        self, row: bpy.types.UILayout, item: Any, index: int
+    ) -> None:
         """Render a material list entry with preview and settings controls.
 
         Creates a row with material preview, name, layer selection,
@@ -123,8 +137,8 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         self._draw_toggle_control(row, item, index)
 
         preview_id = self._get_material_preview_id(item)
-        row.label(text='', icon_value=preview_id)
-        row.prop(item.mat, 'name', text='', emboss=False)
+        row.label(text="", icon_value=preview_id)
+        row.prop(item.mat, "name", text="", emboss=False)
 
         self._draw_layer_control(row, item)
         self._draw_settings_control(row, index)
@@ -144,7 +158,7 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         """
         if item.mat and item.mat.preview:
             return item.mat.preview.icon_id
-        return bpy.context.icon(bpy.context, 'QUESTION')
+        return bpy.context.icon(bpy.context, "QUESTION")
 
     @staticmethod
     def _draw_layer_control(layout: bpy.types.UILayout, item: Any) -> None:
@@ -159,10 +173,12 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         """
         col = layout.column(align=True)
         col.scale_x = 0.4
-        col.prop(item, 'layer', text='')
+        col.prop(item, "layer", text="")
 
     @staticmethod
-    def _draw_toggle_control(layout: bpy.types.UILayout, item: Any, index: int) -> None:
+    def _draw_toggle_control(
+        layout: bpy.types.UILayout, item: Any, index: int
+    ) -> None:
         """Render the material toggle button with the appropriate icon.
 
         Creates a button to toggle the material's inclusion in the atlas,
@@ -173,8 +189,10 @@ class SMC_UL_Combine_List(bpy.types.UIList):
             item: The material item to draw the toggle for.
             index: The index of the item in the list.
         """
-        icon = 'CHECKBOX_HLT' if item.used else 'CHECKBOX_DEHLT'
-        layout.operator('smc.combine_switch', text='', icon=icon, emboss=False).list_id = index
+        icon = "CHECKBOX_HLT" if item.used else "CHECKBOX_DEHLT"
+        layout.operator(
+            "smc.combine_switch", text="", icon=icon, emboss=False
+        ).list_id = index
 
     @staticmethod
     def _draw_settings_control(layout: bpy.types.UILayout, index: int) -> None:
@@ -187,9 +205,13 @@ class SMC_UL_Combine_List(bpy.types.UIList):
             layout: The layout to draw into.
             index: The index of the item in the list.
         """
-        layout.operator('smc.material_properties', text='', icon=ICON_PROPERTIES).list_id = index
+        layout.operator(
+            "smc.material_properties", text="", icon=ICON_PROPERTIES
+        ).list_id = index
 
-    def draw_filter(self, context: bpy.types.Context, layout: bpy.types.UILayout) -> None:
+    def draw_filter(
+        self, context: bpy.types.Context, layout: bpy.types.UILayout
+    ) -> None:
         """Draw the filter panel with filtering and sorting controls.
 
         Creates a filter input field and buttons for controlling
@@ -200,13 +222,20 @@ class SMC_UL_Combine_List(bpy.types.UIList):
             layout: The layout to draw the filter panel in.
         """
         row = layout.row(align=True)
-        row.prop(self, 'filter_name', text='')
+        row.prop(self, "filter_name", text="")
 
         filter_mode_icon = self._get_filter_mode_icon()
-        row.prop_menu_enum(self, 'filter_mode', text='', icon=filter_mode_icon)
+        row.prop_menu_enum(self, "filter_mode", text="", icon=filter_mode_icon)
 
-        sort_reverse_icon = 'TRIA_DOWN' if self.use_filter_sort_reverse else 'TRIA_UP'
-        row.prop(self, 'use_filter_sort_reverse', icon=sort_reverse_icon, icon_only=True)
+        sort_reverse_icon = (
+            "TRIA_DOWN" if self.use_filter_sort_reverse else "TRIA_UP"
+        )
+        row.prop(
+            self,
+            "use_filter_sort_reverse",
+            icon=sort_reverse_icon,
+            icon_only=True,
+        )
         row.menu("SMC_MT_SelectionMenu", text="", icon=ICON_DROPDOWN)
 
     def _get_filter_mode_icon(self) -> str:
@@ -218,14 +247,16 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         Returns:
             Icon name string corresponding to the current filter mode.
         """
-        if self.filter_mode == 'MATERIAL':
-            return 'MATERIAL'
-        elif self.filter_mode == 'OBJECT':
-            return 'OBJECT_DATA'
+        if self.filter_mode == "MATERIAL":
+            return "MATERIAL"
+        elif self.filter_mode == "OBJECT":
+            return "OBJECT_DATA"
         else:
-            return 'FILTER'
+            return "FILTER"
 
-    def filter_items(self, context: bpy.types.Context, data: Any, propname: str) -> Tuple[List[int], List[int]]:
+    def filter_items(
+        self, context: bpy.types.Context, data: Any, propname: str
+    ) -> Tuple[List[int], List[int]]:
         """Filter and sort combine list items based on current filter settings.
 
         Implements complex filtering and sorting logic that maintains the
@@ -254,25 +285,33 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         if self.filter_name:
             filter_text = self.filter_name.lower()
             for group in groups.values():
-                if self.filter_mode == 'OBJECT':
-                    self._apply_filter_by_object(group, filter_text, filter_flags)
-                elif self.filter_mode == 'MATERIAL':
-                    self._apply_filter_by_material(group, filter_text, filter_flags)
-                elif self.filter_mode == 'BOTH':
+                if self.filter_mode == "OBJECT":
+                    self._apply_filter_by_object(
+                        group, filter_text, filter_flags
+                    )
+                elif self.filter_mode == "MATERIAL":
+                    self._apply_filter_by_material(
+                        group, filter_text, filter_flags
+                    )
+                elif self.filter_mode == "BOTH":
                     self._apply_filter_both(group, filter_text, filter_flags)
 
         # Sort group keys (ob_ids) based on the OBJECT name.
         sorted_group_ids = sorted(
             groups.keys(),
-            key=lambda ob_index: self._get_object_name_for_group(groups[ob_index]),
-            reverse=self.use_filter_sort_reverse
+            key=lambda ob_index: self._get_object_name_for_group(
+                groups[ob_index]
+            ),
+            reverse=self.use_filter_sort_reverse,
         )
 
         # Build the desired order by processing each group.
         desired_order = []
         for ob_id in sorted_group_ids:
             group_items = groups[ob_id]
-            group_order = self._sort_group_items(group_items, reverse_sort=self.use_filter_sort_reverse)
+            group_order = self._sort_group_items(
+                group_items, reverse_sort=self.use_filter_sort_reverse
+            )
             desired_order.extend(group_order)
 
         # IMPORTANT: Do not reverse the entire order here.
@@ -287,7 +326,7 @@ class SMC_UL_Combine_List(bpy.types.UIList):
 
     @staticmethod
     def _group_items_by_ob_id(
-            items_with_indices: List[Tuple[int, bpy.types.PropertyGroup]]
+        items_with_indices: List[Tuple[int, bpy.types.PropertyGroup]],
     ) -> Dict[int, List[Tuple[int, bpy.types.PropertyGroup]]]:
         """Group list items by their object ID.
 
@@ -306,10 +345,10 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         return groups
 
     def _apply_filter_by_object(
-            self,
-            group: List[Tuple[int, bpy.types.PropertyGroup]],
-            filter_text: str,
-            filter_flags: List[int]
+        self,
+        group: List[Tuple[int, bpy.types.PropertyGroup]],
+        filter_text: str,
+        filter_flags: List[int],
     ) -> None:
         """Apply filtering based on object names.
 
@@ -332,10 +371,10 @@ class SMC_UL_Combine_List(bpy.types.UIList):
             filter_flags[idx] = flag
 
     def _apply_filter_by_material(
-            self,
-            group: List[Tuple[int, bpy.types.PropertyGroup]],
-            filter_text: str,
-            filter_flags: List[int]
+        self,
+        group: List[Tuple[int, bpy.types.PropertyGroup]],
+        filter_text: str,
+        filter_flags: List[int],
     ) -> None:
         """Apply filtering based on material names.
 
@@ -361,14 +400,17 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         # Second pass: if any MATERIAL matched, show OBJECT and SEPARATOR items.
         if material_found:
             for idx, item in group:
-                if item.type in (CombineListTypes.OBJECT, CombineListTypes.SEPARATOR):
+                if item.type in (
+                    CombineListTypes.OBJECT,
+                    CombineListTypes.SEPARATOR,
+                ):
                     filter_flags[idx] = self.bitflag_filter_item
 
     def _apply_filter_both(
-            self,
-            group: List[Tuple[int, bpy.types.PropertyGroup]],
-            filter_text: str,
-            filter_flags: List[int]
+        self,
+        group: List[Tuple[int, bpy.types.PropertyGroup]],
+        filter_text: str,
+        filter_flags: List[int],
     ) -> None:
         """Apply filtering based on both object and material names.
 
@@ -382,7 +424,8 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         """
         object_matches = any(
             filter_text in (item.ob.name.lower() if item.ob else "")
-            for _, item in group if item.type == CombineListTypes.OBJECT
+            for _, item in group
+            if item.type == CombineListTypes.OBJECT
         )
         if object_matches:
             for idx, _ in group:
@@ -397,15 +440,23 @@ class SMC_UL_Combine_List(bpy.types.UIList):
                     material_found = True
                 else:
                     filter_flags[idx] = 0
-            elif item.type in (CombineListTypes.OBJECT, CombineListTypes.SEPARATOR):
+            elif item.type in (
+                CombineListTypes.OBJECT,
+                CombineListTypes.SEPARATOR,
+            ):
                 filter_flags[idx] = 0
         if material_found:
             for idx, item in group:
-                if item.type in (CombineListTypes.OBJECT, CombineListTypes.SEPARATOR):
+                if item.type in (
+                    CombineListTypes.OBJECT,
+                    CombineListTypes.SEPARATOR,
+                ):
                     filter_flags[idx] = self.bitflag_filter_item
 
     @staticmethod
-    def _get_object_name_for_group(group: List[Tuple[int, bpy.types.PropertyGroup]]) -> str:
+    def _get_object_name_for_group(
+        group: List[Tuple[int, bpy.types.PropertyGroup]],
+    ) -> str:
         """Get the object name for a group of items.
 
         Retrieves the name of the object for sorting purposes.
@@ -419,10 +470,12 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         for _, item in group:
             if item.type == CombineListTypes.OBJECT and item.ob:
                 return item.ob.name.lower()
-        return ''
+        return ""
 
     @staticmethod
-    def _sort_group_items(group: List[Tuple[int, bpy.types.PropertyGroup]], reverse_sort: bool) -> List[int]:
+    def _sort_group_items(
+        group: List[Tuple[int, bpy.types.PropertyGroup]], reverse_sort: bool
+    ) -> List[int]:
         """Sort items within a group maintaining hierarchical structure.
 
         Sorts objects first, then materials, and finally separators,
@@ -435,17 +488,29 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         Returns:
             List of original indices in the desired sort order.
         """
-        object_entries = [(idx, item) for idx, item in group if item.type == CombineListTypes.OBJECT]
-        material_entries = [(idx, item) for idx, item in group if item.type == CombineListTypes.MATERIAL]
-        separator_entries = [(idx, item) for idx, item in group if item.type == CombineListTypes.SEPARATOR]
+        object_entries = [
+            (idx, item)
+            for idx, item in group
+            if item.type == CombineListTypes.OBJECT
+        ]
+        material_entries = [
+            (idx, item)
+            for idx, item in group
+            if item.type == CombineListTypes.MATERIAL
+        ]
+        separator_entries = [
+            (idx, item)
+            for idx, item in group
+            if item.type == CombineListTypes.SEPARATOR
+        ]
 
         object_entries.sort(
-            key=lambda pair: pair[1].ob.name.lower() if pair[1].ob else '',
-            reverse=reverse_sort
+            key=lambda pair: pair[1].ob.name.lower() if pair[1].ob else "",
+            reverse=reverse_sort,
         )
         material_entries.sort(
-            key=lambda pair: pair[1].mat.name.lower() if pair[1].mat else '',
-            reverse=reverse_sort
+            key=lambda pair: pair[1].mat.name.lower() if pair[1].mat else "",
+            reverse=reverse_sort,
         )
 
         # Always keep SEPARATOR entries at the end.

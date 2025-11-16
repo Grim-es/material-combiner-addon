@@ -6,7 +6,7 @@ to generating the final atlas and updating UV coordinates. The Combiner operator
 manages the main workflow and delegates specific tasks to specialized functions.
 
 Usage example:
-    bpy.ops.smc.combiner(directory=r"/path/to/save/directory")
+    bpy.ops.smc.combiner(directory=r'/path/to/save/directory')
 """
 
 from typing import Set
@@ -56,10 +56,16 @@ class Combiner(bpy.types.Operator):
     bl_options = {"UNDO", "INTERNAL"}
 
     directory = StringProperty(
-        description="Directory to save the atlas", maxlen=1024, default="", subtype="FILE_PATH", options={"HIDDEN"}
+        description="Directory to save the atlas",
+        maxlen=1024,
+        default="",
+        subtype="FILE_PATH",
+        options={"HIDDEN"},
     )
     filter_glob = StringProperty(default="", options={"HIDDEN"})
-    cats = BoolProperty(description="Enable special cats workflow mode", default=False)
+    cats = BoolProperty(
+        description="Enable special cats workflow mode", default=False
+    )
     data = None
     mats_uv = None
     structure = None
@@ -166,7 +172,9 @@ class Combiner(bpy.types.Operator):
 
         # Check if we're only dealing with duplicate materials
         total_unique_mats = len(self.structure)
-        has_duplicates = any(len(item['dup']) > 0 for item in self.structure.values())
+        has_duplicates = any(
+            len(item["dup"]) > 0 for item in self.structure.values()
+        )
 
         # Validate material requirements
         if total_unique_mats == 0:

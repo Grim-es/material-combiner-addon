@@ -92,6 +92,7 @@ class RectWH:
             w: Width of the rectangle. Defaults to 0.
             h: Height of the rectangle. Defaults to 0.
         """
+        self.bin = None
         self.w = w
         self.h = h
 
@@ -888,11 +889,14 @@ class RectPack2D:
 
                 if area_with_penalty < best_area:
                     best_area = area_with_penalty
-                    best_packing = {r.material_id: {
-                        'x': r.x,
-                        'y': r.y,
-                        'flipped': r.flipped
-                    } for r in packed_rects}
+                    best_packing = {
+                        r.material_id: {
+                            "x": r.x,
+                            "y": r.y,
+                            "flipped": r.flipped,
+                        }
+                        for r in packed_rects
+                    }
 
         # If we found packing, update the bin
         if best_packing:
@@ -900,10 +904,14 @@ class RectPack2D:
                 original_size = self.bin[material_id]["gfx"]["size"]
                 # Update the 'fit' field in the original format expected by the addon
                 self.bin[material_id]["gfx"]["fit"] = {
-                    'x': pack_data['x'],
-                    'y': pack_data['y'],
-                    'w': original_size[1] if pack_data['flipped'] else original_size[0],
-                    'h': original_size[0] if pack_data['flipped'] else original_size[1]
+                    "x": pack_data["x"],
+                    "y": pack_data["y"],
+                    "w": original_size[1]
+                    if pack_data["flipped"]
+                    else original_size[0],
+                    "h": original_size[0]
+                    if pack_data["flipped"]
+                    else original_size[1],
                 }
 
         return self.bin

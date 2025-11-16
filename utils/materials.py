@@ -1,9 +1,8 @@
-"""Utilities for handling and processing Blender materials.
+"""Material processing utilities for Blender texture atlas generation.
 
-This module provides functions for detecting material types, extracting textures,
-and preparing materials for atlas generation in the Material Combiner addon.
-It handles different shader types and Blender versions with support for MMD,
-MToon, Principled BSDF, and other material systems.
+This module provides robust material analysis and texture extraction for the
+Material Combiner addon, supporting various shader systems including Principled
+BSDF, MMD, MToon, VRM, and XNALara materials.
 """
 
 from collections import OrderedDict, defaultdict
@@ -17,13 +16,15 @@ from ..type_annotations import Diffuse, MatDict, MatDictItem
 from .images import get_image, get_packed_file
 from .textures import get_texture
 
-# Gamma correction constants for proper sRGB to linear conversion
+# Color space conversion constants (sRGB)
+GAMMA = 2.4
 GAMMA_THRESHOLD = 0.0031308
 LINEAR_FACTOR = 12.92
 GAMMA_FACTOR = 1.055
+GAMMA_OFFSET = 0.055
 DEFAULT_DIFFUSE = (255, 255, 255, 255)
 
-# Node types that correspond to specific shader types for material detection
+# Shader node type mappings
 SHADER_NODE_TYPES = {
     "ShaderNodeBsdfPrincipled": "principled",
     "ShaderNodeBsdfDiffuse": "diffuse",
@@ -35,19 +36,19 @@ SHADER_NODE_TYPES = {
     },
 }
 
-# Known shader names and textures for MMD and MToon material detection
-MMD_SHADER_NAMES = {"mmd_shader"}
-MMD_TEXTURE_NAMES = {"mmd_base_tex"}
-MTOON_SHADER_NAMES = {"Mtoon1Material.Mtoon1Output"}
-MTOON_TEXTURE_NAMES = {"Mtoon1BaseColorTexture.Image"}
+# Shader-specific node names
+MMD_SHADER_NODE = "mmd_shader"
+MMD_TEXTURE_NODE = "mmd_base_tex"
+MTOON_SHADER_NODE = "Mtoon1Material.Mtoon1Output"
+MTOON_TEXTURE_NODE = "Mtoon1BaseColorTexture.Image"
 
-# Map of shader types to node names for classification
+# Shader type definitions with required nodes
 SHADER_TYPES = OrderedDict(
     [
-        ("mmd", {"mmd_shader", "mmd_base_tex"}),
-        ("mmdCol", {"mmd_shader"}),
-        ("mtoon", {"Mtoon1BaseColorTexture.Image"}),
-        ("mtoonCol", {"Mtoon1Material.Mtoon1Output"}),
+        ("mmd", {MMD_SHADER_NODE, MMD_TEXTURE_NODE}),
+        ("mmdCol", {MMD_SHADER_NODE}),
+        ("mtoon", {MTOON_TEXTURE_NODE}),
+        ("mtoonCol", {MTOON_SHADER_NODE}),
         ("principled", {"Principled BSDF", "Image Texture"}),
         ("principledCol", {"Principled BSDF"}),
         ("diffuse", {"Diffuse BSDF", "Image Texture"}),
@@ -57,10 +58,10 @@ SHADER_TYPES = OrderedDict(
     ]
 )
 
-# Map of shader types to their corresponding albedo texture node names for extraction
+# Texture node mappings by shader type
 SHADER_IMAGE_NODES = {
-    "mmd": "mmd_base_tex",
-    "mtoon": "Mtoon1BaseColorTexture.Image",
+    "mmd": MMD_TEXTURE_NODE,
+    "mtoon": MTOON_TEXTURE_NODE,
     "vrm": "Image Texture",
     "xnalara": "Image Texture",
     "principled": "Image Texture",
@@ -68,7 +69,7 @@ SHADER_IMAGE_NODES = {
     "emission": "Image Texture",
 }
 
-# Map of shader types to the input names that typically connect to albedo textures
+# Albedo input names by shader type
 SHADER_ALBEDO_INPUTS = {
     "principled": "Base Color",
     "diffuse": "Color",
@@ -80,208 +81,96 @@ SHADER_ALBEDO_INPUTS = {
     "xnalaraNew": "Diffuse",
 }
 
-# Common color-related input names across different shaders
-COLOR_INPUT_NAMES = ["Color", "Base Color", "Diffuse Color", "BaseColor"]
+# Common color input names across shader systems
+COLOR_INPUT_NAMES = frozenset(
+    ["Color", "Base Color", "Diffuse Color", "BaseColor"]
+)
 
-# Diffuse color accessors by shader type for reliable color extraction
+# Diffuse color accessors for color-only shaders
 DIFFUSE_ACCESSORS = {
-    "mmdCol": lambda nodes: nodes["mmd_shader"]
+    "mmdCol": lambda n: n[MMD_SHADER_NODE]
     .inputs["Diffuse Color"]
     .default_value,
-    "mtoonCol": lambda nodes: nodes[
-        "Mtoon1PbrMetallicRoughness.BaseColorFactor"
-    ].color,
-    "vrm": lambda nodes: nodes["RGB"].outputs[0].default_value,
-    "vrmCol": lambda nodes: nodes["Group"].inputs[10].default_value,
-    "diffuseCol": lambda nodes: nodes["Diffuse BSDF"]
-    .inputs["Color"]
-    .default_value,
-    "xnalaraNewCol": lambda nodes: nodes["Group"]
-    .inputs["Diffuse"]
-    .default_value,
-    "principledCol": lambda nodes: nodes["Principled BSDF"]
+    "mtoonCol": lambda n: n["Mtoon1PbrMetallicRoughness.BaseColorFactor"].color,
+    "vrm": lambda n: n["RGB"].outputs[0].default_value,
+    "vrmCol": lambda n: n["Group"].inputs[10].default_value,
+    "diffuseCol": lambda n: n["Diffuse BSDF"].inputs["Color"].default_value,
+    "xnalaraNewCol": lambda n: n["Group"].inputs["Diffuse"].default_value,
+    "principledCol": lambda n: n["Principled BSDF"]
     .inputs["Base Color"]
     .default_value,
-    "xnalaraCol": lambda nodes: nodes["Principled BSDF"]
+    "xnalaraCol": lambda n: n["Principled BSDF"]
     .inputs["Base Color"]
     .default_value,
 }
 
 
-def get_materials(ob: bpy.types.Object) -> List[bpy.types.Material]:
-    """Retrieves all materials assigned to a Blender object.
+def get_materials(obj: bpy.types.Object) -> List[bpy.types.Material]:
+    """Retrieves all valid materials from an object.
 
     Args:
-        ob: Blender object from which to extract materials.
+        obj: Blender object to extract materials from.
 
     Returns:
-        List of materials assigned to the object, excluding empty slots.
+        List of non-null materials assigned to the object.
     """
     return [
-        mat_slot.material for mat_slot in ob.material_slots if mat_slot.material
+        slot.material
+        for slot in obj.material_slots
+        if slot.material is not None
     ]
 
 
-def get_shader_type(mat: bpy.types.Material) -> Optional[str]:
-    """Identifies the shader type of a material through node analysis.
+def get_shader_type(mat: bpy.types.Material) -> Optional[str]:  # noqa: PLR0911
+    """Identifies the shader type of material.
 
-    Uses multiple detection methods to determine the shader type:
-    1. Connection-based detection (following from output node).
-    2. Group node detection for special cases (XNALara, VRM, etc.).
-    3. Specific shader name detection (MMD, MToon).
-    4. Node name pattern matching.
+    Performs multi-stage detection:
+    1. Connection-based detection from output node
+    2. Group node detection for special cases
+    3. Specific shader name matching
+    4. Node name pattern matching
 
     Args:
         mat: Material to analyze.
 
     Returns:
-        String identifier of a shader type or None if not recognized.
-        Types with "Col" suffix indicate materials using only colors without textures.
+        Shader type identifier or None if unrecognized.
+        Types ending with 'Col' indicate color-only materials without textures.
     """
     if not mat.node_tree or not mat.node_tree.nodes:
         return None
 
-    node_tree = mat.node_tree.nodes
-    shader_type = None
+    nodes = mat.node_tree.nodes
 
-    # 1. First try connection-based detection (most robust)
-    output_node = _find_output_node(node_tree)
+    # Try connection-based detection first (most accurate)
+    output_node = _find_output_node(nodes)
     if output_node:
-        shader_result = _trace_connected_shader(output_node)
-        if shader_result:
-            shader_node, shader_type = shader_result
-
-            # Check if this shader has an image texture connected
-            image_node = _find_connected_image_node(shader_node, shader_type)
-            if image_node:
+        shader_info = _trace_shader_from_output(output_node)
+        if shader_info:
+            shader_node, shader_type = shader_info
+            # Check for connected texture
+            if _find_connected_image_node(shader_node, shader_type):
                 return shader_type
-            else:
-                # No texture, use color variant
-                return "{}Col".format(shader_type)
+            return "{}Col".format(shader_type)
 
-    # 2. Fallback to group node detection (special cases)
-    if not shader_type:
-        shader_type = _detect_group_shader(node_tree)
+    # Try group node detection
+    shader_type = _detect_group_shader(nodes)
+    if shader_type:
+        return shader_type
 
-    # 3. Check for specific shader types by name sets
-    if not shader_type:
-        node_names_set = set(node_tree.keys())
-        if MMD_SHADER_NAMES.intersection(node_names_set):
-            shader_type = (
-                "mmd"
-                if MMD_TEXTURE_NAMES.intersection(node_names_set)
-                else "mmdCol"
-            )
-        elif MTOON_SHADER_NAMES.intersection(node_names_set):
-            shader_type = (
-                "mtoon"
-                if MTOON_TEXTURE_NAMES.intersection(node_names_set)
-                else "mtoonCol"
-            )
-        else:
-            # 4. As last resort, check against predefined shader types
-            for shader, node_names in SHADER_TYPES.items():
-                if node_names.issubset(node_names_set):
-                    shader_type = shader
-                    break
+    # Try specific shader detection
+    node_names = set(nodes.keys())
 
-    return shader_type
+    if {MMD_SHADER_NODE} & node_names:
+        return "mmd" if {MMD_TEXTURE_NODE} & node_names else "mmdCol"
 
+    if {MTOON_SHADER_NODE} & node_names:
+        return "mtoon" if {MTOON_TEXTURE_NODE} & node_names else "mtoonCol"
 
-def _find_image_from_connection_detection(
-    mat: bpy.types.Material,
-) -> Optional[bpy.types.Image]:
-    """Finds image through connection-based detection.
-
-    Args:
-        mat: Material to analyze.
-
-    Returns:
-        Found image or None if no image is detected.
-    """
-    if not mat.node_tree or not mat.node_tree.nodes:
-        return None
-
-    node_tree = mat.node_tree
-
-    # Connection-based detection (most reliable)
-    output_node = _find_output_node(node_tree.nodes)
-    if output_node:
-        shader_result = _trace_connected_shader(output_node)
-        if shader_result:
-            shader_node, shader_type = shader_result
-            image_node = _find_connected_image_node(shader_node, shader_type)
-            if image_node and hasattr(image_node, "image"):
-                return image_node.image
-
-    return None
-
-
-def _find_image_from_specific_nodes(
-    node_tree: bpy.types.NodeTree,
-) -> Optional[bpy.types.Image]:
-    """Finds image from specific known nodes like MMD and MToon.
-
-    Args:
-        node_tree: Node tree to search in.
-
-    Returns:
-        Found image or None if no image is found in specified nodes.
-    """
-    # MMD-specific detection
-    if "mmd_base_tex" in node_tree.nodes and hasattr(
-        node_tree.nodes["mmd_base_tex"], "image"
-    ):
-        return node_tree.nodes["mmd_base_tex"].image
-
-    # MToon-specific detection
-    if "Mtoon1BaseColorTexture.Image" in node_tree.nodes and hasattr(
-        node_tree.nodes["Mtoon1BaseColorTexture.Image"], "image"
-    ):
-        return node_tree.nodes["Mtoon1BaseColorTexture.Image"].image
-
-    return None
-
-
-def _find_image_from_any_texture_node(
-    node_tree: bpy.types.NodeTree,
-) -> Optional[bpy.types.Image]:
-    """Finds any image texture node in the material.
-
-    Args:
-        node_tree: Node tree to search in.
-
-    Returns:
-        First found image from any texture node or None if no image texture nodes exist.
-    """
-    for node in node_tree.nodes:
-        if _is_image_texture_node(node):
-            return node.image
-    return None
-
-
-def _find_image_from_shader_type(
-    mat: bpy.types.Material,
-) -> Optional[bpy.types.Image]:
-    """Finds image based on material's detected shader type.
-
-    Args:
-        mat: Material to analyze.
-
-    Returns:
-        Found image or None if no image is found or shader type is not recognized.
-    """
-    shader = get_shader_type(mat)
-    if not shader or shader not in SHADER_IMAGE_NODES:
-        return None
-
-    node_name = SHADER_IMAGE_NODES[shader]
-    node_tree = mat.node_tree
-
-    if node_name in node_tree.nodes:
-        node = node_tree.nodes[node_name]
-        if hasattr(node, "image"):
-            return node.image
+    # Pattern-based detection as last resort
+    for shader_type, required_nodes in SHADER_TYPES.items():
+        if required_nodes <= node_names:
+            return shader_type
 
     return None
 
@@ -289,16 +178,16 @@ def _find_image_from_shader_type(
 def get_image_from_material(
     mat: bpy.types.Material,
 ) -> Optional[bpy.types.Image]:
-    """Extracts the main albedo/diffuse image from a material.
+    """Extracts the main albedo/diffuse texture from a material.
 
-    Uses multiple detection methods in order of reliability to find the appropriate
-    texture for atlas generation.
+    Uses multiple detection strategies in order of reliability.
+    Only returns textures connected to the material output.
 
     Args:
         mat: Material to extract image from.
 
     Returns:
-        The albedo/diffuse image or None if no texture is found.
+        The albedo/diffuse image or None if no valid texture found.
     """
     if globs.is_blender_legacy:
         return get_image(get_texture(mat))
@@ -307,221 +196,231 @@ def get_image_from_material(
         return None
 
     node_tree = mat.node_tree
-    result_image = None
 
-    # Try different detection methods in order of reliability
+    # Try detection methods in order of reliability
     detection_methods = [
-        lambda: _find_image_from_connection_detection(mat),
+        lambda: _find_image_via_connection(mat),
         lambda: _find_image_from_specific_nodes(node_tree),
         lambda: _find_color_connected_image(node_tree),
-        lambda: _find_image_from_any_texture_node(node_tree),
         lambda: _find_image_from_shader_type(mat),
     ]
 
     for method in detection_methods:
-        result_image = method()
-        if result_image:
-            break
+        image = method()
+        if image:
+            return image
 
-    return result_image
+    return None
 
 
 def get_diffuse(mat: bpy.types.Material) -> Tuple[int, int, int, int]:
-    """Extracts the diffuse color from a material for atlas generation.
-
-    Handles different shader types and Blender versions to get the base color
-    for each material. Used to determine how non-textured areas or color-only
-    materials are handled in the atlas.
+    """Extracts the diffuse color from a material.
 
     Args:
-        mat: Material to extract diffuse color from.
+        mat: Material to extract color from.
 
     Returns:
-        RGBA color values as a tuple of integers (0-255), ready for use with Pillow.
+        RGBA color as integers (0-255) for atlas generation.
     """
-    # Default diffuse color as fallback
-    diffuse_color = DEFAULT_DIFFUSE
-
     if not mat:
-        return diffuse_color
+        return DEFAULT_DIFFUSE
 
     if globs.is_blender_legacy:
-        return _rgb_to_255_scale(mat.diffuse_color)
+        return _rgb_to_srgb255(mat.diffuse_color)
 
-    # For Blender 2.80+, use node-based detection
     if not mat.node_tree or not mat.node_tree.nodes:
-        return diffuse_color
+        return DEFAULT_DIFFUSE
 
-    # 1. Try connection-based detection first
+    # Try connection-based detection
     output_node = _find_output_node(mat.node_tree.nodes)
     if output_node:
-        shader_result = _trace_connected_shader(output_node)
-        if shader_result:
-            shader_node, shader_type = shader_result
-            color = _get_color_from_shader_node(shader_node, shader_type)
+        shader_info = _trace_shader_from_output(output_node)
+        if shader_info:
+            shader_node, shader_type = shader_info
+            color = _extract_shader_color(shader_node, shader_type)
             if color:
-                diffuse_color = color
+                return color
 
-    # If connection-based detection didn't work, try shader-specific detection
-    if diffuse_color == DEFAULT_DIFFUSE:
-        shader = get_shader_type(mat)
+    # Try shader-specific accessors
+    shader_type = get_shader_type(mat)
+    if shader_type and shader_type in DIFFUSE_ACCESSORS:
+        nodes = mat.node_tree.nodes
+        try:
+            accessor = DIFFUSE_ACCESSORS[shader_type]
+            return _rgb_to_srgb255(accessor(nodes))
+        except (KeyError, AttributeError, IndexError):
+            pass
 
-        if shader:
-            node_tree = mat.node_tree.nodes
-
-            # Use the accessor function for this shader type if available
-            accessor = DIFFUSE_ACCESSORS.get(shader)
-            if accessor and all(
-                required_node in node_tree
-                for required_node in _get_required_nodes(shader)
-            ):
-                try:
-                    diffuse_color = _rgb_to_255_scale(accessor(node_tree))
-                except (KeyError, AttributeError):
-                    # If access fails, keep the default diffuse color
-                    pass
-
-    return diffuse_color
+    return DEFAULT_DIFFUSE
 
 
 def sort_materials(
-    mat_list: List[bpy.types.Material],
+    materials: List[bpy.types.Material],
 ) -> ValuesView[MatDictItem]:
-    """Groups materials by their textures and diffuse colors for combining.
-
-    Determines which materials can be combined into the same atlas based on
-    identical textures and similar colors.
+    """Groups materials by texture and color for atlas generation.
 
     Args:
-        mat_list: List of materials to group.
+        materials: List of materials to process.
 
     Returns:
-        Materials grouped by texture/color combinations for atlas creation.
+        Materials grouped by their texture/color combinations.
     """
     # Reset material references
     for mat in bpy.data.materials:
         mat.root_mat = None
 
     mat_dict = cast(MatDict, defaultdict(list))
-    for mat in mat_list:
+
+    for mat in materials:
         if not mat:
             continue
 
-        packed_file = None
-
         image = get_image_from_material(mat)
-        if image:
-            packed_file = get_packed_file(image)
-
-        # Get diffuse color (always RGBA)
-        diffuse_rgba = get_diffuse(mat)
+        packed_file = get_packed_file(image) if image else None
+        diffuse = get_diffuse(mat)
 
         if packed_file:
-            key = (
-                packed_file,
-                diffuse_rgba if mat.smc_diffuse else DEFAULT_DIFFUSE,
-            )
-            mat_dict[key].append(mat)
+            # Group by texture and optionally diffuse color
+            key = (packed_file, diffuse if mat.smc_diffuse else DEFAULT_DIFFUSE)
         else:
-            mat_dict[diffuse_rgba].append(mat)
+            # Group by color only
+            key = diffuse
+
+        mat_dict[key].append(mat)
 
     return mat_dict.values()
 
 
-def _find_nodes_by_type(
-    nodes: bpy.types.bpy_prop_collection, node_type: str
-) -> List[bpy.types.Node]:
-    """Locates all nodes of a specific type in a node tree.
-
-    Args:
-        nodes: Node tree to search in.
-        node_type: Blender node type identifier.
-
-    Returns:
-        List of nodes matching the specified type.
-    """
-    return [node for node in nodes if node.bl_idname == node_type]
+# Private helper functions
 
 
 def _find_output_node(
     nodes: bpy.types.bpy_prop_collection,
 ) -> Optional[bpy.types.Node]:
-    """Locates the output node in a material node tree.
-
-    The output node is the starting point for tracing node connections
-    in the material graph.
+    """Finds the material output node.
 
     Args:
-        nodes: Node tree to search in.
+        nodes: Node collection to search.
 
     Returns:
-        The output node or None if not found.
+        Material output node or None.
     """
-    # Try to find by type first (most reliable)
-    output_nodes = _find_nodes_by_type(nodes, "ShaderNodeOutputMaterial")
-    if output_nodes:
-        return output_nodes[0]
-
-    # Fallback to finding by name
+    # Try typed search first (most reliable)
     for node in nodes:
-        if "Output" in node.name or "output" in node.name.lower():
+        if node.bl_idname == "ShaderNodeOutputMaterial":
+            return node
+
+    # Fallback to name-based search
+    for node in nodes:
+        if "output" in node.name.lower():
             return node
 
     return None
 
 
-def _trace_connected_shader(
+def _trace_shader_from_output(
     node: bpy.types.Node,
 ) -> Optional[Tuple[bpy.types.Node, str]]:
-    """Traces node connections from output to find the connected shader.
-
-    Follows links backward from the output node to identify the primary
-    shader responsible for the material's appearance.
+    """Traces connections to find the main shader node.
 
     Args:
-        node: Output node to trace connections from.
+        node: Output node to trace from.
 
     Returns:
-        Tuple of (shader_node, shader_type) or None if no shader is connected.
+        Tuple of (shader_node, shader_type) or None.
     """
-    if not node or not node.inputs:
+    if not node or not hasattr(node, "inputs"):
         return None
 
-    # Get the first connected node (usually "Surface" input for output nodes)
     for input_socket in node.inputs:
-        if input_socket.links:
-            connected_node = input_socket.links[0].from_node
+        if not input_socket.links:
+            continue
 
-            # Check if this is a shader node by type
-            node_type = connected_node.bl_idname
-            if node_type in SHADER_NODE_TYPES:
-                shader_type = SHADER_NODE_TYPES[node_type]
+        connected_node = input_socket.links[0].from_node
+        node_type = connected_node.bl_idname
 
-                # Handle node groups with different internal node trees
-                if node_type == "ShaderNodeGroup" and connected_node.node_tree:
-                    group_name = connected_node.node_tree.name
+        if node_type not in SHADER_NODE_TYPES:
+            # Not a shader, continue tracing
+            return _trace_shader_from_output(connected_node)
 
-                    if group_name in shader_type:
-                        shader_type = shader_type[group_name]
-                    else:
-                        return _trace_connected_shader(connected_node)
+        shader_type = SHADER_NODE_TYPES[node_type]
 
-                return connected_node, shader_type
+        # Handle node groups
+        if isinstance(shader_type, dict):
+            if (
+                not hasattr(connected_node, "node_tree")
+                or not connected_node.node_tree
+            ):
+                continue
 
-            # Not a shader, continue recursively
-            return _trace_connected_shader(connected_node)
+            group_name = connected_node.node_tree.name
+            if group_name in shader_type:
+                return connected_node, shader_type[group_name]
+
+            # Unknown group, continue tracing
+            return _trace_shader_from_output(connected_node)
+
+        return connected_node, shader_type
 
     return None
 
 
+def _get_connected_nodes(
+    start_node: bpy.types.Node, visited: Optional[Set[bpy.types.Node]] = None
+) -> Set[bpy.types.Node]:
+    """Recursively collects all nodes connected to the output.
+
+    Args:
+        start_node: Node to start traversal from.
+        visited: Set of already visited nodes.
+
+    Returns:
+        Set of all connected nodes.
+    """
+    if visited is None:
+        visited = set()
+
+    if start_node in visited:
+        return visited
+
+    visited.add(start_node)
+
+    if hasattr(start_node, "inputs"):
+        for input_socket in start_node.inputs:
+            for link in input_socket.links:
+                _get_connected_nodes(link.from_node, visited)
+
+    return visited
+
+
+def _is_connected_to_output(
+    node: bpy.types.Node, node_tree: bpy.types.NodeTree
+) -> bool:
+    """Checks if a node contributes to the final output.
+
+    Args:
+        node: Node to check.
+        node_tree: Node tree containing the node.
+
+    Returns:
+        True if node is connected to output.
+    """
+    output_node = _find_output_node(node_tree.nodes)
+    if not output_node:
+        return False
+
+    connected_nodes = _get_connected_nodes(output_node)
+    return node in connected_nodes
+
+
 def _is_image_texture_node(node: bpy.types.Node) -> bool:
-    """Determines whether a node is an image texture with a valid image.
+    """Checks if a node is a valid image texture.
 
     Args:
         node: Node to check.
 
     Returns:
-        True if node is an image texture with a valid image, False otherwise.
+        True if node is an image texture with valid image.
     """
     return (
         node.bl_idname == "ShaderNodeTexImage"
@@ -530,303 +429,317 @@ def _is_image_texture_node(node: bpy.types.Node) -> bool:
     )
 
 
-def _find_image_texture_in_node_tree(
-    node: bpy.types.Node, visited: Optional[Set[bpy.types.Node]] = None
+def _find_connected_image_node(
+    shader_node: bpy.types.Node, shader_type: str = ""
 ) -> Optional[bpy.types.Node]:
-    """Recursively searches for an image texture node in the material graph.
+    """Finds image texture connected to shader's color input.
 
-    Traverses complex shader graphs to find texture nodes that might be connected
-    through intermediary nodes like mixers or converters.
+    Only checks appropriate inputs for known shader types to avoid
+    selecting wrong textures (metallic, normal, etc.).
 
     Args:
-        node: Starting node for recursive search.
-        visited: Set of visited nodes to prevent infinite loops.
+        shader_node: Shader node to search from.
+        shader_type: Type of shader for input selection.
 
     Returns:
-        Image texture node or None if not found.
+        Connected image texture node or None.
     """
-    if visited is None:
-        visited = set()
-
-    # Avoid infinite recursion by tracking visited nodes
-    if node in visited:
+    if not shader_node or not hasattr(shader_node, "inputs"):
         return None
-    visited.add(node)
 
-    # Check if this is an image texture node
-    if _is_image_texture_node(node):
-        return node
+    # Determine the appropriate input name
+    priority_input = None
 
-    # Check all inputs of this node first (for mixing nodes that typically connect images to inputs)
-    if hasattr(node, "inputs"):
-        for input_socket in node.inputs:
-            if input_socket.links:
-                for link in input_socket.links:
-                    result = _find_image_texture_in_node_tree(
-                        link.from_node, visited
-                    )
-                    if result:
-                        return result
+    if shader_node.bl_idname == "ShaderNodeBsdfPrincipled":
+        priority_input = "Base Color"
+    elif shader_node.bl_idname == "ShaderNodeBsdfDiffuse":
+        priority_input = "Color"
+    elif shader_node.bl_idname == "ShaderNodeEmission":
+        priority_input = "Color"
+    elif shader_type in SHADER_ALBEDO_INPUTS:
+        priority_input = SHADER_ALBEDO_INPUTS[shader_type]
 
-    # Then check all outputs of this node
-    if hasattr(node, "outputs"):
-        for output in node.outputs:
-            for link in output.links:
-                result = _find_image_texture_in_node_tree(link.to_node, visited)
-                if result:
-                    return result
+    # Check priority input first
+    if priority_input and priority_input in shader_node.inputs:
+        result = _check_socket_for_image(shader_node.inputs[priority_input])
+        if result:
+            return result
+
+    # Check common color inputs as fallback
+    for input_name in COLOR_INPUT_NAMES:
+        if input_name in shader_node.inputs:
+            result = _check_socket_for_image(shader_node.inputs[input_name])
+            if result:
+                return result
 
     return None
 
 
-def _check_input_for_image(
-    input_socket: bpy.types.NodeSocket,
+def _check_socket_for_image(
+    socket: bpy.types.NodeSocket,
 ) -> Optional[bpy.types.Node]:
-    """Checks a specific input socket for connected image textures.
+    """Checks if a socket has an image texture connected.
 
     Args:
-        input_socket: Input socket to check for image connections.
+        socket: Node socket to check.
 
     Returns:
-        Connected image texture node or None if no image is connected.
+        Connected image texture node or None.
     """
-    if not input_socket.links:
+    if not socket.links:
         return None
 
-    for link in input_socket.links:
+    for link in socket.links:
         from_node = link.from_node
 
-        # Direct image texture connection
         if _is_image_texture_node(from_node):
             return from_node
 
-        # Check for indirect connections
-        image_node = _find_image_texture_in_node_tree(from_node, set())
+        # Check indirect connections
+        image_node = _find_image_in_tree(from_node)
         if image_node:
             return image_node
 
     return None
 
 
-def _get_priority_input_name(
-    shader_node: bpy.types.Node, shader_type: str
-) -> Optional[str]:
-    """Determines the priority input name based on shader node and type.
+def _find_image_in_tree(
+    node: bpy.types.Node, visited: Optional[Set[bpy.types.Node]] = None
+) -> Optional[bpy.types.Node]:
+    """Recursively searches for image textures in node tree.
 
     Args:
-        shader_node: The shader node to analyze.
-        shader_type: Type of shader.
+        node: Starting node.
+        visited: Set of visited nodes.
 
     Returns:
-        The name of the priority input or None if no priority input is identified.
+        Image texture node or None.
     """
-    # First check based on a node type
-    if shader_node.bl_idname == "ShaderNodeBsdfPrincipled":
-        return "Base Color"
-    elif shader_node.bl_idname == "ShaderNodeBsdfDiffuse":
-        return "Color"
-    elif shader_node.bl_idname == "ShaderNodeEmission":
-        return "Color"
+    if visited is None:
+        visited = set()
 
-    # Fallback to shader type mapping
-    if shader_type and shader_type in SHADER_ALBEDO_INPUTS:
-        return SHADER_ALBEDO_INPUTS[shader_type]
+    if node in visited:
+        return None
+    visited.add(node)
+
+    if _is_image_texture_node(node):
+        return node
+
+    # Search inputs first (typical for mix nodes)
+    if hasattr(node, "inputs"):
+        for socket in node.inputs:
+            for link in socket.links:
+                result = _find_image_in_tree(link.from_node, visited)
+                if result:
+                    return result
 
     return None
 
 
-def _find_connected_image_node(
-    shader_node: bpy.types.Node, shader_type: str = ""
-) -> Optional[bpy.types.Node]:
-    """Locates an image texture connected to a shader's albedo/color input.
-
-    Prioritizes connections to inputs typically used for base color or albedo textures,
-    which are the primary targets for atlas generation.
+def _find_image_via_connection(
+    mat: bpy.types.Material,
+) -> Optional[bpy.types.Image]:
+    """Finds image through output connection tracing.
 
     Args:
-        shader_node: Shader node to search from.
-        shader_type: Type of shader for prioritizing specific inputs.
+        mat: Material to analyze.
 
     Returns:
-        Connected image texture node or None if not found.
+        Found image or None.
     """
-    if (
-        not shader_node
-        or not hasattr(shader_node, "inputs")
-        or not shader_node.inputs
-    ):
+    if not mat.node_tree:
         return None
 
-    # 1. Check priority input based on a shader type
-    priority_input = _get_priority_input_name(shader_node, shader_type)
+    output_node = _find_output_node(mat.node_tree.nodes)
+    if not output_node:
+        return None
 
-    # 2. Try priority input first if available
-    if priority_input and priority_input in shader_node.inputs:
-        result = _check_input_for_image(shader_node.inputs[priority_input])
-        if result:
-            return result
+    shader_info = _trace_shader_from_output(output_node)
+    if not shader_info:
+        return None
 
-    # 3. Try standard color inputs
-    for input_name in COLOR_INPUT_NAMES:
-        if input_name in shader_node.inputs:
-            result = _check_input_for_image(shader_node.inputs[input_name])
-            if result:
-                return result
+    shader_node, shader_type = shader_info
+    image_node = _find_connected_image_node(shader_node, shader_type)
 
-    # 4. Try all other inputs as last resort
-    for input_socket in shader_node.inputs:
-        if input_socket.name not in COLOR_INPUT_NAMES:
-            result = _check_input_for_image(input_socket)
-            if result:
-                return result
-
-    return None
+    return image_node.image if image_node else None
 
 
-def _find_shader_nodes(node_tree: bpy.types.NodeTree) -> List[bpy.types.Node]:
-    """Identifies all shader nodes in a material node tree.
+def _find_image_from_specific_nodes(
+    node_tree: bpy.types.NodeTree,
+) -> Optional[bpy.types.Image]:
+    """Finds image from known shader-specific nodes.
 
     Args:
-        node_tree: Node tree to search in.
+        node_tree: Node tree to search.
 
     Returns:
-        List of shader nodes found in the material.
+        Found image or None.
     """
-    shader_nodes = []
-    for node in node_tree.nodes:
-        if node.bl_idname in SHADER_NODE_TYPES or (
-            node.bl_idname == "ShaderNodeGroup"
-            and hasattr(node, "node_tree")
-            and node.node_tree
-            and node.node_tree.name
-            in SHADER_NODE_TYPES.get("ShaderNodeGroup", {})
-        ):
-            shader_nodes.append(node)
-    return shader_nodes
+    nodes = node_tree.nodes
+
+    # Check MMD texture
+    if MMD_TEXTURE_NODE in nodes:
+        node = nodes[MMD_TEXTURE_NODE]
+        if hasattr(node, "image") and _is_connected_to_output(node, node_tree):
+            return node.image
+
+    # Check MToon texture
+    if MTOON_TEXTURE_NODE in nodes:
+        node = nodes[MTOON_TEXTURE_NODE]
+        if hasattr(node, "image") and _is_connected_to_output(node, node_tree):
+            return node.image
+
+    return None
 
 
 def _find_color_connected_image(
     node_tree: bpy.types.NodeTree,
 ) -> Optional[bpy.types.Image]:
-    """Finds an image connected to any color-related input in the material.
-
-    Provides a fallback way to locate albedo/base textures when the standard
-    connection patterns aren't found.
+    """Finds images connected to color inputs of shaders.
 
     Args:
-        node_tree: Node tree to search in.
+        node_tree: Node tree to search.
 
     Returns:
-        Image connected to a color input or None if not found.
+        Image connected to a color input or None.
     """
-    shader_nodes = _find_shader_nodes(node_tree)
+    output_node = _find_output_node(node_tree.nodes)
+    if not output_node:
+        return None
 
-    for shader_node in shader_nodes:
-        for input_socket in shader_node.inputs:
+    connected_nodes = _get_connected_nodes(output_node)
+
+    # Find shaders connected to output
+    for node in connected_nodes:
+        if node.bl_idname not in SHADER_NODE_TYPES:
+            continue
+
+        if not hasattr(node, "inputs"):
+            continue
+
+        # Check color inputs
+        for socket in node.inputs:
             if any(
-                color_term in input_socket.name.lower()
-                for color_term in ["color", "diffuse", "base"]
+                term in socket.name.lower()
+                for term in ["color", "diffuse", "base"]
             ):
-                if input_socket.links:
-                    for link in input_socket.links:
-                        from_node = link.from_node
-                        if _is_image_texture_node(from_node):
-                            return from_node.image
+                if not socket.links:
+                    continue
 
-                        # Try recursive search
-                        image_node = _find_image_texture_in_node_tree(
-                            from_node, set()
-                        )
-                        if image_node and hasattr(image_node, "image"):
+                for link in socket.links:
+                    from_node = link.from_node
+                    if _is_image_texture_node(from_node):
+                        return from_node.image
+
+                    # Check indirect connections
+                    image_node = _find_image_in_tree(from_node)
+                    if image_node:
+                        if hasattr(image_node, "image"):
                             return image_node.image
+
+    return None
+
+
+def _find_image_from_shader_type(
+    mat: bpy.types.Material,
+) -> Optional[bpy.types.Image]:
+    """Finds image based on detected shader type.
+
+    Args:
+        mat: Material to analyze.
+
+    Returns:
+        Found image or None.
+    """
+    shader_type = get_shader_type(mat)
+    if not shader_type or shader_type not in SHADER_IMAGE_NODES:
+        return None
+
+    node_name = SHADER_IMAGE_NODES[shader_type]
+    node_tree = mat.node_tree
+
+    if node_name not in node_tree.nodes:
+        return None
+
+    node = node_tree.nodes[node_name]
+    if hasattr(node, "image") and _is_connected_to_output(node, node_tree):
+        return node.image
+
     return None
 
 
 def _detect_group_shader(nodes: bpy.types.bpy_prop_collection) -> Optional[str]:
-    """Identifies specialized group-based shaders used in imported models.
+    """Detects specialized group-based shaders.
 
     Args:
-        nodes: Node tree to check.
+        nodes: Node collection to check.
 
     Returns:
-        Shader type identifier or None if not recognized.
+        Shader type identifier or None.
     """
-    if "Group" not in nodes or not hasattr(nodes["Group"], "node_tree"):
+    if "Group" not in nodes:
         return None
 
-    node_tree_name = (
-        nodes["Group"].node_tree.name if nodes["Group"].node_tree else ""
-    )
+    group_node = nodes["Group"]
+    if not hasattr(group_node, "node_tree") or not group_node.node_tree:
+        return None
 
-    if node_tree_name == "Group":
+    tree_name = group_node.node_tree.name
+
+    if tree_name == "Group":
         return "xnalaraNewCol"
-    if node_tree_name == "MToon_unversioned":
+    elif tree_name == "MToon_unversioned":
         return "vrm" if "Image Texture" in nodes else "vrmCol"
-    elif node_tree_name == "XPS Shader" and "Image Texture" in nodes:
+    elif tree_name == "XPS Shader" and "Image Texture" in nodes:
         return "xnalara"
 
     return None
 
 
-def _get_required_nodes(shader_type: str) -> Set[str]:
-    """Determines the essential nodes needed for a specific shader type.
-
-    Args:
-        shader_type: Shader type to get required nodes for.
-
-    Returns:
-        Set of node names required for the shader type.
-    """
-    if shader_type in SHADER_TYPES:
-        return SHADER_TYPES[shader_type]
-
-    # Special cases for derived shader types
-    if shader_type == "xnalaraCol":
-        return {"Principled BSDF"}
-
-    return set()
-
-
-def _get_color_from_shader_node(
+def _extract_shader_color(
     shader_node: bpy.types.Node, shader_type: str
 ) -> Optional[Tuple[int, int, int, int]]:
-    """Extracts the base color directly from a shader node.
+    """Extracts color from a shader node.
 
     Args:
-        shader_node: Shader node to extract color from.
+        shader_node: Shader node.
         shader_type: Type of shader.
 
     Returns:
-        RGBA color values or None if color input not found.
+        RGBA color values (0-255) or None.
     """
-    if shader_type == "principled" and "Base Color" in shader_node.inputs:
-        return _rgb_to_255_scale(shader_node.inputs["Base Color"].default_value)
-    elif shader_type == "diffuse" and "Color" in shader_node.inputs:
-        return _rgb_to_255_scale(shader_node.inputs["Color"].default_value)
-    elif shader_type == "emission" and "Color" in shader_node.inputs:
-        return _rgb_to_255_scale(shader_node.inputs["Color"].default_value)
+    input_map = {
+        "principled": "Base Color",
+        "diffuse": "Color",
+        "emission": "Color",
+    }
+
+    input_name = input_map.get(shader_type)
+    if input_name and input_name in shader_node.inputs:
+        return _rgb_to_srgb255(shader_node.inputs[input_name].default_value)
+
     return None
 
 
-def _rgb_to_255_scale(diffuse: Diffuse) -> Diffuse:
-    """Converts RGB float values to 8-bit integer values with gamma correction.
-
-    Transforms Blender's linear color values (0-1) to sRGB values (0-255)
-    suitable for processing with Pillow during atlas generation.
+def _rgb_to_srgb255(color: Diffuse) -> Tuple[int, int, int, int]:
+    """Converts linear RGB to sRGB (0-255) with gamma correction.
 
     Args:
-        diffuse: RGB or RGBA color values in 0-1 range.
+        color: Linear RGB values (0-1).
 
     Returns:
-        Color values converted to 0-255 range with gamma correction.
+        sRGB values (0-255).
     """
-    rgb = np.empty(shape=(0,), dtype=int)
-    for c in diffuse:
-        if c < 0.0:
-            srgb = 0
+    result = []
+
+    for c in color:
+        if c <= 0.0:
+            srgb = 0.0
         elif c < GAMMA_THRESHOLD:
             srgb = c * LINEAR_FACTOR
         else:
-            srgb = GAMMA_FACTOR * pow(c, 1.0 / 2.4) - 0.055
-        rgb = np.append(rgb, np.clip(round(srgb * 255), 0, 255))
-    return tuple(rgb)
+            srgb = GAMMA_FACTOR * pow(c, 1.0 / GAMMA) - GAMMA_OFFSET
+
+        result.append(int(np.clip(round(srgb * 255), 0, 255)))
+
+    return tuple(result)
