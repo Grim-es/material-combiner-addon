@@ -76,7 +76,7 @@ class Combiner(bpy.types.Operator):
         This method handles the final stages of the combining process:
         1. Packing textures using bin packing algorithm.
         2. Calculating appropriate atlas dimensions.
-        3. Generating atlas image.
+        3. Generating atlas images for all texture types.
         4. Remapping UV coordinates.
         5. Creating and assigning new materials.
         6. Cleaning up unused materials.
@@ -111,9 +111,9 @@ class Combiner(bpy.types.Operator):
             )
             return {"FINISHED"}
 
-        atlas = get_atlas(scn, self.structure, atlas_size)
-        align_uvs(scn, self.structure, atlas.size, size)
-        comb_mats = get_comb_mats(scn, atlas, self.mats_uv)
+        atlases = get_atlas(scn, self.structure, atlas_size)
+        align_uvs(scn, self.structure, atlas_size, size)
+        comb_mats = get_comb_mats(scn, atlases, self.mats_uv)
         assign_comb_mats(scn, self.data, comb_mats)
         clear_mats(scn, self.mats_uv)
         bpy.ops.smc.refresh_ob_data()

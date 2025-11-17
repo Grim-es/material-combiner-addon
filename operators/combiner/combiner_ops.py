@@ -46,6 +46,7 @@ from ...type_annotations import (
 from ...utils.images import get_image, get_packed_file
 from ...utils.materials import (
     get_diffuse,
+    get_gfx_textures,
     get_image_from_material,
     sort_materials,
 )
@@ -219,7 +220,16 @@ def get_structure(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> Structure:
     """
     structure = defaultdict(
         lambda: {
-            "gfx": {"img_or_color": None, "size": (), "uv_size": ()},
+            "gfx": {
+                "img_or_color": None,
+                "size": (),
+                "uv_size": (),
+                "metallic": None,
+                "roughness": None,
+                "specular": None,
+                "normal_map": None,
+                "emission": None,
+            },
             "dup": [],
             "ob": [],
             "uv": [],
@@ -241,6 +251,10 @@ def get_structure(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> Structure:
             if ob.name not in structure[root_mat]["ob"]:
                 structure[root_mat]["ob"].append(ob.name)
             structure[root_mat]["uv"].extend(mats_uv[ob_n][mat])
+
+            if scn.smc_include_extra_textures:
+                _set_extra_maps(structure[root_mat], root_mat)
+
     return structure
 
 
@@ -422,13 +436,14 @@ def calculate_adjusted_size(
     return size
 
 
-def get_atlas(
+def get_atlas(  # noqa: PLR0912
     scn: Scene, data: Structure, atlas_size: Tuple[int, int]
-) -> ImageType:
-    """Generate the texture atlas image.
+) -> Dict[str, ImageType]:
+    """Generate texture atlas images for all texture types.
 
-    Creates a new image with all textures positioned according to their
-    calculated fit positions.
+    Creates new images with all textures positioned according to their
+    calculated fit positions. Creates separate atlases for albedo, metallic,
+    roughness, specular, normal_map, and emission.
 
     Args:
         scn: Current scene.
@@ -436,25 +451,90 @@ def get_atlas(
         atlas_size: Dimensions for the atlas.
 
     Returns:
-        Generated atlas image.
+        Dictionary of generated atlas images by texture type.
     """
     smc_size = (scn.smc_size_width, scn.smc_size_height)
-    img = Image.new("RGBA", atlas_size)
     half_gaps = int(scn.smc_gaps / 2)
+
+    albedo_atlas = Image.new("RGBA", atlas_size)
+
+    texture_types = [
+        "metallic",
+        "roughness",
+        "specular",
+        "normal_map",
+        "emission",
+    ]
+    extra_atlases = {}
+    materials_with_textures = {tex_type: [] for tex_type in texture_types}
 
     for mat, item in data.items():
         _set_image_or_color(item, mat)
-        _paste_gfx(scn, item, mat, img, half_gaps)
+        _paste_gfx(
+            scn, item, mat, item["gfx"]["img_or_color"], albedo_atlas, half_gaps
+        )
+
+        if scn.smc_include_extra_textures:
+            for tex_type in texture_types:
+                if item["gfx"].get(tex_type):
+                    materials_with_textures[tex_type].append((mat, item))
+
+    if scn.smc_include_extra_textures:
+        for tex_type in texture_types:
+            if materials_with_textures[tex_type]:
+                atlas = Image.new("RGBA", atlas_size, (0, 0, 0, 0))
+
+                for _mat, item in materials_with_textures[tex_type]:
+                    if item["gfx"].get(tex_type) and item["gfx"]["fit"]:
+                        packed_file = item["gfx"][tex_type]
+                        img = Image.open(io.BytesIO(packed_file.data)).convert(
+                            "RGBA"
+                        )
+
+                        size = cast(
+                            Tuple[int, int],
+                            tuple(
+                                int(size - scn.smc_gaps)
+                                for size in item["gfx"]["size"]
+                            ),
+                        )
+
+                        if img.size != size:
+                            img = img.resize(size, resampling)
+
+                        if max(item["gfx"]["uv_size"], default=0) > 1:
+                            img = _get_uv_image(item, img, size)
+
+                        atlas.paste(
+                            img,
+                            (
+                                int(item["gfx"]["fit"]["x"] + half_gaps),
+                                int(item["gfx"]["fit"]["y"] + half_gaps),
+                            ),
+                        )
+
+                extra_atlases[tex_type] = atlas
 
     if scn.smc_size in ["CUST", "STRICTCUST"]:
-        img.thumbnail(smc_size, resampling)
+        albedo_atlas.thumbnail(smc_size, resampling)
+        for _tex_type, atlas in extra_atlases.items():
+            atlas.thumbnail(smc_size, resampling)
 
     if scn.smc_size == "STRICTCUST":
         canvas_img = Image.new("RGBA", smc_size)
-        canvas_img.paste(img)
-        return canvas_img
+        canvas_img.paste(albedo_atlas)
+        result = {"albedo": canvas_img}
 
-    return img
+        for tex_type, atlas in extra_atlases.items():
+            canvas = Image.new("RGBA", smc_size, (0, 0, 0, 0))
+            canvas.paste(atlas)
+            result[tex_type] = canvas
+
+        return result
+
+    result = {"albedo": albedo_atlas}
+    result.update(extra_atlases)
+    return result
 
 
 def _set_image_or_color(item: StructureItem, mat: bpy.types.Material) -> None:
@@ -476,11 +556,24 @@ def _set_image_or_color(item: StructureItem, mat: bpy.types.Material) -> None:
         item["gfx"]["img_or_color"] = get_diffuse(mat)
 
 
-def _paste_gfx(
+def _set_extra_maps(item: StructureItem, mat: bpy.types.Material) -> None:
+    """Set extra maps for a material.
+
+    Args:
+        item: Material metadata.
+        mat: Material to extract image or color from.
+    """
+    gfx_textures = get_gfx_textures(mat)
+    for gfx_type, packed_file in gfx_textures.items():
+        item["gfx"][gfx_type] = packed_file
+
+
+def _paste_gfx(  # noqa: PLR0913
     scn: Scene,
     item: StructureItem,
     mat: bpy.types.Material,
-    img: ImageType,
+    img_or_color: Union[bpy.types.PackedFile, Tuple, None],
+    atlas_img: ImageType,
     half_gaps: int,
 ) -> None:
     """Paste a material's graphics onto the atlas.
@@ -489,14 +582,15 @@ def _paste_gfx(
         scn: Current scene.
         item: Material metadata.
         mat: Material providing the graphics.
-        img: Atlas image to paste onto.
+        img_or_color: Image data or color tuple.
+        atlas_img: Atlas image to paste onto.
         half_gaps: Half the padding size between textures.
     """
     if not item["gfx"]["fit"]:
         return
 
-    img.paste(
-        _get_gfx(scn, mat, item, item["gfx"]["img_or_color"]),
+    atlas_img.paste(
+        _get_gfx(scn, mat, item, img_or_color),
         (
             int(item["gfx"]["fit"]["x"] + half_gaps),
             int(item["gfx"]["fit"]["y"] + half_gaps),
@@ -648,12 +742,14 @@ def _get_scale_factors(
     return (1, 1 / aspect_ratio) if aspect_ratio > 1 else (aspect_ratio, 1)
 
 
-def get_comb_mats(scn: Scene, atlas: ImageType, mats_uv: MatsUV) -> CombMats:
-    """Create materials for the generated atlas.
+def get_comb_mats(
+    scn: Scene, atlases: Dict[str, ImageType], mats_uv: MatsUV
+) -> CombMats:
+    """Create materials for the generated atlases.
 
     Args:
         scn: Current scene.
-        atlas: Generated atlas image.
+        atlases: Dictionary of generated atlas images by texture type.
         mats_uv: Dictionary mapping object names to materials with UV coordinates.
 
     Returns:
@@ -661,11 +757,18 @@ def get_comb_mats(scn: Scene, atlas: ImageType, mats_uv: MatsUV) -> CombMats:
     """
     unique_id = _get_unique_id(scn)
     layers = _get_layers(scn, mats_uv)
-    path = _save_atlas(scn, atlas, unique_id)
-    texture = _create_texture(path, unique_id)
+
+    textures = {}
+    for tex_type, atlas in atlases.items():
+        path = _save_atlas_with_type(scn, atlas, tex_type, unique_id)
+        textures[tex_type] = _create_texture(path, unique_id, tex_type)
+
     return cast(
         CombMats,
-        {idx: _create_material(texture, unique_id, idx) for idx in layers},
+        {
+            idx: _create_material_multi(textures, unique_id, idx)
+            for idx in layers
+        },
     )
 
 
@@ -698,7 +801,7 @@ def _get_unique_id(scn: Scene) -> str:
         Unique ID string for the atlas.
     """
     existed_ids = set()
-    _add_its_from_existing_materials(scn, existed_ids)
+    _add_ids_from_existing_materials(scn, existed_ids)
 
     if not os.path.isdir(scn.smc_save_path):
         return _generate_random_unique_id(existed_ids)
@@ -710,7 +813,7 @@ def _get_unique_id(scn: Scene) -> str:
     return "{:05d}".format(unique_id)
 
 
-def _add_its_from_existing_materials(scn: Scene, existed_ids: Set[int]) -> None:
+def _add_ids_from_existing_materials(scn: Scene, existed_ids: Set[int]) -> None:
     """Add IDs from existing atlas materials to the set.
 
     Args:
@@ -756,49 +859,63 @@ def _add_ids_from_existing_files(scn: Scene, existed_ids: Set[int]) -> None:
             existed_ids.add(int(match.group(1)))
 
 
-def _save_atlas(scn: Scene, atlas: ImageType, unique_id: str) -> str:
-    """Save the atlas image to disk.
+def _save_atlas_with_type(
+    scn: Scene, atlas: ImageType, tex_type: str, unique_id: str
+) -> str:
+    """Save an atlas image to disk with texture type in the name.
 
     Args:
         scn: Current scene.
         atlas: Generated atlas image.
+        tex_type: Type of texture (albedo, metallic, etc.).
         unique_id: Unique ID for the atlas.
 
     Returns:
         Path to the saved atlas image.
     """
-    path = os.path.join(
-        scn.smc_save_path, "{}{}.png".format(atlas_prefix, unique_id)
+    filename = "{}{}{}.png".format(
+        atlas_prefix,
+        "{}_".format(tex_type.title()) if tex_type != "albedo" else "",
+        unique_id,
     )
+
+    path = os.path.join(scn.smc_save_path, filename)
     atlas.save(path)
     return path
 
 
-def _create_texture(path: str, unique_id: str) -> bpy.types.Texture:
-    """Create a Blender texture from the atlas image.
+def _create_texture(
+    path: str, unique_id: str, tex_type: str = "albedo"
+) -> bpy.types.Texture:
+    """Create a Blender texture from an atlas image.
 
     Args:
         path: Path to the atlas image.
         unique_id: Unique ID for the atlas.
+        tex_type: Type of texture.
 
     Returns:
         Created Blender texture.
     """
-    texture = bpy.data.textures.new(
-        "{}{}".format(atlas_texture_prefix, unique_id), "IMAGE"
+    texture_name = "{}{}{}".format(
+        atlas_texture_prefix,
+        '{}_'.format(tex_type) if tex_type != "albedo" else "",
+        unique_id,
     )
+
+    texture = bpy.data.textures.new(texture_name, "IMAGE")
     image = bpy.data.images.load(path)
     texture.image = image
     return texture
 
 
-def _create_material(
-    texture: bpy.types.Texture, unique_id: str, idx: int
+def _create_material_multi(
+    textures: Dict[str, bpy.types.Texture], unique_id: str, idx: int
 ) -> bpy.types.Material:
-    """Create a Blender material using the atlas texture.
+    """Create a Blender material using multiple atlas textures.
 
     Args:
-        texture: Atlas texture.
+        textures: Dictionary of atlas textures by type.
         unique_id: Unique ID for the atlas.
         idx: Layer index for the material.
 
@@ -809,39 +926,114 @@ def _create_material(
         name="{}{}_{}".format(atlas_material_prefix, unique_id, idx)
     )
     if is_blender_modern:
-        _configure_material(mat, texture)
-    else:
-        _configure_material_legacy(mat, texture)
+        _configure_material_multi(mat, textures)
+    elif "albedo" in textures:
+        _configure_material_legacy(mat, textures["albedo"])
     return mat
 
 
-def _configure_material(
-    mat: bpy.types.Material, texture: bpy.types.Texture
+def _configure_material_multi(  # noqa: PLR0915
+    mat: bpy.types.Material, textures: Dict[str, bpy.types.Texture]
 ) -> None:
-    """Configure a modern (Cycles/Eevee) material with the atlas texture.
+    """Configure a modern (Cycles/Eevee) material with multiple atlas textures.
 
     Args:
         mat: Material to configure.
-        texture: Atlas texture.
+        textures: Dictionary of atlas textures by type.
     """
     mat.blend_method = "CLIP"
     mat.use_backface_culling = True
     mat.use_nodes = True
 
-    node_texture = mat.node_tree.nodes.new(type="ShaderNodeTexImage")
-    node_texture.image = texture.image
-    node_texture.label = "Material Combiner Texture"
-    node_texture.location = -300, 300
+    node_tree = mat.node_tree
+    node_bsdf = node_tree.nodes["Principled BSDF"]
 
-    node_bsdf = mat.node_tree.nodes["Principled BSDF"]
-    node_bsdf.inputs["Roughness"].default_value = 1
+    # Position offset for texture nodes
+    x_offset = -600
+    y_offset = 400
+    y_spacing = 300
 
-    mat.node_tree.links.new(
-        node_texture.outputs["Color"], node_bsdf.inputs["Base Color"]
-    )
-    mat.node_tree.links.new(
-        node_texture.outputs["Alpha"], node_bsdf.inputs["Alpha"]
-    )
+    # Configure albedo texture
+    if "albedo" in textures:
+        node_albedo = node_tree.nodes.new(type="ShaderNodeTexImage")
+        node_albedo.image = textures["albedo"].image
+        node_albedo.label = "Albedo Atlas"
+        node_albedo.location = x_offset, y_offset
+
+        node_tree.links.new(
+            node_albedo.outputs["Color"], node_bsdf.inputs["Base Color"]
+        )
+        node_tree.links.new(
+            node_albedo.outputs["Alpha"], node_bsdf.inputs["Alpha"]
+        )
+
+    # Configure metallic texture if exists
+    if "metallic" in textures:
+        node_metallic = node_tree.nodes.new(type="ShaderNodeTexImage")
+        node_metallic.image = textures["metallic"].image
+        node_metallic.label = "Metallic Atlas"
+        node_metallic.location = x_offset, y_offset - y_spacing
+        node_metallic.image.colorspace_settings.name = "Non-Color"
+
+        node_tree.links.new(
+            node_metallic.outputs["Color"], node_bsdf.inputs["Metallic"]
+        )
+
+    # Configure roughness texture if exists
+    if "roughness" in textures:
+        node_roughness = node_tree.nodes.new(type="ShaderNodeTexImage")
+        node_roughness.image = textures["roughness"].image
+        node_roughness.label = "Roughness Atlas"
+        node_roughness.location = x_offset, y_offset - y_spacing * 2
+        node_roughness.image.colorspace_settings.name = "Non-Color"
+
+        node_tree.links.new(
+            node_roughness.outputs["Color"], node_bsdf.inputs["Roughness"]
+        )
+
+    # Configure specular texture if exists
+    if "specular" in textures:
+        node_specular = node_tree.nodes.new(type="ShaderNodeTexImage")
+        node_specular.image = textures["specular"].image
+        node_specular.label = "Specular Atlas"
+        node_specular.location = x_offset, y_offset - y_spacing * 3
+        node_specular.image.colorspace_settings.name = "Non-Color"
+
+        node_tree.links.new(
+            node_specular.outputs["Color"], node_bsdf.inputs["Specular Tint"]
+        )
+
+    # Configure emission texture if exists
+    if "emission" in textures:
+        node_emission = node_tree.nodes.new(type="ShaderNodeTexImage")
+        node_emission.image = textures["emission"].image
+        node_emission.label = "Emission Atlas"
+        node_emission.location = x_offset, y_offset - y_spacing * 4
+
+        node_tree.links.new(
+            node_emission.outputs["Color"], node_bsdf.inputs["Emission Color"]
+        )
+
+        node_bsdf.inputs["Emission Strength"].default_value = 1.0
+
+    # Configure normal map if exists
+    if "normal_map" in textures:
+        node_normal_tex = node_tree.nodes.new(type="ShaderNodeTexImage")
+        node_normal_tex.image = textures["normal_map"].image
+        node_normal_tex.label = "Normal Map Atlas"
+        node_normal_tex.location = x_offset - 300, y_offset - y_spacing * 5
+        node_normal_tex.image.colorspace_settings.name = "Non-Color"
+
+        # Add Normal Map node
+        node_normal_map = node_tree.nodes.new(type="ShaderNodeNormalMap")
+        node_normal_map.location = x_offset, y_offset - y_spacing * 5
+
+        node_tree.links.new(
+            node_normal_tex.outputs["Color"], node_normal_map.inputs["Color"]
+        )
+        node_tree.links.new(
+            node_normal_map.outputs["Normal"], node_bsdf.inputs["Normal"]
+        )
 
 
 def _configure_material_legacy(

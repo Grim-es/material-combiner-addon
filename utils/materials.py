@@ -6,7 +6,7 @@ BSDF, MMD, MToon, VRM, and XNALara materials.
 """
 
 from collections import OrderedDict, defaultdict
-from typing import List, Optional, Set, Tuple, ValuesView, cast
+from typing import Dict, List, Optional, Set, Tuple, ValuesView, cast
 
 import bpy
 import numpy as np
@@ -28,6 +28,7 @@ DEFAULT_DIFFUSE = (255, 255, 255, 255)
 SHADER_NODE_TYPES = {
     "ShaderNodeBsdfPrincipled": "principled",
     "ShaderNodeBsdfDiffuse": "diffuse",
+    "ShaderNodeEeveeSpecular": "specular",
     "ShaderNodeEmission": "emission",
     "ShaderNodeGroup": {
         "MToon_unversioned": "vrm",
@@ -53,6 +54,8 @@ SHADER_TYPES = OrderedDict(
         ("principledCol", {"Principled BSDF"}),
         ("diffuse", {"Diffuse BSDF", "Image Texture"}),
         ("diffuseCol", {"Diffuse BSDF"}),
+        ("specular", {"Specular BSDF", "Image Texture"}),
+        ("specularCol", {"Specular BSDF"}),
         ("emission", {"Emission", "Image Texture"}),
         ("emissionCol", {"Emission"}),
     ]
@@ -66,6 +69,7 @@ SHADER_IMAGE_NODES = {
     "xnalara": "Image Texture",
     "principled": "Image Texture",
     "diffuse": "Image Texture",
+    "specular": "Image Texture",
     "emission": "Image Texture",
 }
 
@@ -73,6 +77,7 @@ SHADER_IMAGE_NODES = {
 SHADER_ALBEDO_INPUTS = {
     "principled": "Base Color",
     "diffuse": "Color",
+    "specular": "Base Color",
     "emission": "Color",
     "mmd": "Diffuse Color",
     "mtoon": "Base Color",
@@ -102,6 +107,23 @@ DIFFUSE_ACCESSORS = {
     "xnalaraCol": lambda n: n["Principled BSDF"]
     .inputs["Base Color"]
     .default_value,
+}
+
+# Graphics texture input names by texture type for modern shaders
+GFX_INPUT_NAMES = {
+    "metallic": "Metallic",
+    "roughness": "Roughness",
+    "specular": "Specular Tint",
+    "normal_map": "Normal",
+    "emission": "Emission Color",
+}
+
+# Specular BSDF specific input names
+SPECULAR_BSDF_INPUT_NAMES = {
+    "roughness": "Roughness",
+    "specular": "Specular",
+    "normal_map": "Normal",
+    "emission": "Emissive Color",
 }
 
 
@@ -254,6 +276,84 @@ def get_diffuse(mat: bpy.types.Material) -> Tuple[int, int, int, int]:
     return DEFAULT_DIFFUSE
 
 
+def get_gfx_textures(
+    mat: bpy.types.Material,
+) -> Dict[str, bpy.types.PackedFile]:
+    """Extracts graphics textures from a material's shader nodes.
+
+    Searches for and extracts additional texture maps (metallic, roughness,
+    specular, normal, emission) from Principled BSDF and Specular BSDF shaders.
+    Only returns textures that are actually connected via image texture nodes.
+
+    Supports:
+        - Principled BSDF: All texture types including metallic
+        - Specular BSDF: Roughness, specular, normal map, and emission
+
+    Normal maps are detected through ShaderNodeNormalMap nodes connected
+    to the shader's Normal input.
+
+    Args:
+        mat: Material to extract textures from.
+
+    Returns:
+        Dictionary mapping texture type names to packed file data.
+        Empty dictionary if no compatible shader or textures found.
+    """
+    gfx_textures = {}
+    if not mat.node_tree or not mat.node_tree.nodes:
+        return gfx_textures
+
+    shader_type = get_shader_type(mat)
+    if not shader_type:
+        return gfx_textures
+
+    nodes = mat.node_tree.nodes
+
+    shader_node = None
+    input_mapping = None
+
+    if "principled" in shader_type:
+        shader_node = next(
+            (
+                node
+                for node in nodes
+                if node.bl_idname == "ShaderNodeBsdfPrincipled"
+            ),
+            None,
+        )
+        input_mapping = GFX_INPUT_NAMES
+
+    elif "specular" in shader_type:
+        shader_node = next(
+            (
+                node
+                for node in nodes
+                if node.bl_idname == "ShaderNodeEeveeSpecular"
+            ),
+            None,
+        )
+        input_mapping = SPECULAR_BSDF_INPUT_NAMES
+
+    if not shader_node or not input_mapping:
+        return gfx_textures
+
+    for gfx_type, input_name in input_mapping.items():
+        if not input_name:
+            continue
+
+        if input_name not in shader_node.inputs:
+            continue
+
+        socket = shader_node.inputs[input_name]
+        image_node = _check_socket_for_image(socket)
+        if image_node and image_node.image:
+            packed_file = get_packed_file(image_node.image)
+            if packed_file:
+                gfx_textures[gfx_type] = packed_file
+
+    return gfx_textures
+
+
 def sort_materials(
     materials: List[bpy.types.Material],
 ) -> ValuesView[MatDictItem]:
@@ -278,13 +378,19 @@ def sort_materials(
         image = get_image_from_material(mat)
         packed_file = get_packed_file(image) if image else None
         diffuse = get_diffuse(mat)
+        gfx_textures = get_gfx_textures(mat)
+        gfx_textures_tuple = tuple(sorted(gfx_textures.items()))
 
         if packed_file:
             # Group by texture and optionally diffuse color
-            key = (packed_file, diffuse if mat.smc_diffuse else DEFAULT_DIFFUSE)
+            key = (
+                packed_file,
+                diffuse if mat.smc_diffuse else DEFAULT_DIFFUSE,
+                gfx_textures_tuple,
+            )
         else:
             # Group by color only
-            key = diffuse
+            key = (diffuse, gfx_textures_tuple)
 
         mat_dict[key].append(mat)
 
@@ -454,6 +560,8 @@ def _find_connected_image_node(
         priority_input = "Base Color"
     elif shader_node.bl_idname == "ShaderNodeBsdfDiffuse":
         priority_input = "Color"
+    elif shader_node.bl_idname == "ShaderNodeEeveeSpecular":
+        priority_input = "Base Color"
     elif shader_node.bl_idname == "ShaderNodeEmission":
         priority_input = "Color"
     elif shader_type in SHADER_ALBEDO_INPUTS:
@@ -711,6 +819,7 @@ def _extract_shader_color(
     input_map = {
         "principled": "Base Color",
         "diffuse": "Color",
+        "specular": "Base Color",
         "emission": "Color",
     }
 

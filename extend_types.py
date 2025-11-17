@@ -31,6 +31,7 @@ _SCENE_PROPS = (
     "smc_gaps",
     "smc_save_path",
     "smc_packer_type",
+    "smc_include_extra_textures",
 )
 
 _MATERIAL_PROPS = (
@@ -241,6 +242,12 @@ def _register_scene_properties() -> None:
         default=0,
         options={"HIDDEN"},
         description="Spacing between atlas elements",
+    )
+
+    bpy.types.Scene.smc_include_extra_textures = BoolProperty(
+        name="Atlas PBR Maps",
+        default=True,
+        description="Generate separate atlases for metallic, roughness, specular, normal, and emission textures",
     )
 
     bpy.types.Scene.smc_save_path = StringProperty(
