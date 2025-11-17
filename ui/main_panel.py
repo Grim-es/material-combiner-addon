@@ -129,6 +129,8 @@ class MaterialCombinerPanel(bpy.types.Panel):
         self._add_size_properties(box, scene)
         self._add_quality_properties(box, scene)
         self._add_gap_settings(box, scene)
+        if globs.is_blender_modern:
+            box.prop(scene, "smc_include_extra_textures", text="Atlas PBR Maps")
 
     @staticmethod
     def _add_size_properties(
